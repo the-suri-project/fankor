@@ -1,8 +1,8 @@
 use std::panic::{resume_unwind, AssertUnwindSafe, UnwindSafe};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::thread;
 use std::time::Duration;
+use std::{fs, thread};
 
 use crate::build::{FankorConfig, IdlBuildContext};
 
@@ -76,8 +76,11 @@ impl IdlContext {
     pub fn build(&self) {
         // Read config.
         let config = match std::fs::read_to_string("./Fankor.toml") {
-            Ok(file_content) => match toml::from_str(file_content.as_str()) {
-                Ok(config) => config,
+            Ok(file_content) => match toml::from_str::<FankorConfig>(file_content.as_str()) {
+                Ok(mut config) => {
+                    config.fill_with_defaults();
+                    config
+                }
                 Err(e) => {
                     panic!("ERROR: Failed to parse Fankor.toml: {}", e);
                 }
@@ -89,7 +92,7 @@ impl IdlContext {
         };
 
         // Wait enough time to let all other actions to be registered.
-        thread::sleep(Duration::from_millis(config.initial_delay));
+        thread::sleep(Duration::from_millis(config.initial_delay.unwrap()));
 
         let mut idl_build_context = self.build_context();
 
