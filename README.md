@@ -1,2 +1,3 @@
-# fankor
-An Anchor-based framework meant to be used in a functional way. 
+# Fankor
+
+A functional Anchor-like framework to develop Solana programs.
