@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread;
 use std::time::Duration;
 
-use crate::build::IdlBuildContext;
+use crate::build::{FankorConfig, IdlBuildContext};
 
 /// Contains helper data to do the building process.
 pub struct IdlContext {
@@ -74,9 +74,22 @@ impl IdlContext {
 
     /// Performs the build process.
     pub fn build(&self) {
+        // Read config.
+        let config = match std::fs::read_to_string("./Fankor.toml") {
+            Ok(file_content) => match toml::from_str(file_content.as_str()) {
+                Ok(config) => config,
+                Err(e) => {
+                    panic!("ERROR: Failed to parse Fankor.toml: {}", e);
+                }
+            },
+            Err(_) => {
+                println!("WARNING: Fankor.toml is not present. Using default configuration.");
+                FankorConfig::default()
+            }
+        };
+
         // Wait enough time to let all other actions to be registered.
-        // TODO make this time configurable with an env-var.
-        thread::sleep(Duration::from_millis(1000));
+        thread::sleep(Duration::from_millis(config.initial_delay));
 
         let mut idl_build_context = self.build_context();
 

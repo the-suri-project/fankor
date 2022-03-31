@@ -11,8 +11,9 @@ edition = "2021"
 builder-tests = ["lazy_static", "serde", "serde_json"]
 
 [dependencies]
+toml = "0.5.0"
 lazy_static = { version = "1.4.0", optional = true }
-serde = { version = "1.0.136", optional = true }
+serde = { version = "1.0.136", features = ["derive"], optional = true }
 serde_json = { version = "1.0.79", optional = true }
 fankor-general = { path = "../fankor-general" }
 fankor-account = { path = "../fankor-account" }
