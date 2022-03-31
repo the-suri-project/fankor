@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Julio Treviño Páez <julio.tpaez@gmail.com>"]
 repository = "https://github.com/juliotpaez/fankor"
 license = "Apache-2.0"
-description = "Fancor framework to build Solana programs"
+description = "Fankor framework to build Solana programs"
 edition = "2021"
 
 [features]

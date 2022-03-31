@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Julio Treviño Páez <julio.tpaez@gmail.com>"]
 repository = "https://github.com/juliotpaez/fankor"
 license = "Apache-2.0"
-description = "Fancor macro for defining an account"
+description = "Fankor macro for defining an account"
 edition = "2021"
 
 [lib]

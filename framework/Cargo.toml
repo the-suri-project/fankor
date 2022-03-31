@@ -1,2 +1,2 @@
 [workspace]
-members = ["fankor", "fankor-general", "fankor-constant", "fankor-account"]
+members = ["fankor", "fankor-syn", "fankor-general", "fankor-constant", "fankor-account"]
