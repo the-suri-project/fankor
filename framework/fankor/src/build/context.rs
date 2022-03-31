@@ -1,4 +1,4 @@
-use std::panic::{resume_unwind, AssertUnwindSafe, UnwindSafe};
+use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe, UnwindSafe};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
@@ -90,18 +90,35 @@ impl IdlContext {
                 FankorConfig::default()
             }
         };
+        config.validate();
 
         // Wait enough time to let all other actions to be registered.
         thread::sleep(Duration::from_millis(config.initial_delay.unwrap()));
 
-        let mut idl_build_context = self.build_context();
+        let idl_build_context = self.execute_actions(self.build_context());
+        println!("All actions done [first round].");
 
-        // Execute the actions.
+        // Finish the development process.
+        self.finish();
+
+        // Execute again just in case during the execution of previous actions another one was registered.
+        let idl_build_context = self.execute_actions(idl_build_context);
+        println!("All actions done [second round].");
+
+        // Generate the IDL files.
+        self.generate_idl(&config, idl_build_context);
+        println!("IDL generation done.");
+    }
+
+    fn execute_actions<'a>(
+        &self,
+        mut idl_build_context: MutexGuard<'a, IdlBuildContext>,
+    ) -> MutexGuard<'a, IdlBuildContext> {
         while let Some(action) = self.pop_action() {
             // Executes the function and captures any error to report it to others.
-            let arg: &mut IdlBuildContext = &mut idl_build_context;
+            let arg = &mut idl_build_context;
             let mut arg = AssertUnwindSafe(arg);
-            let result = ::std::panic::catch_unwind(move || (action.function)(*arg));
+            let result = catch_unwind(move || (action.function)(*arg));
 
             if let Err(err) = result {
                 idl_build_context
@@ -110,12 +127,39 @@ impl IdlContext {
             }
         }
 
-        println!("All actions done...");
+        idl_build_context
+    }
 
-        // Finish the development process.
-        self.finish();
+    fn generate_idl(
+        &self,
+        config: &FankorConfig,
+        mut idl_build_context: MutexGuard<IdlBuildContext>,
+    ) {
+        let folder_path = format!("target/idl");
+        let file_path = format!("{}/{}.json", folder_path, config.program_name);
+        let file_path_ts = format!("{}/{}.ts", folder_path, config.program_name);
 
-        // TODO generate the IDL files.
+        // Remove file.
+        let _ = fs::remove_file(file_path.as_str());
+        let _ = fs::remove_file(file_path_ts.as_str());
+
+        // Create folders.
+        fs::create_dir_all(folder_path.as_str())
+            .unwrap_or_else(|e| panic!("Cannot create folder '{}': {}", folder_path, e));
+
+        // Generate the IDL.
+        let idl = idl_build_context.build_idl(config);
+        let idl_str = serde_json::to_string(&idl).unwrap();
+        let idl_ts_str = format!(
+            "export type {} = {}; export const IDL: {} = {};",
+            config.program_name, idl_str, config.program_name, idl_str
+        );
+
+        fs::write(file_path.as_str(), idl_str.as_str())
+            .unwrap_or_else(|e| panic!("Cannot write file '{}': {}", file_path, e));
+
+        fs::write(file_path_ts.as_str(), idl_ts_str.as_str())
+            .unwrap_or_else(|e| panic!("Cannot write file '{}': {}", file_path, e));
     }
 }
 

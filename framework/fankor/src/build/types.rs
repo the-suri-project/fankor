@@ -25,57 +25,57 @@ pub enum IdlType {
 }
 
 impl IdlType {
-    pub fn to_idl_string(&self) -> Value {
+    pub fn to_idl_value(&self) -> Value {
         let mut obj = serde_json::Map::new();
 
         match self {
             IdlType::Bool => {
                 obj.insert(
                     "type".to_string(),
-                    serde_json::Value::String("\"boolean\"".to_string()),
+                    serde_json::Value::String("boolean".to_string()),
                 );
             }
             IdlType::Number => {
                 obj.insert(
                     "type".to_string(),
-                    serde_json::Value::String("\"number\"".to_string()),
+                    serde_json::Value::String("number".to_string()),
                 );
             }
             IdlType::BigNumber => {
                 obj.insert(
                     "type".to_string(),
-                    serde_json::Value::String("\"bigNumber\"".to_string()),
+                    serde_json::Value::String("bigNumber".to_string()),
                 );
             }
             IdlType::String => {
                 obj.insert(
                     "type".to_string(),
-                    serde_json::Value::String("\"string\"".to_string()),
+                    serde_json::Value::String("string".to_string()),
                 );
             }
             IdlType::Array(v) => {
                 obj.insert(
                     "type".to_string(),
-                    serde_json::Value::String("\"array\"".to_string()),
+                    serde_json::Value::String("array".to_string()),
                 );
-                obj.insert("inner".to_string(), v.to_idl_string());
+                obj.insert("inner".to_string(), v.to_idl_value());
             }
             IdlType::Tuple(v) => {
                 obj.insert(
                     "type".to_string(),
-                    serde_json::Value::String("\"tuple\"".to_string()),
+                    serde_json::Value::String("tuple".to_string()),
                 );
                 obj.insert(
                     "inner".to_string(),
-                    serde_json::Value::Array(v.iter().map(|v| v.to_idl_string()).collect()),
+                    serde_json::Value::Array(v.iter().map(|v| v.to_idl_value()).collect()),
                 );
             }
             IdlType::Option(v) => {
                 obj.insert(
                     "type".to_string(),
-                    serde_json::Value::String("\"option\"".to_string()),
+                    serde_json::Value::String("option".to_string()),
                 );
-                obj.insert("inner".to_string(), v.to_idl_string());
+                obj.insert("inner".to_string(), v.to_idl_value());
             }
         }
 

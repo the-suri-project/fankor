@@ -20,6 +20,14 @@ impl FankorConfig {
             self.initial_delay = Some(INITIAL_DELAY_CONFIG);
         }
     }
+
+    pub fn validate(&self) {
+        for char in self.program_name.chars() {
+            if !char.is_ascii_alphanumeric() && char != '_' {
+                panic!("The program name must be alphanumeric or underscore.");
+            }
+        }
+    }
 }
 
 impl Default for FankorConfig {
