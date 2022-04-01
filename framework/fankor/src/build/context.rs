@@ -1,10 +1,11 @@
+use fankor_syn::fankor::{read_fankor_toml, FankorConfig};
 use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe, UnwindSafe};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::time::Duration;
 use std::{fs, thread};
 
-use crate::build::{FankorConfig, IdlBuildContext};
+use crate::build::IdlBuildContext;
 
 /// Contains helper data to do the building process.
 pub struct IdlContext {
@@ -75,25 +76,10 @@ impl IdlContext {
     /// Performs the build process.
     pub fn build(&self) {
         // Read config.
-        let config = match std::fs::read_to_string("./Fankor.toml") {
-            Ok(file_content) => match toml::from_str::<FankorConfig>(file_content.as_str()) {
-                Ok(mut config) => {
-                    config.fill_with_defaults();
-                    config
-                }
-                Err(e) => {
-                    panic!("ERROR: Failed to parse Fankor.toml: {}", e);
-                }
-            },
-            Err(_) => {
-                println!("WARNING: Fankor.toml is not present. Using default configuration.");
-                FankorConfig::default()
-            }
-        };
-        config.validate();
+        let config = read_fankor_toml();
 
         // Wait enough time to let all other actions to be registered.
-        thread::sleep(Duration::from_millis(config.initial_delay.unwrap()));
+        thread::sleep(Duration::from_millis(config.build().initial_delay.unwrap()));
 
         let idl_build_context = self.execute_actions(self.build_context());
         println!("All actions done [first round].");
@@ -136,8 +122,8 @@ impl IdlContext {
         mut idl_build_context: MutexGuard<IdlBuildContext>,
     ) {
         let folder_path = format!("target/idl");
-        let file_path = format!("{}/{}.json", folder_path, config.program_name);
-        let file_path_ts = format!("{}/{}.ts", folder_path, config.program_name);
+        let file_path = format!("{}/{}.json", folder_path, config.program.name);
+        let file_path_ts = format!("{}/{}.ts", folder_path, config.program.name);
 
         // Remove file.
         let _ = fs::remove_file(file_path.as_str());
@@ -152,7 +138,7 @@ impl IdlContext {
         let idl_str = serde_json::to_string(&idl).unwrap();
         let idl_ts_str = format!(
             "export type {} = {}; export const IDL: {} = {};",
-            config.program_name, idl_str, config.program_name, idl_str
+            config.program.name, idl_str, config.program.name, idl_str
         );
 
         fs::write(file_path.as_str(), idl_str.as_str())

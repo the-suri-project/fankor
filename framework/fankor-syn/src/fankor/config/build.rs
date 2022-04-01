@@ -4,15 +4,12 @@ pub const INITIAL_DELAY_CONFIG: u64 = 1000;
 
 /// The configuration for the building process.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FankorConfig {
-    /// The name of the program.
-    pub program_name: String,
-
+pub struct FankorBuildConfig {
     /// The initial delay in milliseconds.
     pub initial_delay: Option<u64>,
 }
 
-impl FankorConfig {
+impl FankorBuildConfig {
     // METHODS ----------------------------------------------------------------
 
     pub fn fill_with_defaults(&mut self) {
@@ -20,20 +17,11 @@ impl FankorConfig {
             self.initial_delay = Some(INITIAL_DELAY_CONFIG);
         }
     }
-
-    pub fn validate(&self) {
-        for char in self.program_name.chars() {
-            if !char.is_ascii_alphanumeric() && char != '_' {
-                panic!("The program name must be alphanumeric or underscore.");
-            }
-        }
-    }
 }
 
-impl Default for FankorConfig {
+impl Default for FankorBuildConfig {
     fn default() -> Self {
-        FankorConfig {
-            program_name: "smart_contract".to_string(),
+        FankorBuildConfig {
             initial_delay: Some(INITIAL_DELAY_CONFIG),
         }
     }

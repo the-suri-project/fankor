@@ -1,5 +1,5 @@
 use crate::build::types::IdlType;
-use crate::build::FankorConfig;
+use fankor_syn::fankor::FankorConfig;
 use std::collections::HashMap;
 
 /// Contains the info for building the IDL.
@@ -56,7 +56,11 @@ impl IdlBuildContext {
         let mut map = serde_json::Map::new();
         map.insert(
             "name".to_string(),
-            serde_json::Value::String(config.program_name.clone()),
+            serde_json::Value::String(config.program.name.clone()),
+        );
+        map.insert(
+            "programId".to_string(),
+            serde_json::Value::String(config.program.pubkey.clone()),
         );
         map.insert("constants".to_string(), self.build_idl_constants());
 
