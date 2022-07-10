@@ -8,15 +8,14 @@ description = "Fankor framework to build Solana programs"
 edition = "2021"
 
 [features]
-builder-tests = ["lazy_static", "serde", "serde_json"]
+builder = ["lazy_static", "serde", "serde_json"]
 
 [dependencies]
 bs58 = "0.4.0"
 lazy_static = { version = "1.4.0", optional = true }
-serde = { version = "1.0.136", features = ["derive"], optional = true }
-serde_json = { version = "1.0.79", optional = true }
-solana-program = "1.10.5"
-fankor-account = { path = "../fankor-account" }
-fankor-constant = { path = "../fankor-constant" }
-fankor-general = { path = "../fankor-general" }
+parking_lot = "0.12.1"
+serde = { version = "1.0.138", features = ["derive"], optional = true }
+serde_json = { version = "1.0.82", optional = true }
+solana-program = "1.11.2"
+fankor-macros = { path = "../fankor-macros" }
 fankor-syn = { path = "../fankor-syn" }

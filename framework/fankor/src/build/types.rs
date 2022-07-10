@@ -1,12 +1,23 @@
 use serde_json::{Number, Value};
+use std::fmt::Write;
 
 /// Methods all IDL types must implement.
 pub trait IdlTypeMappable {
     /// Returns the IDL type.
     fn idl_type() -> IdlType;
 
-    /// Returns the value as an IDL string.
-    fn map_to_idl(&self) -> Value;
+    /// Returns the equivalent value in JSON.
+    fn map_value_to_json(&self) -> Value;
+
+    /// Returns the equivalent value in Typescript.
+    fn map_value_to_typescript(&self, buffer: &mut String) {
+        write!(
+            buffer,
+            "{}",
+            serde_json::to_string(&self.map_value_to_json()).unwrap()
+        )
+        .unwrap();
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -14,10 +25,22 @@ pub trait IdlTypeMappable {
 // ----------------------------------------------------------------------------
 
 /// The different supported IDL types.
+#[allow(non_camel_case_types)]
 pub enum IdlType {
     Bool,
-    Number,
-    BigNumber,
+    u8,
+    u16,
+    u32,
+    u64,
+    u128,
+    i8,
+    i16,
+    i32,
+    i64,
+    i128,
+    f32,
+    f64,
+    Char,
     String,
     Array(Box<IdlType>),
     Tuple(Vec<IdlType>),
@@ -25,61 +48,52 @@ pub enum IdlType {
 }
 
 impl IdlType {
-    pub fn to_idl_value(&self) -> Value {
-        let mut obj = serde_json::Map::new();
-
+    /// Returns the equivalent type in JSON.
+    pub fn map_type_to_json(&self) -> Value {
         match self {
-            IdlType::Bool => {
-                obj.insert(
-                    "type".to_string(),
-                    serde_json::Value::String("boolean".to_string()),
-                );
-            }
-            IdlType::Number => {
-                obj.insert(
-                    "type".to_string(),
-                    serde_json::Value::String("number".to_string()),
-                );
-            }
-            IdlType::BigNumber => {
-                obj.insert(
-                    "type".to_string(),
-                    serde_json::Value::String("bigNumber".to_string()),
-                );
-            }
-            IdlType::String => {
-                obj.insert(
-                    "type".to_string(),
-                    serde_json::Value::String("string".to_string()),
-                );
-            }
+            IdlType::Bool => Value::String("boolean".to_string()),
+            IdlType::u8 => Value::String("u8".to_string()),
+            IdlType::u16 => Value::String("u16".to_string()),
+            IdlType::u32 => Value::String("u32".to_string()),
+            IdlType::u64 => Value::String("u64".to_string()),
+            IdlType::u128 => Value::String("u128".to_string()),
+            IdlType::i8 => Value::String("i8".to_string()),
+            IdlType::i16 => Value::String("i16".to_string()),
+            IdlType::i32 => Value::String("i32".to_string()),
+            IdlType::i64 => Value::String("i64".to_string()),
+            IdlType::i128 => Value::String("i128".to_string()),
+            IdlType::f32 => Value::String("f32".to_string()),
+            IdlType::f64 => Value::String("f64".to_string()),
+            IdlType::Char => Value::String("char".to_string()),
+            IdlType::String => Value::String("string".to_string()),
             IdlType::Array(v) => {
-                obj.insert(
-                    "type".to_string(),
-                    serde_json::Value::String("array".to_string()),
-                );
-                obj.insert("inner".to_string(), v.to_idl_value());
+                let mut obj = serde_json::Map::new();
+
+                obj.insert("base".to_string(), Value::String("array".to_string()));
+                obj.insert("inner".to_string(), v.map_type_to_json());
+
+                Value::Object(obj)
             }
             IdlType::Tuple(v) => {
-                obj.insert(
-                    "type".to_string(),
-                    serde_json::Value::String("tuple".to_string()),
-                );
+                let mut obj = serde_json::Map::new();
+
+                obj.insert("base".to_string(), Value::String("tuple".to_string()));
                 obj.insert(
                     "inner".to_string(),
-                    serde_json::Value::Array(v.iter().map(|v| v.to_idl_value()).collect()),
+                    Value::Array(v.iter().map(|v| v.map_type_to_json()).collect()),
                 );
+
+                Value::Object(obj)
             }
             IdlType::Option(v) => {
-                obj.insert(
-                    "type".to_string(),
-                    serde_json::Value::String("option".to_string()),
-                );
-                obj.insert("inner".to_string(), v.to_idl_value());
+                let mut obj = serde_json::Map::new();
+
+                obj.insert("base".to_string(), Value::String("option".to_string()));
+                obj.insert("inner".to_string(), v.map_type_to_json());
+
+                Value::Object(obj)
             }
         }
-
-        serde_json::Value::Object(obj)
     }
 }
 
@@ -92,8 +106,8 @@ impl IdlTypeMappable for () {
         IdlType::Tuple(vec![])
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::Array(vec![])
+    fn map_value_to_json(&self) -> Value {
+        Value::Array(vec![])
     }
 }
 
@@ -102,118 +116,150 @@ impl IdlTypeMappable for bool {
         IdlType::Bool
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::Bool(*self)
+    fn map_value_to_json(&self) -> Value {
+        Value::Bool(*self)
     }
 }
 
 impl IdlTypeMappable for u8 {
     fn idl_type() -> IdlType {
-        IdlType::Number
+        IdlType::u8
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::Number(Number::from(*self))
+    fn map_value_to_json(&self) -> Value {
+        Value::Number(Number::from(*self))
     }
 }
 
 impl IdlTypeMappable for u16 {
     fn idl_type() -> IdlType {
-        IdlType::Number
+        IdlType::u16
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::Number(Number::from(*self))
+    fn map_value_to_json(&self) -> Value {
+        Value::Number(Number::from(*self))
     }
 }
 
 impl IdlTypeMappable for u32 {
     fn idl_type() -> IdlType {
-        IdlType::Number
+        IdlType::u32
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::Number(Number::from(*self))
+    fn map_value_to_json(&self) -> Value {
+        Value::Number(Number::from(*self))
     }
 }
 
 impl IdlTypeMappable for u64 {
     fn idl_type() -> IdlType {
-        IdlType::BigNumber
+        IdlType::u64
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::String(self.to_string())
+    fn map_value_to_json(&self) -> Value {
+        Value::String(self.to_string())
+    }
+
+    fn map_value_to_typescript(&self, buffer: &mut String) {
+        write!(buffer, "new BN(\"{}\")", self).unwrap();
+    }
+}
+
+impl IdlTypeMappable for u128 {
+    fn idl_type() -> IdlType {
+        IdlType::u128
+    }
+
+    fn map_value_to_json(&self) -> Value {
+        Value::String(self.to_string())
+    }
+
+    fn map_value_to_typescript(&self, buffer: &mut String) {
+        write!(buffer, "new BN(\"{}\")", self).unwrap();
     }
 }
 
 impl IdlTypeMappable for i8 {
     fn idl_type() -> IdlType {
-        IdlType::Number
+        IdlType::i8
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::Number(Number::from(*self))
+    fn map_value_to_json(&self) -> Value {
+        Value::Number(Number::from(*self))
     }
 }
 
 impl IdlTypeMappable for i16 {
     fn idl_type() -> IdlType {
-        IdlType::Number
+        IdlType::i16
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::Number(Number::from(*self))
+    fn map_value_to_json(&self) -> Value {
+        Value::Number(Number::from(*self))
     }
 }
 
 impl IdlTypeMappable for i32 {
     fn idl_type() -> IdlType {
-        IdlType::Number
+        IdlType::i32
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::Number(Number::from(*self))
+    fn map_value_to_json(&self) -> Value {
+        Value::Number(Number::from(*self))
     }
 }
 
 impl IdlTypeMappable for i64 {
     fn idl_type() -> IdlType {
-        IdlType::BigNumber
+        IdlType::i64
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::String(self.to_string())
+    fn map_value_to_json(&self) -> Value {
+        Value::String(self.to_string())
+    }
+}
+
+impl IdlTypeMappable for i128 {
+    fn idl_type() -> IdlType {
+        IdlType::i128
+    }
+
+    fn map_value_to_json(&self) -> Value {
+        Value::String(self.to_string())
+    }
+
+    fn map_value_to_typescript(&self, buffer: &mut String) {
+        write!(buffer, "new BN(\"{}\")", self).unwrap();
     }
 }
 
 impl IdlTypeMappable for f32 {
     fn idl_type() -> IdlType {
-        IdlType::Number
+        IdlType::f32
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::String(self.to_string())
+    fn map_value_to_json(&self) -> Value {
+        Value::Number(Number::from_f64(*self as f64).unwrap())
     }
 }
 
 impl IdlTypeMappable for f64 {
     fn idl_type() -> IdlType {
-        IdlType::Number
+        IdlType::f64
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::String(self.to_string())
+    fn map_value_to_json(&self) -> Value {
+        Value::Number(Number::from_f64(*self as f64).unwrap())
     }
 }
 
 impl IdlTypeMappable for char {
     fn idl_type() -> IdlType {
-        IdlType::String
+        IdlType::Char
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::String(self.to_string())
+    fn map_value_to_json(&self) -> Value {
+        Value::String(format!("{}", *self))
     }
 }
 
@@ -222,8 +268,8 @@ impl IdlTypeMappable for String {
         IdlType::String
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::String(self.to_string())
+    fn map_value_to_json(&self) -> Value {
+        Value::String(self.to_string())
     }
 }
 
@@ -232,8 +278,8 @@ impl IdlTypeMappable for &str {
         IdlType::String
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::String(self.to_string())
+    fn map_value_to_json(&self) -> Value {
+        Value::String(self.to_string())
     }
 }
 
@@ -242,11 +288,29 @@ impl<T: IdlTypeMappable> IdlTypeMappable for Option<T> {
         IdlType::Option(Box::new(T::idl_type()))
     }
 
-    fn map_to_idl(&self) -> Value {
-        match self {
-            Some(v) => v.map_to_idl(),
-            None => serde_json::Value::Null,
+    fn map_value_to_json(&self) -> Value {
+        let mut obj = serde_json::Map::new();
+
+        obj.insert(
+            "isNull".to_string(),
+            Value::String(self.is_some().to_string()),
+        );
+
+        if let Some(v) = self {
+            obj.insert("value".to_string(), v.map_value_to_json());
         }
+
+        Value::Object(obj)
+    }
+}
+
+impl<T: IdlTypeMappable, const N: usize> IdlTypeMappable for [T; N] {
+    fn idl_type() -> IdlType {
+        IdlType::Array(Box::new(T::idl_type()))
+    }
+
+    fn map_value_to_json(&self) -> Value {
+        Value::Array(self.iter().map(|v| v.map_value_to_json()).collect())
     }
 }
 
@@ -255,8 +319,8 @@ impl<T: IdlTypeMappable> IdlTypeMappable for [T] {
         IdlType::Array(Box::new(T::idl_type()))
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::Array(self.iter().map(|v| v.map_to_idl()).collect())
+    fn map_value_to_json(&self) -> Value {
+        Value::Array(self.iter().map(|v| v.map_value_to_json()).collect())
     }
 }
 
@@ -265,8 +329,8 @@ impl<T: IdlTypeMappable> IdlTypeMappable for Vec<T> {
         IdlType::Array(Box::new(T::idl_type()))
     }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::Array(self.iter().map(|v| v.map_to_idl()).collect())
+    fn map_value_to_json(&self) -> Value {
+        Value::Array(self.iter().map(|v| v.map_value_to_json()).collect())
     }
 }
 
@@ -275,8 +339,8 @@ impl<T: IdlTypeMappable> IdlTypeMappable for &T {
         T::idl_type()
     }
 
-    fn map_to_idl(&self) -> Value {
-        T::map_to_idl(self)
+    fn map_value_to_json(&self) -> Value {
+        T::map_value_to_json(self)
     }
 }
 
@@ -285,63 +349,39 @@ impl<T: IdlTypeMappable> IdlTypeMappable for &mut T {
         T::idl_type()
     }
 
-    fn map_to_idl(&self) -> Value {
-        T::map_to_idl(self)
+    fn map_value_to_json(&self) -> Value {
+        T::map_value_to_json(self)
     }
 }
 
-impl<A: IdlTypeMappable> IdlTypeMappable for (A,) {
-    fn idl_type() -> IdlType {
-        IdlType::Tuple(vec![A::idl_type()])
-    }
+macro_rules! build_tuple_impls {
+    ($($id:tt: $param:ident),+) => {
+        build_tuple_impls!(@ [] [$($id: $param)+]);
+    };
+    (@ [$($idFirstList:tt: $paramFirstList:ident)*] [$idFirst:tt: $paramFirst:ident $($id:tt: $param:ident)*]) => {
+       build_tuple_impls!(@build $($idFirstList: $paramFirstList)*);
+       build_tuple_impls!(@ [$($idFirstList: $paramFirstList)* $idFirst: $paramFirst] [$($id: $param)*]);
+    };
+    (@ [$($id:tt: $param:ident)*] []) => {
+       build_tuple_impls!(@build $($id: $param)*);
+    };
+    (@build $($id:tt: $param:ident)+) => {
+        impl<$($param: IdlTypeMappable),+> IdlTypeMappable for ($($param),+,) {
+            fn idl_type() -> IdlType {
+                IdlType::Tuple(vec![$($param::idl_type()),*])
+            }
 
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::Array(vec![self.0.map_to_idl()])
-    }
+            fn map_value_to_json(&self) -> Value {
+                serde_json::Value::Array(vec![$(build_tuple_impls!(@expr self.$id).map_value_to_json()),*])
+            }
+        }
+    };
+    (@build) => {};
+
+    // Hack
+    (@expr $x:expr) => {
+        ($x)
+    };
 }
 
-impl<A: IdlTypeMappable, B: IdlTypeMappable> IdlTypeMappable for (A, B) {
-    fn idl_type() -> IdlType {
-        IdlType::Tuple(vec![A::idl_type(), B::idl_type()])
-    }
-
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::Array(vec![self.0.map_to_idl(), self.1.map_to_idl()])
-    }
-}
-
-impl<A: IdlTypeMappable, B: IdlTypeMappable, C: IdlTypeMappable> IdlTypeMappable for (A, B, C) {
-    fn idl_type() -> IdlType {
-        IdlType::Tuple(vec![A::idl_type(), B::idl_type(), C::idl_type()])
-    }
-
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::Array(vec![
-            self.0.map_to_idl(),
-            self.1.map_to_idl(),
-            self.2.map_to_idl(),
-        ])
-    }
-}
-
-impl<A: IdlTypeMappable, B: IdlTypeMappable, C: IdlTypeMappable, D: IdlTypeMappable> IdlTypeMappable
-    for (A, B, C, D)
-{
-    fn idl_type() -> IdlType {
-        IdlType::Tuple(vec![
-            A::idl_type(),
-            B::idl_type(),
-            C::idl_type(),
-            D::idl_type(),
-        ])
-    }
-
-    fn map_to_idl(&self) -> Value {
-        serde_json::Value::Array(vec![
-            self.0.map_to_idl(),
-            self.1.map_to_idl(),
-            self.2.map_to_idl(),
-            self.3.map_to_idl(),
-        ])
-    }
-}
+build_tuple_impls!(0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G, 7: H, 8: I, 9: J);

@@ -1,17 +1,18 @@
 use fankor_syn::fankor::{read_fankor_toml, FankorConfig};
+use parking_lot::{Mutex, MutexGuard};
+use std::collections::HashSet;
 use std::panic::{catch_unwind, resume_unwind, AssertUnwindSafe, UnwindSafe};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::Duration;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 use std::{fs, thread};
 
 use crate::build::IdlBuildContext;
 
 /// Contains helper data to do the building process.
 pub struct IdlContext {
-    finished: AtomicBool,
+    tasks: Arc<Mutex<IdlTasks>>,
     actions: Arc<Mutex<Vec<IdlAction>>>,
-    mutex: Arc<Mutex<IdlBuildContext>>,
+    build_context: Arc<Mutex<IdlBuildContext>>,
 }
 
 impl IdlContext {
@@ -20,47 +21,79 @@ impl IdlContext {
     /// Creates a new IDL build context.
     pub fn new() -> IdlContext {
         IdlContext {
-            finished: AtomicBool::new(false),
+            tasks: {
+                // Read tasks file.
+                let file_path = fs::canonicalize("./target/fankor-build/tasks")
+                    .expect("Cannot canonicalize the path to fankor-build folder");
+                let content = fs::read_to_string(&file_path).unwrap_or_else(|_| {
+                    panic!("Cannot read file at: {}", file_path.to_string_lossy())
+                });
+
+                let mut tasks = HashSet::new();
+
+                for task_hash in content.split('\n') {
+                    if task_hash.is_empty() {
+                        continue;
+                    }
+
+                    tasks.insert(task_hash.to_string());
+                }
+
+                Arc::new(Mutex::new(IdlTasks {
+                    task_registration_finished: false,
+                    remain_tasks: tasks.clone(),
+                    tasks,
+                }))
+            },
             actions: Arc::new(Mutex::new(Vec::new())),
-            mutex: Arc::new(Mutex::new(IdlBuildContext::new())),
+            build_context: Arc::new(Mutex::new(IdlBuildContext::new())),
         }
     }
 
     // GETTERS ----------------------------------------------------------------
 
-    /// Returns the finished flag.
-    pub fn finished(&self) -> bool {
-        self.finished.load(Ordering::SeqCst)
-    }
-
     /// Gets a mutable reference to the IDL build context.
     pub fn build_context(&self) -> MutexGuard<IdlBuildContext> {
-        self.mutex.lock().unwrap()
+        self.build_context.lock()
     }
 
     /// Gets the remaining number of actions.
     pub fn remaining_actions(&self) -> usize {
-        self.actions.lock().unwrap().len()
+        self.actions.lock().len()
     }
 
     // METHODS ----------------------------------------------------------------
 
-    /// Finishes the IDL building process setting the finished flag.
-    pub fn finish(&self) {
-        self.finished.store(true, Ordering::SeqCst);
-    }
-
     /// Adds an action to the context.
-    pub fn register_action<F>(&self, test_name: &'static str, file_path: &'static str, function: F)
-    where
+    pub fn register_action<F>(
+        &self,
+        task_hash: &'static str,
+        test_name: &'static str,
+        file_path: &'static str,
+        function: F,
+    ) where
         F: 'static + FnOnce(&mut IdlBuildContext) + UnwindSafe + Send,
     {
-        if self.finished() {
+        let mut idl_tasks = self.tasks.lock();
+
+        if idl_tasks.task_registration_finished {
+            // Add the task hash to the list of tasks in order to wait for it in the next execution.
+            idl_tasks.tasks.insert(task_hash.to_string());
+            idl_tasks.save_tasks();
+
             panic!("Race error: the task has not been registered before starting the building process.");
         }
 
-        let mut actions = self.actions.lock().unwrap();
+        if idl_tasks.tasks.contains(task_hash) {
+            idl_tasks.remain_tasks.remove(task_hash);
+        } else {
+            // Add the task hash to the list of tasks in order to wait for it in the next execution.
+            idl_tasks.tasks.insert(task_hash.to_string());
+        }
+
+        let mut actions = self.actions.lock();
         actions.push(IdlAction {
+            task_hash,
             test_name,
             file_path,
             function: Box::new(function),
@@ -69,7 +102,7 @@ impl IdlContext {
 
     /// Pops an action from the context.
     pub fn pop_action(&self) -> Option<IdlAction> {
-        let mut actions = self.actions.lock().unwrap();
+        let mut actions = self.actions.lock();
         actions.pop()
     }
 
@@ -78,22 +111,53 @@ impl IdlContext {
         // Read config.
         let config = read_fankor_toml();
 
-        // Wait enough time to let all other actions to be registered.
-        thread::sleep(Duration::from_millis(config.build().initial_delay.unwrap()));
+        let start = Instant::now();
+        let timeout = config.build().task_wait_timeout.unwrap() as u128;
+        loop {
+            let mut idl_tasks = self.tasks.lock();
 
+            if idl_tasks.remain_tasks.is_empty() {
+                // Finish the task registration.
+                idl_tasks.task_registration_finished = true;
+
+                // Save the tasks again.
+                idl_tasks.save_tasks();
+
+                break;
+            }
+
+            if start.elapsed().as_millis() >= timeout {
+                // Remove remaining tasks from the list because they are not present anymore.
+                let remain_tasks = std::mem::take(&mut idl_tasks.remain_tasks);
+                for task in remain_tasks.iter() {
+                    idl_tasks.tasks.remove(task);
+                }
+
+                // Finish the task registration.
+                idl_tasks.task_registration_finished = true;
+
+                // Save the tasks again.
+                idl_tasks.save_tasks();
+
+                break;
+            }
+
+            // Wait enough time to let all other actions to be registered.
+            thread::sleep(Duration::from_millis(
+                config.build().task_wait_interval.unwrap(),
+            ));
+        }
+
+        println!("All tasks registered");
+
+        println!("Executing actions...");
         let idl_build_context = self.execute_actions(self.build_context());
-        println!("All actions done [first round].");
-
-        // Finish the development process.
-        self.finish();
-
-        // Execute again just in case during the execution of previous actions another one was registered.
-        let idl_build_context = self.execute_actions(idl_build_context);
-        println!("All actions done [second round].");
+        println!("Executing actions... [DONE]");
 
         // Generate the IDL files.
+        println!("Generating IDL files...");
         self.generate_idl(&config, idl_build_context);
-        println!("IDL generation done.");
+        println!("Generating IDL files... [DONE]");
     }
 
     fn execute_actions<'a>(
@@ -134,8 +198,10 @@ impl IdlContext {
         let idl_str = serde_json::to_string(&idl).unwrap();
 
         // Generate typescript IDL.
-        let mut typescript_idl = idl_build_context.build_typescript_idl(config);
-        typescript_idl.push_str(format!("export const IDL = {};", idl_str).as_str());
+        let typescript_idl = format!(
+            "export type {} = {};\nexport const IDL = {};",
+            config.program.name, idl_str, idl_str
+        );
 
         fs::write(file_path.as_str(), idl_str.as_str())
             .unwrap_or_else(|e| panic!("Cannot write file '{}': {}", file_path, e));
@@ -157,7 +223,43 @@ impl Default for IdlContext {
 
 /// An action to build the IDL.
 pub struct IdlAction {
+    pub task_hash: &'static str,
     pub test_name: &'static str,
     pub file_path: &'static str,
     pub function: Box<dyn FnOnce(&mut IdlBuildContext) + UnwindSafe + Send>,
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/// An action to build the IDL.
+pub struct IdlTasks {
+    pub task_registration_finished: bool,
+    pub tasks: HashSet<String>,
+    pub remain_tasks: HashSet<String>,
+}
+
+impl IdlTasks {
+    // METHODS ----------------------------------------------------------------
+
+    pub fn save_tasks(&self) {
+        // Create folder.
+        let folder_path = fs::canonicalize("./target/fankor-build")
+            .expect("Cannot canonicalize the path to fankor-build folder");
+        fs::create_dir_all(&folder_path).unwrap_or_else(|_| {
+            panic!(
+                "Cannot create the directory at: {}",
+                folder_path.to_string_lossy()
+            )
+        });
+
+        // Open file.
+        let file_path = folder_path.join("tasks");
+        let content = self.tasks.iter().map(|v| v.as_str()).collect::<Vec<_>>();
+        let content = content.join("\n");
+
+        fs::write(&file_path, content.as_bytes())
+            .unwrap_or_else(|_| panic!("Cannot write file at: {}", file_path.to_string_lossy()));
+    }
 }
