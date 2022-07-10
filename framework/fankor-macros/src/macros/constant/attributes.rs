@@ -27,10 +27,7 @@ impl ConstantAttributes {
                         } else {
                             return Err(Error::new(
                                 meta.path.span(),
-                                format!(
-                                    "Unknown attribute: {}",
-                                    meta.path.to_token_stream().to_string()
-                                ),
+                                format!("Unknown attribute: {}", meta.path.to_token_stream()),
                             ));
                         }
                     }

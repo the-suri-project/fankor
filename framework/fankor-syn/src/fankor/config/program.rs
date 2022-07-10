@@ -34,7 +34,7 @@ impl FankorProgramConfig {
 impl Default for FankorProgramConfig {
     fn default() -> Self {
         FankorProgramConfig {
-            name: "smart_contract".to_string(),
+            name: "SmartContract".to_string(),
             pubkey: Pubkey::default().to_string(),
         }
     }

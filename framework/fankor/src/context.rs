@@ -53,7 +53,7 @@ impl IdlContext {
     /// Adds an action to the context.
     pub fn register_action<F>(&self, test_name: &'static str, file_path: &'static str, function: F)
     where
-        F: 'static + FnOnce(&mut IdlBuildContext) -> () + UnwindSafe + Send,
+        F: 'static + FnOnce(&mut IdlBuildContext) + UnwindSafe + Send,
     {
         if self.finished() {
             panic!("Race error: the task has not been registered before starting the building process.");
@@ -116,12 +116,8 @@ impl IdlContext {
         idl_build_context
     }
 
-    fn generate_idl(
-        &self,
-        config: &FankorConfig,
-        mut idl_build_context: MutexGuard<IdlBuildContext>,
-    ) {
-        let folder_path = format!("target/idl");
+    fn generate_idl(&self, config: &FankorConfig, idl_build_context: MutexGuard<IdlBuildContext>) {
+        let folder_path = "target/idl";
         let file_path = format!("{}/{}.json", folder_path, config.program.name);
         let file_path_ts = format!("{}/{}.ts", folder_path, config.program.name);
 
@@ -130,22 +126,28 @@ impl IdlContext {
         let _ = fs::remove_file(file_path_ts.as_str());
 
         // Create folders.
-        fs::create_dir_all(folder_path.as_str())
+        fs::create_dir_all(folder_path)
             .unwrap_or_else(|e| panic!("Cannot create folder '{}': {}", folder_path, e));
 
         // Generate the IDL.
         let idl = idl_build_context.build_idl(config);
         let idl_str = serde_json::to_string(&idl).unwrap();
-        let idl_ts_str = format!(
-            "export type {} = {}; export const IDL: {} = {};",
-            config.program.name, idl_str, config.program.name, idl_str
-        );
+
+        // Generate typescript IDL.
+        let mut typescript_idl = idl_build_context.build_typescript_idl(config);
+        typescript_idl.push_str(format!("export const IDL = {};", idl_str).as_str());
 
         fs::write(file_path.as_str(), idl_str.as_str())
             .unwrap_or_else(|e| panic!("Cannot write file '{}': {}", file_path, e));
 
-        fs::write(file_path_ts.as_str(), idl_ts_str.as_str())
+        fs::write(file_path_ts.as_str(), typescript_idl.as_str())
             .unwrap_or_else(|e| panic!("Cannot write file '{}': {}", file_path, e));
+    }
+}
+
+impl Default for IdlContext {
+    fn default() -> Self {
+        IdlContext::new()
     }
 }
 
@@ -157,5 +159,5 @@ impl IdlContext {
 pub struct IdlAction {
     pub test_name: &'static str,
     pub file_path: &'static str,
-    pub function: Box<dyn FnOnce(&mut IdlBuildContext) -> () + UnwindSafe + Send>,
+    pub function: Box<dyn FnOnce(&mut IdlBuildContext) + UnwindSafe + Send>,
 }

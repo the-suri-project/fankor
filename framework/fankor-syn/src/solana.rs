@@ -11,7 +11,7 @@ pub fn parse_pubkey(input: &str) -> Result<TokenStream> {
         Err(_) => {
             return Err(Error::new(
                 Span::call_site(),
-                format!("Failed to decode base58 string"),
+                "Failed to decode base58 string".to_string(),
             ));
         }
     };
