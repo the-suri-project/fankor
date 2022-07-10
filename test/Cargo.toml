@@ -1,0 +1,24 @@
+[package]
+name = "fankor-test"
+version = "0.1.0"
+authors = ["Julio Treviño Páez <julio.tpaez@gmail.com>"]
+repository = "https://github.com/juliotpaez/fankor"
+license = "Apache-2.0"
+description = "Fankor framework test"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[features]
+no-entrypoint = []
+builder = ["fankor/builder"]
+
+[dependencies]
+fankor = { path = "../framework/fankor", features = ["builder"] }
+
+[dev-dependencies]
+solana-sdk = "1.11.2"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

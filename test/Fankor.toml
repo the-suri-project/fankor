@@ -1,0 +1,7 @@
+[program]
+name = "FankorTest"
+pubkey = "7JKciYMdWKBo1yPhjVe5eDDjoxYfB8YhkAL7DRpJj3xE"
+
+#[build]
+#task_wait_interval = 100
+#task_wait_timeout = 2000
