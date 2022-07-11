@@ -1,49 +1,24 @@
 use sha2::{Digest, Sha256};
-use std::io::{Read, Write};
 
-/// Writes an x into the tasks file to let know the builder the number of tasks to wait for.
-pub fn string_to_hash(text: &str) -> String {
+/// Computes a 256-bit hash from a text.
+pub fn generate_discriminator(account_name: &str, remove_highest_bit: bool) -> (String, [u8; 32]) {
     // Compute the hash from the key.
     let mut hasher = Sha256::default();
-    hasher.update(text);
+    hasher.update(account_name);
 
-    bs58::encode(hasher.finalize()).into_string()
-}
+    let bytes = hasher.finalize();
+    let mut final_bytes = [0u8; 32];
 
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-/// Writes an x into the tasks file to let know the builder the number of tasks to wait for.
-pub fn write_task_hash_to_file(hash: &str) {
-    // Create folder.
-    let folder_path = std::fs::canonicalize("./target/fankor-build")
-        .expect("Cannot canonicalize the path to fankor-build folder");
-    std::fs::create_dir_all(&folder_path).unwrap_or_else(|_| {
-        panic!(
-            "Cannot create the directory at: {}",
-            folder_path.to_string_lossy()
-        )
-    });
-
-    // Open file.
-    let file_path = folder_path.join("tasks");
-    let mut file = std::fs::OpenOptions::new()
-        .create(true)
-        .write(true)
-        .read(true)
-        .append(true)
-        .open(&file_path)
-        .unwrap_or_else(|_| panic!("Cannot open file at: {}", file_path.to_string_lossy()));
-
-    // Read file and check whether the hash is already there.
-    let mut content = String::new();
-    file.read_to_string(&mut content)
-        .unwrap_or_else(|_| panic!("Cannot read file at: {}", file_path.to_string_lossy()));
-
-    if !content.contains(&hash) {
-        // Write file.
-        file.write_all(format!("{}\n", hash).as_bytes())
-            .unwrap_or_else(|_| panic!("Cannot write file at: {}", file_path.to_string_lossy()));
+    // Remove the highest bit of each byte.
+    if remove_highest_bit {
+        for (i, byte) in bytes.iter().enumerate() {
+            final_bytes[i] = byte & !0x80;
+        }
+    } else {
+        for (i, byte) in bytes.iter().enumerate() {
+            final_bytes[i] = *byte;
+        }
     }
+
+    (bs58::encode(&final_bytes).into_string(), final_bytes)
 }

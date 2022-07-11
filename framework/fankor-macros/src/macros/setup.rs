@@ -18,31 +18,9 @@ pub fn processor() -> Result<proc_macro::TokenStream> {
         /// Returns the program ID.
         pub fn id() -> ::fankor::prelude::solana_program::pubkey::Pubkey { ID }
 
+        #[cfg(test)]
         #[test]
-        fn test_id() { assert!(check_id(&id())); }
-
-        // --------------------------------------------------------------------
-        // --------------------------------------------------------------------
-        // --------------------------------------------------------------------
-
-        #[cfg(all(test, feature = "builder"))]
-        pub mod __internal__idl_builder_test__root {
-            use super::ID;
-
-            ::fankor::build::prelude::lazy_static! {
-                pub static ref IDL_CONTEXT: ::std::sync::Arc<::fankor::build::IdlContext> = ::std::sync::Arc::new(::fankor::build::IdlContext::new());
-            }
-
-            // ----------------------------------------------------------------
-            // ----------------------------------------------------------------
-            // ----------------------------------------------------------------
-
-            /// This is the main build function.
-            #[test]
-            fn build() {
-                IDL_CONTEXT.build();
-            }
-        }
+        fn __fankor_internal__test__id() { assert!(check_id(&id())); }
     };
 
     Ok(result.into())

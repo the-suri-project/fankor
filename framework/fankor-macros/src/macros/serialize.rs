@@ -2,24 +2,30 @@ use borsh_derive_internal::{enum_ser, struct_ser};
 use fankor_syn::Result;
 use proc_macro2::Span;
 use quote::quote;
-use syn::{Ident, ItemEnum, ItemImpl, ItemStruct, ItemUnion};
+use syn::spanned::Spanned;
+use syn::{Error, Ident, Item, ItemImpl};
 
-pub fn processor(input: proc_macro::TokenStream) -> Result<proc_macro::TokenStream> {
+pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
     let cratename = Ident::new("borsh", Span::call_site());
 
-    let (res, initial_where_clause) = if let Ok(input) = syn::parse::<ItemStruct>(input.clone()) {
-        let initial_where_clause = input.generics.where_clause.clone();
+    // Process input.
+    let (res, initial_where_clause) = match input {
+        Item::Struct(input) => {
+            let initial_where_clause = input.generics.where_clause.clone();
 
-        (struct_ser(&input, cratename)?, initial_where_clause)
-    } else if let Ok(input) = syn::parse::<ItemEnum>(input.clone()) {
-        let initial_where_clause = input.generics.where_clause.clone();
+            (struct_ser(&input, cratename)?, initial_where_clause)
+        }
+        Item::Enum(input) => {
+            let initial_where_clause = input.generics.where_clause.clone();
 
-        (enum_ser(&input, cratename)?, initial_where_clause)
-    } else if syn::parse::<ItemUnion>(input).is_ok() {
-        unimplemented!()
-    } else {
-        // Derive macros can only be defined on structs, enums, and unions.
-        unreachable!()
+            (enum_ser(&input, cratename)?, initial_where_clause)
+        }
+        _ => {
+            return Err(Error::new(
+                input.span(),
+                "FankorSerialize macro can only be applied to struct or enum declarations",
+            ));
+        }
     };
 
     let mut impl_block = syn::parse2::<ItemImpl>(res).unwrap();

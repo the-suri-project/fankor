@@ -28,6 +28,8 @@ pub fn setup(args: TokenStream) -> TokenStream {
 /// A custom implementation of BorshSerialize that fix an issue with the where clause.
 #[proc_macro_derive(FankorSerialize, attributes(borsh_skip))]
 pub fn serialize(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as Item);
+
     match macros::serialize::processor(input) {
         Ok(v) => v,
         Err(e) => e.to_compile_error().into(),
@@ -41,6 +43,8 @@ pub fn serialize(input: TokenStream) -> TokenStream {
 /// A custom implementation of BorshDeserialize that fix an issue with the where clause.
 #[proc_macro_derive(FankorDeserialize, attributes(borsh_skip, borsh_init))]
 pub fn deserialize(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as Item);
+
     match macros::deserialize::processor(input) {
         Ok(v) => v,
         Err(e) => e.to_compile_error().into(),
@@ -52,12 +56,13 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 
 /// This macro marks a constant to be exposed into the IDL.
+/// This macro transforms an enum into an error enum.
 #[proc_macro_attribute]
-pub fn constant(args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn error_code(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
     let input = parse_macro_input!(input as Item);
 
-    match macros::constant::processor(args, input) {
+    match macros::error::processor(args, input) {
         Ok(v) => v,
         Err(e) => e.to_compile_error().into(),
     }

@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use syn::{parse_str, Error, Expr, Lit, LitStr};
+use syn::{parse_str, Error, Expr, Lit, LitInt, LitStr};
 
 use crate::Result;
 
@@ -19,10 +19,22 @@ pub fn parse_expression_from_string(lit: LitStr) -> Result<TokenStream> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-/// Unwraps a string literal from generic literal.
+/// Unwraps a string literal from a generic literal.
 pub fn unwrap_string_from_literal(lit: Lit) -> Result<LitStr> {
     match lit {
-        syn::Lit::Str(lit) => Ok(lit),
+        Lit::Str(lit) => Ok(lit),
         v => Err(Error::new(v.span(), "Expected string literal")),
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/// Unwraps an int literal from a generic literal.
+pub fn unwrap_int_from_literal(lit: Lit) -> Result<LitInt> {
+    match lit {
+        Lit::Int(lit) => Ok(lit),
+        v => Err(Error::new(v.span(), "Expected integer literal")),
     }
 }

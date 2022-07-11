@@ -12,10 +12,9 @@ crate-type = ["cdylib", "lib"]
 
 [features]
 no-entrypoint = []
-builder = ["fankor/builder"]
 
 [dependencies]
-fankor = { path = "../framework/fankor", features = ["builder"] }
+fankor = { path = "../framework/fankor" }
 
 [dev-dependencies]
 solana-sdk = "1.11.2"
