@@ -1,6 +1,6 @@
-pub use build::*;
+pub use accounts::*;
 pub use program::*;
-mod build;
+mod accounts;
 mod program;
 
 use serde::{Deserialize, Serialize};
@@ -12,24 +12,25 @@ pub struct FankorConfig {
     pub program: FankorProgramConfig,
 
     /// The initial delay in milliseconds.
-    pub build: Option<FankorBuildConfig>,
+    #[serde(default)]
+    pub accounts: Option<FankorAccountsConfig>,
 }
 
 impl FankorConfig {
     // GETTERS ----------------------------------------------------------------
 
     /// Returns the build configuration.
-    pub fn build(&self) -> &FankorBuildConfig {
-        self.build.as_ref().unwrap()
+    pub fn build(&self) -> &FankorAccountsConfig {
+        self.accounts.as_ref().unwrap()
     }
 
     // METHODS ----------------------------------------------------------------
 
     pub fn fill_with_defaults(&mut self) {
-        if let Some(build) = &mut self.build {
+        if let Some(build) = &mut self.accounts {
             build.fill_with_defaults();
         } else {
-            self.build = Some(FankorBuildConfig::default());
+            self.accounts = Some(FankorAccountsConfig::default());
         }
     }
 
@@ -42,7 +43,7 @@ impl Default for FankorConfig {
     fn default() -> Self {
         FankorConfig {
             program: FankorProgramConfig::default(),
-            build: Some(FankorBuildConfig::default()),
+            accounts: Some(FankorAccountsConfig::default()),
         }
     }
 }

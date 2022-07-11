@@ -10,6 +10,43 @@ use crate as fankor;
 /// The starting point for user defined error codes.
 pub const ERROR_CODE_OFFSET: u32 = 6000;
 
+/// Error codes that can be returned by internal framework code.
+///
+/// - 3000..4000 - Accounts
+/// - 5500       - custom program error without code
+///
+/// The starting point for user-defined errors is defined
+/// by the [ERROR_CODE_OFFSET](crate::error::ERROR_CODE_OFFSET).
+#[error_code(offset = 0)]
+pub enum ErrorCode {
+    // Accounts
+    /// No 8 byte discriminator was found on the account
+    #[msg("No 8 byte discriminator was found on the account: {}", account)]
+    AccountDiscriminatorNotFound { account: String },
+
+    /// 8 byte discriminator did not match what was expected
+    #[msg(
+        "8 byte discriminator {:?} did not match what was expected {:?} of account {}",
+        actual,
+        expected,
+        account
+    )]
+    #[continue_from(3000)]
+    AccountDiscriminatorMismatch {
+        actual: Vec<u8>,
+        expected: Vec<u8>,
+        account: String,
+    },
+
+    /// Failed to serialize the account
+    #[msg("Failed to serialize the account: {}", account)]
+    AccountDidNotSerialize { account: String },
+
+    /// Failed to deserialize the account
+    #[msg("Failed to deserialize the account: {}", account)]
+    AccountDidNotDeserialize { account: String },
+}
+
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------

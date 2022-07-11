@@ -26,13 +26,12 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     };
 
     let name = enum_item.ident;
-    let name_str = name.to_string();
 
     // Parse fields.
     let variants = enum_item
         .variants
         .into_iter()
-        .map(|v| ErrorVariant::from(v))
+        .map(ErrorVariant::from)
         .collect::<Result<Vec<_>>>()?;
     let visibility = enum_item.vis;
     let generic_params = &enum_item.generics.params;
@@ -124,7 +123,10 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             }
         };
 
-        discriminators.push(discriminant.clone());
+        let discriminant_field_name = format!("{}::{}", name.to_string(), variant_name.to_string());
+        discriminators.push(quote! {
+            (#discriminant_field_name, #discriminant)
+        });
 
         Ok(match fields {
             Fields::Named(_) => quote! {
@@ -176,10 +178,13 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
     });
 
-    let test_variant = format_ident!("__fankor_internal__test__{}", name);
+    let test_unique_variant_error_codes = format_ident!(
+        "__fankor_internal__test__unique_variant_error_codes_{}",
+        name
+    );
 
     let result = quote! {
-        #[derive(::std::fmt::Debug, ::std::clone::Clone, Copy)]
+        #[derive(::std::fmt::Debug, ::std::clone::Clone)]
         #[repr(u32)]
         #visibility enum #name #generic_params #generic_where_clause {
             #(#final_enum_variants,)*
@@ -228,16 +233,14 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[automatically_derived]
         #[cfg(test)]
         #[test]
-        fn #test_variant() {
-            let values = &[#(#discriminators),*];
-            let mut current = std::collections::HashSet::new();
+        fn #test_unique_variant_error_codes() {
+            let discriminators = [#(#discriminators),*];
+            let helper = &crate::__internal__idl_builder_test__root::ERROR_HELPER;
 
-            for value in values {
-                if current.contains(value) {
-                    panic!("{} contains two elements with the same discriminator", #name_str);
+            for (name, discriminator) in discriminators {
+                if let Err(item) = helper.add_error(name, discriminator) {
+                    panic!("There is a discriminator collision between errors. First: {}, Second: {}, Discriminator: {}", name, item.name, discriminator);
                 }
-
-                current.insert(*value);
             }
         }
     };

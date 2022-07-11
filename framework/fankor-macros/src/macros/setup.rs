@@ -21,6 +21,18 @@ pub fn processor() -> Result<proc_macro::TokenStream> {
         #[cfg(test)]
         #[test]
         fn __fankor_internal__test__id() { assert!(check_id(&id())); }
+
+        // --------------------------------------------------------------------
+        // --------------------------------------------------------------------
+        // --------------------------------------------------------------------
+
+        #[cfg(test)]
+        pub mod __internal__idl_builder_test__root {
+            ::fankor::helpers::lazy_static::lazy_static! {
+                pub static ref ERROR_HELPER: ::fankor::helpers::ErrorHelper = ::fankor::helpers::ErrorHelper::new();
+                pub static ref ACCOUNT_HELPER: ::fankor::helpers::AccountHelper = ::fankor::helpers::AccountHelper::new();
+            }
+        }
     };
 
     Ok(result.into())

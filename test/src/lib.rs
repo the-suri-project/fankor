@@ -1,8 +1,9 @@
 use fankor::prelude::*;
 
+mod accounts;
 mod arguments;
-mod constants;
 #[cfg(not(feature = "no-entrypoint"))]
 mod entrypoint;
+mod errors;
 
 setup!();

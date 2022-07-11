@@ -63,7 +63,7 @@ impl ErrorVariant {
                     Err(_) => {
                         return Err(Error::new(
                             attribute_span,
-                            format!("The msg attribute expects arguments following the format of the format! macro"),
+                            "The msg attribute expects arguments following the format of the format! macro",
                         ));
                     }
                 };
@@ -110,7 +110,7 @@ impl ErrorVariant {
                     Err(_) => {
                         return Err(Error::new(
                             attribute_span,
-                            format!("The continue_from attribute expects one integer literal as arguments"),
+                            "The continue_from attribute expects one integer literal as arguments",
                         ));
                     }
                 };
@@ -118,7 +118,7 @@ impl ErrorVariant {
                 if args.nested.len() != 1 {
                     return Err(Error::new(
                         attribute_span,
-                        format!("The continue_from attribute expects only one argument"),
+                        "The continue_from attribute expects only one argument",
                     ));
                 }
 
