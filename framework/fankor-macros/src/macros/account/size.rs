@@ -30,13 +30,13 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 .map(|v| {
                     let name = v.ident.as_ref().unwrap();
 
-                    quote!(
-                        self.#name.actual_account_size()
-                    )
+                    quote! {
+                        ::fankor::traits::AccountSize::actual_account_size(&self.#name)
+                    }
                 })
                 .collect::<Vec<_>>();
 
-            quote!(
+            quote! {
                 #[automatically_derived]
                  impl #generic_params ::fankor::traits::AccountSize for #name #generic_params #generic_where_clause {
                     fn min_account_size() -> usize {
@@ -55,7 +55,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         actual_size
                     }
                 }
-            )
+            }
         }
         Item::Enum(item) => {
             let name = &item.ident;
@@ -102,19 +102,19 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             .collect::<Vec<_>>();
 
                         let actual_size_variants = variant_names.iter().map(|name| {
-                            quote!(
-                                #name.actual_account_size()
-                            )
+                            quote! {
+                                ::fankor::traits::AccountSize::actual_account_size(#name)
+                            }
                         });
 
                         let variant_name = &variant.ident;
-                        Some(quote!(#name::#variant_name {#(#variant_names),*} => {
+                        Some(quote! {#name::#variant_name {#(#variant_names),*} => {
                             let mut actual_size = 1;
 
                             #(actual_size += #actual_size_variants;)*
 
                             actual_size
-                        }))
+                        }})
                     }
                     Fields::Unnamed(v) => {
                         let variant_names = v
@@ -125,25 +125,25 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             .collect::<Vec<_>>();
 
                         let actual_size_variants = variant_names.iter().map(|name| {
-                            quote!(
-                                #name.actual_account_size()
-                            )
+                            quote! {
+                                ::fankor::traits::AccountSize::actual_account_size(#name)
+                            }
                         });
 
                         let variant_name = &variant.ident;
-                        Some(quote!(#name::#variant_name(#(#variant_names),*) => {
+                        Some(quote! {#name::#variant_name(#(#variant_names),*) => {
                             let mut actual_size = 1;
 
                             #(actual_size += #actual_size_variants;)*
 
                             actual_size
-                        }))
+                        }})
                     }
                     Fields::Unit => return None,
                 })
                 .collect::<Vec<_>>();
 
-            quote!(
+            quote! {
                 #[automatically_derived]
                 impl #generic_params ::fankor::traits::AccountSize for #name #generic_params #generic_where_clause {
                     fn min_account_size() -> usize {
@@ -163,7 +163,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         actual_size
                     }
                 }
-            )
+            }
         }
         _ => {
             return Err(Error::new(
@@ -182,6 +182,6 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
 pub fn get_min_size_of(ty: &Type) -> TokenStream {
     quote! {
-        <#ty>::min_account_size()
+        <#ty as ::fankor::traits::AccountSize>::min_account_size()
     }
 }
