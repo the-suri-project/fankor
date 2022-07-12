@@ -76,6 +76,52 @@ pub fn account(args: TokenStream, input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
+/// Generates the size methods for structs and enums in order to get their minimum
+/// size and the actual size.
+#[proc_macro_derive(AccountSize)]
+pub fn account_size(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as Item);
+
+    match macros::account::size::processor(input) {
+        Ok(v) => v,
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/// Generates field offsets for structs and enums.
+/// The offsets are based in the fixed (minimum) size of the accounts, so having:
+/// ```ignore
+/// struct Foo {
+///     a: Vec<u8>,
+///     b: u16,
+/// }
+/// ```
+/// `a` will have offset 0 and `b` will have offset 4, because the minimum size of
+/// a `Vec<_>` is just the 4-bytes length field with no content. This causes that
+/// if `a` contains any value, the offset of `b` will be incorrect.
+///
+/// For those cases use `actual_offset` providing an object to get the correct offset
+/// of a field inside that object.
+///
+/// > Requires that the struct or enum has the `AccountSize` trait implemented.
+#[proc_macro_derive(AccountOffsets)]
+pub fn account_offsets(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as Item);
+
+    match macros::account::offset::processor(input) {
+        Ok(v) => v,
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
 /// This macro transforms an enum into an error enum.
 #[proc_macro_attribute]
 pub fn error_code(args: TokenStream, input: TokenStream) -> TokenStream {

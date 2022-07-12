@@ -1,3 +1,6 @@
+pub mod offset;
+pub mod size;
+
 use fankor_syn::fankor::read_fankor_toml;
 use quote::{format_ident, quote};
 use syn::spanned::Spanned;
