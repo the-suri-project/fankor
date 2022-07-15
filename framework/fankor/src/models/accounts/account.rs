@@ -423,7 +423,7 @@ impl<'info, T: Debug + crate::traits::Account> InstructionAccount<'info> for Acc
 impl<'info, T: Debug + crate::traits::Account> Debug for Account<'info, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Account")
-            .field("account", &self.data)
+            .field("data", &self.data)
             .field("info", &self.info)
             .finish()
     }
