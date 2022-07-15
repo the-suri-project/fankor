@@ -2,7 +2,7 @@ use crate::macros::instruction_accounts::parser::CustomMetaList;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::spanned::Spanned;
-use syn::{Attribute, Error, Type};
+use syn::{Attribute, Error, Fields, Type, Variant};
 
 use crate::Result;
 
@@ -43,6 +43,42 @@ impl Field {
         new_field.parse_attributes(field.attrs)?;
 
         Ok(new_field)
+    }
+
+    /// Creates a new instance of the ErrorAttributes struct from the given attributes.
+    pub fn from_variant(variant: Variant) -> Result<Field> {
+        match variant.fields {
+            Fields::Unnamed(v) => {
+                if v.unnamed.len() != 1 {
+                    return Err(Error::new(
+                        v.span(),
+                        "Instruction variants can only have a single unnamed field, i.e. Variant(<account>)",
+                    ));
+                }
+
+                let mut new_field = Field {
+                    name: variant.ident,
+                    ty: v.unnamed.first().unwrap().ty.clone(),
+                    owner: None,
+                    address: None,
+                    initialized: None,
+                    writable: None,
+                    executable: None,
+                    rent_exempt: None,
+                    signer: None,
+                    min: None,
+                    max: None,
+                };
+
+                new_field.parse_attributes(variant.attrs)?;
+
+                Ok(new_field)
+            }
+            _ => Err(Error::new(
+                variant.span(),
+                "Instruction variants must be like: Variant(<account>)",
+            )),
+        }
     }
 
     fn parse_attributes(&mut self, mut attrs: Vec<Attribute>) -> Result<()> {
