@@ -2,6 +2,7 @@ use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+#[derive(Default)]
 pub struct ErrorHelper {
     pub discriminators: Arc<Mutex<HashMap<u32, ErrorHelperItem>>>,
 }
@@ -16,9 +17,7 @@ impl ErrorHelper {
     // CONSTRUCTORS -----------------------------------------------------------
 
     pub fn new() -> ErrorHelper {
-        ErrorHelper {
-            discriminators: Arc::new(Mutex::new(HashMap::new())),
-        }
+        Self::default()
     }
 
     // METHODS ----------------------------------------------------------------

@@ -2,6 +2,7 @@ use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
 
+#[derive(Default)]
 pub struct AccountHelper {
     pub discriminators: Arc<Mutex<HashMap<String, AccountHelperItem>>>,
 }
@@ -16,9 +17,7 @@ impl AccountHelper {
     // CONSTRUCTORS -----------------------------------------------------------
 
     pub fn new() -> AccountHelper {
-        AccountHelper {
-            discriminators: Arc::new(Mutex::new(HashMap::new())),
-        }
+        AccountHelper::default()
     }
 
     // METHODS ----------------------------------------------------------------

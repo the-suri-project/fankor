@@ -198,82 +198,76 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     Fields::Unit => None,
                 });
 
-            let actual_offsets = item
-                .variants
-                .iter()
-                .filter_map(|variant| match &variant.fields {
-                    Fields::Named(v) => {
-                        let variant_name = &variant.ident;
+            let actual_offsets = item.variants.iter().map(|variant| match &variant.fields {
+                Fields::Named(v) => {
+                    let variant_name = &variant.ident;
 
-                        let args = v
-                            .named
-                            .iter()
-                            .map(|v| v.ident.as_ref().unwrap());
+                    let args = v.named.iter().map(|v| v.ident.as_ref().unwrap());
 
-                        let actual_offsets = v.named.iter().map(|v| {
-                            let arg_name = v.ident.as_ref().unwrap();
-                            let field = format_ident!(
-                                    "{}{}",
-                                    variant_name,
-                                    case_converter.convert(arg_name.to_string()),
-                                    span = arg_name.span()
-                                );
+                    let actual_offsets = v.named.iter().map(|v| {
+                        let arg_name = v.ident.as_ref().unwrap();
+                        let field = format_ident!(
+                            "{}{}",
+                            variant_name,
+                            case_converter.convert(arg_name.to_string()),
+                            span = arg_name.span()
+                        );
 
-                            quote! {
-                                if *self == #fields_name::#field {
-                                    return Some(size);
-                                }
-
-                                size += ::fankor::traits::AccountSize::actual_account_size(#arg_name);
+                        quote! {
+                            if *self == #fields_name::#field {
+                                return Some(size);
                             }
-                        });
 
-                        Some(quote! {
-                            #name::#variant_name {#(#args),*} => {
-                                let mut size = 1;
-                                #(#actual_offsets)*
-                                None
+                            size += ::fankor::traits::AccountSize::actual_account_size(#arg_name);
+                        }
+                    });
+
+                    Some(quote! {
+                        #name::#variant_name {#(#args),*} => {
+                            let mut size = 1;
+                            #(#actual_offsets)*
+                            None
+                        }
+                    })
+                }
+                Fields::Unnamed(v) => {
+                    let variant_name = &variant.ident;
+
+                    let args = v
+                        .unnamed
+                        .iter()
+                        .enumerate()
+                        .map(|(i, _)| format_ident!("v{}", i));
+
+                    let actual_offsets = v.unnamed.iter().enumerate().map(|(i, _)| {
+                        let arg_name = format_ident!("v{}", i);
+                        let field = format_ident!("{}{}", variant_name, i);
+
+                        quote! {
+                            if *self == #fields_name::#field {
+                                return Some(size);
                             }
-                        })
-                    }
-                    Fields::Unnamed(v) => {
-                        let variant_name = &variant.ident;
 
-                        let args = v
-                            .unnamed
-                            .iter()
-                            .enumerate()
-                            .map(|(i, _)| format_ident!("v{}", i));
+                            size += ::fankor::traits::AccountSize::actual_account_size(#arg_name);
+                        }
+                    });
 
-                        let actual_offsets = v.unnamed.iter().enumerate().map(|(i, _)| {
-                            let arg_name = format_ident!("v{}", i);
-                            let field = format_ident!("{}{}", variant_name, i);
+                    Some(quote! {
+                        #name::#variant_name (#(#args),*) => {
+                            let mut size = 1;
+                            #(#actual_offsets)*
+                            None
+                        }
+                    })
+                }
+                Fields::Unit => {
+                    let variant_name = &variant.ident;
 
-                            quote! {
-                                if *self == #fields_name::#field {
-                                    return Some(size);
-                                }
-
-                                size += ::fankor::traits::AccountSize::actual_account_size(#arg_name);
-                            }
-                        });
-
-                        Some(quote! {
-                            #name::#variant_name (#(#args),*) => {
-                                let mut size = 1;
-                                #(#actual_offsets)*
-                                None
-                            }
-                        })
-                    }
-                    Fields::Unit => {
-                        let variant_name = &variant.ident;
-
-                        Some(quote! {
-                            #name::#variant_name => None,
-                        })
-                    },
-                });
+                    Some(quote! {
+                        #name::#variant_name => None,
+                    })
+                }
+            });
 
             quote! {
                 #[allow(dead_code)]

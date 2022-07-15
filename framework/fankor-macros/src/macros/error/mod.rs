@@ -123,7 +123,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             }
         };
 
-        let discriminant_field_name = format!("{}::{}", name.to_string(), variant_name.to_string());
+        let discriminant_field_name = format!("{}::{}", name, variant_name);
         discriminators.push(quote! {
             (#discriminant_field_name, #discriminant)
         });

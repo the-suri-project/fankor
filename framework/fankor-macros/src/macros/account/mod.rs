@@ -97,10 +97,11 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                         account: #name_str.to_string(),
                     }.into());
                 }
-                Self::try_deserialize_unchecked(buf)
+
+                unsafe {Self::try_deserialize_unchecked(buf)}
             }
 
-            fn try_deserialize_unchecked(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
+            unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
                 let mut data: &[u8] = &buf[8..];
                 ::fankor::prelude::borsh::BorshDeserialize::deserialize(&mut data)
                     .map_err(|_| ::fankor::errors::ErrorCode::AccountDidNotDeserialize {
@@ -115,8 +116,8 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 &[#(#discriminator,)*]
             }
 
-             fn owner() -> Pubkey {
-                crate::ID
+             fn owner() -> &'static Pubkey {
+                &crate::ID
             }
         }
 

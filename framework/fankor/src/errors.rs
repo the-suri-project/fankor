@@ -3,6 +3,7 @@ pub type FankorResult<T> = Result<T, Error>;
 use fankor_macros::error_code;
 use solana_program::msg;
 use solana_program::program_error::ProgramError;
+use solana_program::pubkey::Pubkey;
 use std::fmt::{Debug, Display};
 
 use crate as fankor;
@@ -45,6 +46,83 @@ pub enum ErrorCode {
     /// Failed to deserialize the account
     #[msg("Failed to deserialize the account: {}", account)]
     AccountDidNotDeserialize { account: String },
+
+    /// Cannot modify an account that is not owned by the current program
+    #[msg(
+        "Cannot {} an account that is not owned by the current program: {}",
+        address,
+        action
+    )]
+    AccountNotOwnedByProgram {
+        address: Pubkey,
+        action: &'static str,
+    },
+
+    /// Cannot modify a readonly account
+    #[msg("Cannot {} a readonly account: {}", address, action)]
+    ReadonlyAccountModification {
+        address: Pubkey,
+        action: &'static str,
+    },
+
+    /// Cannot create a mutable reference to a readonly account
+    #[msg("Cannot create a mutable reference to a readonly account: {}", address)]
+    MutRefToReadonlyAccount { address: Pubkey },
+
+    /// Cannot create an account from an AccountInfo which has been already marked as closed. If your purpose is to revive the account, please use: FankorContext::revive
+    #[msg("Cannot create an account from an AccountInfo ({}) which has been already marked as closed. If your purpose is to revive the account, please use: FankorContext::revive", address)]
+    NewFromClosedAccount { address: Pubkey },
+
+    /// Cannot modify a readonly account
+    #[msg("Cannot {} a readonly account: {}", address, action)]
+    AccountNotRentExempt {
+        address: Pubkey,
+        action: &'static str,
+    },
+
+    /// Account not initialized
+    #[msg("Account {} not initialized", address)]
+    AccountNotInitialized { address: Pubkey },
+
+    /// Account was expected to be owned by a program but it is owned by another
+    #[msg(
+        "Account {} was expected to be owned by program {} but it is owned by {}",
+        address,
+        expected,
+        actual
+    )]
+    AccountOwnedByWrongProgram {
+        address: Pubkey,
+        expected: Pubkey,
+        actual: Pubkey,
+    },
+
+    /// The account cannot be writen because it is already closed
+    #[msg(
+        "Cannot {} the account {} because it is already closed",
+        action,
+        address
+    )]
+    AlreadyClosedAccount {
+        address: Pubkey,
+        action: &'static str,
+    },
+
+    /// A program was expected but it is another instead
+    #[msg("The program {} was expected but it is {} instead", expected, actual)]
+    InvalidProgram { expected: Pubkey, actual: Pubkey },
+
+    /// The program was expected to be executable
+    #[msg("The program {} was expected to be executable", program)]
+    ProgramIsNotExecutable { program: Pubkey },
+
+    /// There are not enough accounts to deserialize the instruction
+    #[msg("There are not enough accounts to deserialize the instruction")]
+    NotEnoughAccountKeys,
+
+    /// There are not enough valid accounts to deserialize the account list
+    #[msg("There are not enough valid accounts to deserialize the account list")]
+    NotEnoughValidAccountForVec,
 }
 
 // ----------------------------------------------------------------------------

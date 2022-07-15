@@ -139,7 +139,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             actual_size
                         }})
                     }
-                    Fields::Unit => return None,
+                    Fields::Unit => None,
                 })
                 .collect::<Vec<_>>();
 
