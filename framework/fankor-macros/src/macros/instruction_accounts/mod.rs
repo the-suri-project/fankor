@@ -474,8 +474,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 });
 
             quote! {
-                 #[automatically_derived]
-                 impl #generic_params ::fankor::traits::InstructionAccount<'info> for #name #generic_params #generic_where_clause {
+                #[automatically_derived]
+                impl #generic_params ::fankor::traits::InstructionAccount<'info> for #name #generic_params #generic_where_clause {
                     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
                     where
                         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
@@ -493,7 +493,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                         Err(err)
                     }
-                 }
+                }
             }
         }
         _ => {

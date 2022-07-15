@@ -24,8 +24,8 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
     // Process input.
     let (name, generics, item) = match &input {
-        Item::Struct(item) => (&item.ident, &item.generics, quote! { #item}),
-        Item::Enum(item) => (&item.ident, &item.generics, quote! { #item}),
+        Item::Struct(item) => (&item.ident, &item.generics, quote! { #item }),
+        Item::Enum(item) => (&item.ident, &item.generics, quote! { #item }),
         _ => {
             return Err(Error::new(
                 input.span(),

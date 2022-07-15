@@ -5,7 +5,6 @@ pub use crate::models::types::sets::{FnkSetU16, FnkSetU24, FnkSetU8};
 pub use crate::models::types::strings::{FnkStringU16, FnkStringU24, FnkStringU8};
 pub use crate::models::types::vectors::{FnkVecU16, FnkVecU24, FnkVecU8};
 pub use crate::models::*;
-pub use crate::traits::Instruction;
 pub use borsh;
 pub use bs58;
 pub use fankor_macros::*;
