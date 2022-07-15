@@ -122,6 +122,21 @@ pub fn account_offsets(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
+/// Derives the `InstructionAccount` trait for the given struct/enum.
+#[proc_macro_derive(InstructionAccounts, attributes(account))]
+pub fn instruction_accounts(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as Item);
+
+    match macros::instruction_accounts::processor(input) {
+        Ok(v) => v,
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
 /// This macro transforms an enum into an error enum.
 #[proc_macro_attribute]
 pub fn error_code(args: TokenStream, input: TokenStream) -> TokenStream {

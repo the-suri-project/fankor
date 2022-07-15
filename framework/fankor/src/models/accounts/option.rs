@@ -5,6 +5,16 @@ use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 
 impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Option<T> {
+    fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
+    where
+        F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
+    {
+        match self {
+            Some(v) => v.verify_account_infos(f),
+            None => Ok(()),
+        }
+    }
+
     #[inline(never)]
     fn try_from(
         context: &'info FankorContext<'info>,

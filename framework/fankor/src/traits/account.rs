@@ -16,11 +16,6 @@ pub trait Account:
     fn owner() -> &'static Pubkey;
 }
 
-pub trait ProgramAccount: Account {
-    /// The address that identify the program.
-    fn address() -> &'static Pubkey;
-}
-
 pub trait AccountSerialize {
     /// Serializes the account data into `writer`.
     fn try_serialize<W: Write>(&self, _writer: &mut W) -> FankorResult<()> {

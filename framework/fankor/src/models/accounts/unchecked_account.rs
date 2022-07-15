@@ -1,5 +1,5 @@
 use crate::errors::{ErrorCode, FankorResult};
-use crate::models::{FankorContext, FankorContextExitAction};
+use crate::models::FankorContext;
 use crate::traits::InstructionAccount;
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
@@ -78,11 +78,6 @@ impl<'info> UncheckedAccount<'info> {
         let rent = Rent::get().expect("Cannot access Rent Sysvar");
 
         rent.is_exempt(lamports, data_len)
-    }
-
-    /// The exit action of this account.
-    pub fn exit_action(&self) -> Option<FankorContextExitAction<'info>> {
-        self.context().get_exit_action(self.info)
     }
 
     /// Whether the account is owned by the current program.
@@ -172,6 +167,13 @@ impl<'info> UncheckedAccount<'info> {
 }
 
 impl<'info> InstructionAccount<'info> for UncheckedAccount<'info> {
+    fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
+    where
+        F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
+    {
+        f(self.context, self.info)
+    }
+
     #[inline(never)]
     fn try_from(
         context: &'info FankorContext<'info>,

@@ -1,39 +1,36 @@
 use crate::errors::{ErrorCode, FankorResult};
-use crate::models::FankorContext;
-use crate::traits::InstructionAccount;
+use crate::models::{Account, Either, FankorContext};
+use crate::traits::{AccountSize, InstructionAccount};
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
+use solana_program::system_program;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
-pub struct Program<'info, T: crate::traits::Program> {
+pub type MaybeUninitializedAccount<'info, T> =
+    Either<Account<'info, T>, UninitializedAccount<'info, T>>;
+
+/// Wrapper for `AccountInfo` to explicitly define an uninitialized account.
+pub struct UninitializedAccount<'info, T: crate::traits::Account> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,
     _data: PhantomData<T>,
 }
 
-impl<'info, T: crate::traits::Program> Program<'info, T> {
+impl<'info, T: crate::traits::Account> UninitializedAccount<'info, T> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Creates a new account with the given data.
     pub fn new(
         context: &'info FankorContext<'info>,
         info: &'info AccountInfo<'info>,
-    ) -> FankorResult<Program<'info, T>> {
-        if info.key != T::address() {
-            return Err(ErrorCode::InvalidProgram {
-                expected: *T::address(),
-                actual: *info.key,
-            }
-            .into());
+    ) -> FankorResult<UninitializedAccount<'info, T>> {
+        if info.owner != &system_program::ID || info.lamports() > 0 {
+            return Err(ErrorCode::AccountAlreadyInitialized { address: *info.key }.into());
         }
 
-        if !info.executable {
-            return Err(ErrorCode::ProgramIsNotExecutable { program: *info.key }.into());
-        }
-
-        Ok(Program {
+        Ok(UninitializedAccount {
             context,
             info,
             _data: PhantomData,
@@ -83,7 +80,28 @@ impl<'info, T: crate::traits::Program> Program<'info, T> {
     }
 }
 
-impl<'info, T: crate::traits::Program> InstructionAccount<'info> for Program<'info, T> {
+impl<'info, T: Default + crate::traits::Account> UninitializedAccount<'info, T> {
+    // METHODS ----------------------------------------------------------------
+
+    pub fn init(self, _payer: &AccountInfo<'info>, _space: usize) -> Account<'info, T> {
+        // TODO call CPI to allocate space
+        // TODO call CPI to assign account
+
+        Account::new_without_checks(self.context, self.info, T::default())
+    }
+}
+
+impl<'info, T: Default + crate::traits::Account + AccountSize> UninitializedAccount<'info, T> {
+    // METHODS ----------------------------------------------------------------
+
+    pub fn init_with_min_space(self, payer: &AccountInfo<'info>) -> Account<'info, T> {
+        self.init(payer, T::min_account_size())
+    }
+}
+
+impl<'info, T: crate::traits::Account> InstructionAccount<'info>
+    for UninitializedAccount<'info, T>
+{
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
@@ -101,21 +119,14 @@ impl<'info, T: crate::traits::Program> InstructionAccount<'info> for Program<'in
         }
 
         let info = &accounts[0];
-        let result = Program::new(context, info)?;
-
-        *accounts = &accounts[1..];
-        Ok(result)
+        UninitializedAccount::new(context, info)
     }
 }
 
-impl<'info, T: crate::traits::Program> Debug for Program<'info, T> {
+impl<'info, T: crate::traits::Account> Debug for UninitializedAccount<'info, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Program").field("info", &self.info).finish()
-    }
-}
-
-impl<'info, T: crate::traits::Program> AsRef<AccountInfo<'info>> for Program<'info, T> {
-    fn as_ref(&self) -> &AccountInfo<'info> {
-        self.info
+        f.debug_struct("UninitializedAccount")
+            .field("info", &self.info)
+            .finish()
     }
 }

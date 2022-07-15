@@ -23,6 +23,7 @@ pub enum ErrorCode {
     // Accounts
     /// No 8 byte discriminator was found on the account
     #[msg("No 8 byte discriminator was found on the account: {}", account)]
+    #[continue_from(3000)]
     AccountDiscriminatorNotFound { account: String },
 
     /// 8 byte discriminator did not match what was expected
@@ -32,7 +33,6 @@ pub enum ErrorCode {
         expected,
         account
     )]
-    #[continue_from(3000)]
     AccountDiscriminatorMismatch {
         actual: Vec<u8>,
         expected: Vec<u8>,
@@ -84,6 +84,10 @@ pub enum ErrorCode {
     #[msg("Account {} not initialized", address)]
     AccountNotInitialized { address: Pubkey },
 
+    /// The account is already initialized
+    #[msg("The account {} is already initialized", address)]
+    AccountAlreadyInitialized { address: Pubkey },
+
     /// Account was expected to be owned by a program but it is owned by another
     #[msg(
         "Account {} was expected to be owned by program {} but it is owned by {}",
@@ -123,6 +127,85 @@ pub enum ErrorCode {
     /// There are not enough valid accounts to deserialize the account list
     #[msg("There are not enough valid accounts to deserialize the account list")]
     NotEnoughValidAccountForVec,
+
+    /// The account must belong to a program but it belongs to another
+    #[msg(
+        "The account '{}' must belong to program {} but it belongs to {}",
+        account,
+        expected,
+        actual
+    )]
+    AccountConstraintOwnerMismatch {
+        actual: Pubkey,
+        expected: Pubkey,
+        account: &'static str,
+    },
+
+    /// The account's address of an account must be one value but it is another
+    #[msg(
+        "The account's address of '{}' must be {} but it is {}",
+        account,
+        expected,
+        actual
+    )]
+    AccountConstraintAddressMismatch {
+        actual: Pubkey,
+        expected: Pubkey,
+        account: &'static str,
+    },
+
+    /// The account must be initialized
+    #[msg("The account '{}' must be initialized", account)]
+    AccountConstraintNotInitialized { account: &'static str },
+
+    /// The account must not be initialized
+    #[msg("The account '{}' must not be initialized", account)]
+    AccountConstraintInitialized { account: &'static str },
+
+    /// The account must be writable
+    #[msg("The account '{}' must be writable", account)]
+    AccountConstraintNotWritable { account: &'static str },
+
+    /// The account must not be writable
+    #[msg("The account '{}' must not be writable", account)]
+    AccountConstraintWritable { account: &'static str },
+
+    /// The account must be executable
+    #[msg("The account '{}' must be executable", account)]
+    AccountConstraintNotExecutable { account: &'static str },
+
+    /// The account must not be executable
+    #[msg("The account '{}' must not be executable", account)]
+    AccountConstraintExecutable { account: &'static str },
+
+    /// The account must be a rent-exempt
+    #[msg("The account '{}' must be a rent-exempt", account)]
+    AccountConstraintNotRentExempt { account: &'static str },
+
+    /// The account must not be rent-exempt
+    #[msg("The account '{}' must not be a rent-exempt", account)]
+    AccountConstraintRentExempt { account: &'static str },
+
+    /// The account must be a signer
+    #[msg("The account '{}' must be a signer", account)]
+    AccountConstraintNotSigner { account: &'static str },
+
+    /// The account must not be a signer
+    #[msg("The account '{}' must not be a signer", account)]
+    AccountConstraintSigner { account: &'static str },
+
+    /// The length of the account list must be one value but it is another
+    #[msg(
+        "The length of the account list '{}' must be {} but it is {}",
+        account,
+        expected,
+        actual
+    )]
+    AccountConstraintMinimumMismatch {
+        actual: usize,
+        expected: usize,
+        account: &'static str,
+    },
 }
 
 // ----------------------------------------------------------------------------

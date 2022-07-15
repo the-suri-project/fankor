@@ -3,16 +3,6 @@ use crate::models::FankorContext;
 use crate::traits::InstructionAccount;
 use solana_program::account_info::AccountInfo;
 
-impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Vec<T> {
-    #[inline(never)]
-    fn try_from(
-        context: &'info FankorContext<'info>,
-        accounts: &mut &'info [AccountInfo<'info>],
-    ) -> FankorResult<Self> {
-        try_from_vec_accounts_with_bounds(context, accounts, 0, usize::MAX)
-    }
-}
-
 /// Same as `Vec<T>::try_from`, but limiting the maximum it can get.
 pub fn try_from_vec_accounts_with_bounds<'info, T: InstructionAccount<'info>>(
     context: &'info FankorContext<'info>,

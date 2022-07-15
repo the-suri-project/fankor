@@ -5,5 +5,6 @@ mod arguments;
 #[cfg(not(feature = "no-entrypoint"))]
 mod entrypoint;
 mod errors;
+mod instruction;
 
 setup!();

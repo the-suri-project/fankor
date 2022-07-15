@@ -14,13 +14,13 @@ use std::fmt::{Debug, Formatter};
 use std::io::Write;
 use std::mem::ManuallyDrop;
 
-pub struct Account<'info, T: Debug + crate::traits::Account> {
+pub struct Account<'info, T: crate::traits::Account> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,
     data: ManuallyDrop<T>,
 }
 
-impl<'info, T: Debug + crate::traits::Account> Account<'info, T> {
+impl<'info, T: crate::traits::Account> Account<'info, T> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Creates a new account with the given data.
@@ -132,6 +132,11 @@ impl<'info, T: Debug + crate::traits::Account> Account<'info, T> {
     /// The exit action of this account.
     pub fn exit_action(&self) -> Option<FankorContextExitAction<'info>> {
         self.context().get_exit_action(self.info)
+    }
+
+    /// Whether the account is uninitialized or not.
+    pub fn is_uninitialized(&self) -> bool {
+        self.info.owner == &system_program::ID && self.info.lamports() == 0
     }
 
     /// Whether the account is owned by the current program.
@@ -368,7 +373,7 @@ impl<'info, T: Debug + crate::traits::Account> Account<'info, T> {
     }
 }
 
-impl<'info, T: Debug + crate::traits::Account + AccountSize> Account<'info, T> {
+impl<'info, T: crate::traits::Account + AccountSize> Account<'info, T> {
     // METHODS ----------------------------------------------------------------
 
     /// Reallocates the account to the actual account `data` size plus the discriminator
@@ -387,7 +392,14 @@ impl<'info, T: Debug + crate::traits::Account + AccountSize> Account<'info, T> {
     }
 }
 
-impl<'info, T: Debug + crate::traits::Account> InstructionAccount<'info> for Account<'info, T> {
+impl<'info, T: crate::traits::Account> InstructionAccount<'info> for Account<'info, T> {
+    fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
+    where
+        F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
+    {
+        f(self.context, self.info)
+    }
+
     #[inline(never)]
     fn try_from(
         context: &'info FankorContext<'info>,
@@ -420,17 +432,14 @@ impl<'info, T: Debug + crate::traits::Account> InstructionAccount<'info> for Acc
     }
 }
 
-impl<'info, T: Debug + crate::traits::Account> Debug for Account<'info, T> {
+impl<'info, T: crate::traits::Account> Debug for Account<'info, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Account")
-            .field("data", &self.data)
-            .field("info", &self.info)
-            .finish()
+        f.debug_struct("Account").field("info", &self.info).finish()
     }
 }
 
 /// Execute the last actions over the account.
-impl<'info, T: Debug + crate::traits::Account> Drop for Account<'info, T> {
+impl<'info, T: crate::traits::Account> Drop for Account<'info, T> {
     fn drop(&mut self) {
         if let Err(e) = drop_aux(self) {
             crate::macros::panic_error!(e);
@@ -438,7 +447,7 @@ impl<'info, T: Debug + crate::traits::Account> Drop for Account<'info, T> {
     }
 }
 
-fn drop_aux<T: Debug + crate::traits::Account>(account: &mut Account<T>) -> FankorResult<()> {
+fn drop_aux<T: crate::traits::Account>(account: &mut Account<T>) -> FankorResult<()> {
     // Ignore if not owned by program.
     if !account.is_owned_by_program() {
         return Ok(());
