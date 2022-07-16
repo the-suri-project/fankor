@@ -225,8 +225,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let fields = item.fields.iter().map(|v| &v.ident);
 
             // CpiInstructionAccount implementation
-            let account_infos_name = format_ident!("Cpi{}", name);
-            let account_infos_fields = mapped_fields.iter().map(|v| {
+            let cpi_name = format_ident!("Cpi{}", name);
+            let cpi_fields = mapped_fields.iter().map(|v| {
                 let name = &v.name;
                 let ty = &v.ty;
 
@@ -234,7 +234,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     #name:<#ty as ::fankor::traits::InstructionAccount<'info>>::CPI
                 }
             });
-            let to_account_infos_fn_elements = mapped_fields.iter().map(|v| {
+            let cpi_fn_elements = mapped_fields.iter().map(|v| {
                 let name = &v.name;
 
                 quote! {
@@ -242,11 +242,32 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 }
             });
 
+            // LpiInstructionAccount implementation
+            let lpi_name = format_ident!("Lpi{}", name);
+            let lpi_fields = mapped_fields.iter().map(|v| {
+                let name = &v.name;
+                let ty = &v.ty;
+
+                quote! {
+                    #name:<#ty as ::fankor::traits::InstructionAccount<'info>>::LPI
+                }
+            });
+            let lpi_fn_elements = mapped_fields.iter().map(|v| {
+                let name = &v.name;
+
+                quote! {
+                    ::fankor::traits::LpiInstructionAccount::to_pubkeys(&self.#name, pubkeys)?;
+                }
+            });
+
             // Result
             quote! {
                 #[automatically_derived]
                 impl #generic_params ::fankor::traits::InstructionAccount<'info> for #name #generic_params #generic_where_clause {
-                    type CPI = #account_infos_name <'info>;
+                    type CPI = #cpi_name <'info>;
+
+                    #[cfg(feature = "library")]
+                    type LPI = #lpi_name <'info>;
 
                     fn verify_account_infos<F>(&self, f: &mut F) -> ::fankor::errors::FankorResult<()>
                     where
@@ -270,14 +291,29 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 }
 
                 #[automatically_derived]
-                #vis struct #account_infos_name <'info> {
-                    #(#account_infos_fields),*
+                #vis struct #cpi_name <'info> {
+                    #(#cpi_fields),*
                 }
 
                 #[automatically_derived]
-                impl <'info> ::fankor::traits::CpiInstructionAccount<'info> for #account_infos_name <'info> {
+                impl <'info> ::fankor::traits::CpiInstructionAccount<'info> for #cpi_name <'info> {
                     fn to_account_infos(&self, infos: &mut Vec<&'info AccountInfo<'info>>) -> ::fankor::errors::FankorResult<()> {
-                        #(#to_account_infos_fn_elements)*
+                        #(#cpi_fn_elements)*
+                        Ok(())
+                    }
+                }
+
+                #[automatically_derived]
+                #[cfg(feature = "library")]
+                #vis struct #lpi_name <'info> {
+                    #(#lpi_fields),*
+                }
+
+                #[automatically_derived]
+                #[cfg(feature = "library")]
+                impl <'info> ::fankor::traits::LpiInstructionAccount<'info> for #lpi_name <'info> {
+                    fn to_pubkeys(&self, pubkeys: &mut Vec<::fankor::prelude::Pubkey>) -> ::fankor::errors::FankorResult<()> {
+                        #(#lpi_fn_elements)*
                         Ok(())
                     }
                 }
@@ -506,8 +542,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 });
 
             // CpiInstructionAccount implementation
-            let account_infos_name = format_ident!("Cpi{}", name);
-            let account_infos_fields = mapped_fields.iter().map(|v| {
+            let cpi_name = format_ident!("Cpi{}", name);
+            let cpi_fields = mapped_fields.iter().map(|v| {
                 let name = &v.name;
                 let ty = &v.ty;
 
@@ -515,13 +551,33 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     #name(<#ty as ::fankor::traits::InstructionAccount<'info>>::CPI)
                 }
             });
-            let to_account_infos_fn_elements = mapped_fields
+            let cpi_fn_elements = mapped_fields
                 .iter()
                 .map(|v| {
                     let variant_name = &v.name;
 
                     quote!{
-                        #account_infos_name::#variant_name(v) => ::fankor::traits::CpiInstructionAccount::to_account_infos(v, infos)?
+                        #cpi_name::#variant_name(v) => ::fankor::traits::CpiInstructionAccount::to_account_infos(v, infos)?
+                    }
+                });
+
+            // LpiInstructionAccount implementation
+            let lpi_name = format_ident!("Lpi{}", name);
+            let lpi_fields = mapped_fields.iter().map(|v| {
+                let name = &v.name;
+                let ty = &v.ty;
+
+                quote! {
+                    #name(<#ty as ::fankor::traits::InstructionAccount<'info>>::LPI)
+                }
+            });
+            let lpi_fn_elements = mapped_fields
+                .iter()
+                .map(|v| {
+                    let variant_name = &v.name;
+
+                    quote!{
+                        #lpi_name::#variant_name(v) => ::fankor::traits::LpiInstructionAccount::to_pubkeys(v, pubkeys)?
                     }
                 });
 
@@ -529,7 +585,10 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             quote! {
                 #[automatically_derived]
                 impl #generic_params ::fankor::traits::InstructionAccount<'info> for #name #generic_params #generic_where_clause {
-                    type CPI = #account_infos_name <'info>;
+                    type CPI = #cpi_name <'info>;
+
+                    #[cfg(feature = "library")]
+                    type LPI = #lpi_name <'info>;
 
                     fn verify_account_infos<F>(&self, f: &mut F) -> ::fankor::errors::FankorResult<()>
                     where
@@ -551,15 +610,33 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 }
 
                 #[automatically_derived]
-                #vis enum #account_infos_name <'info> {
-                    #(#account_infos_fields),*
+                #vis enum #cpi_name <'info> {
+                    #(#cpi_fields),*
                 }
 
                 #[automatically_derived]
-                impl <'info> ::fankor::traits::CpiInstructionAccount<'info> for #account_infos_name <'info> {
+                impl <'info> ::fankor::traits::CpiInstructionAccount<'info> for #cpi_name <'info> {
                     fn to_account_infos(&self, infos: &mut Vec<&'info AccountInfo<'info>>) -> ::fankor::errors::FankorResult<()> {
                         match self {
-                            #(#to_account_infos_fn_elements),*
+                            #(#cpi_fn_elements),*
+                        }
+
+                        Ok(())
+                    }
+                }
+
+                #[automatically_derived]
+                #[cfg(feature = "library")]
+                #vis enum #lpi_name <'info> {
+                    #(#lpi_fields),*
+                }
+
+                #[automatically_derived]
+                #[cfg(feature = "library")]
+                impl <'info> ::fankor::traits::LpiInstructionAccount<'info> for #lpi_name <'info> {
+                    fn to_pubkeys(&self, pubkeys: &mut Vec<::fankor::prelude::Pubkey>) -> ::fankor::errors::FankorResult<()> {
+                        match self {
+                            #(#lpi_fn_elements),*
                         }
 
                         Ok(())

@@ -1,7 +1,8 @@
 use crate::errors::{ErrorCode, FankorResult};
 use crate::models::FankorContext;
-use crate::traits::{CpiInstructionAccount, InstructionAccount};
+use crate::traits::{CpiInstructionAccount, InstructionAccount, LpiInstructionAccount};
 use solana_program::account_info::AccountInfo;
+use solana_program::pubkey::Pubkey;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 
@@ -65,6 +66,9 @@ impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> Instruct
 {
     type CPI = CpiEither<L::CPI, R::CPI>;
 
+    #[cfg(feature = "library")]
+    type LPI = LpiEither<L::LPI, R::LPI>;
+
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
@@ -113,6 +117,10 @@ impl<'info, L: Debug + InstructionAccount<'info>, R: Debug + InstructionAccount<
     }
 }
 
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
 pub enum CpiEither<L, R> {
     Left(L),
     Right(R),
@@ -125,6 +133,28 @@ impl<'info, L: CpiInstructionAccount<'info>, R: CpiInstructionAccount<'info>>
         match self {
             CpiEither::Left(v) => v.to_account_infos(infos),
             CpiEither::Right(v) => v.to_account_infos(infos),
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+#[cfg(feature = "library")]
+pub enum LpiEither<L, R> {
+    Left(L),
+    Right(R),
+}
+
+#[cfg(feature = "library")]
+impl<'info, L: LpiInstructionAccount<'info>, R: LpiInstructionAccount<'info>>
+    LpiInstructionAccount<'info> for LpiEither<L, R>
+{
+    fn to_pubkeys(&self, pubkeys: &mut Vec<Pubkey>) -> FankorResult<()> {
+        match self {
+            LpiEither::Left(v) => v.to_pubkeys(pubkeys),
+            LpiEither::Right(v) => v.to_pubkeys(pubkeys),
         }
     }
 }

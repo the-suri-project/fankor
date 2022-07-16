@@ -9,6 +9,7 @@ edition = "2021"
 
 [features]
 test = ["lazy_static", "parking_lot"]
+library = []
 
 [dependencies]
 borsh = "0.9.3"

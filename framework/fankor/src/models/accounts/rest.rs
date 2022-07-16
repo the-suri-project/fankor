@@ -2,6 +2,7 @@ use crate::errors::FankorResult;
 use crate::models::FankorContext;
 use crate::traits::InstructionAccount;
 use solana_program::account_info::AccountInfo;
+use solana_program::pubkey::Pubkey;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 
@@ -37,6 +38,9 @@ impl<'info> Rest<'info> {
 
 impl<'info> InstructionAccount<'info> for Rest<'info> {
     type CPI = Vec<&'info AccountInfo<'info>>;
+
+    #[cfg(feature = "library")]
+    type LPI = Vec<Pubkey>;
 
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where

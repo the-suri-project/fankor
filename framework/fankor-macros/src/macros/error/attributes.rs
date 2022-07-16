@@ -10,8 +10,8 @@ pub struct ErrorAttributes {
     /// The starting offset of the error list.
     pub offset: Option<LitInt>,
 
-    /// Whether the task should be skipped or not.
-    pub skip_task: bool,
+    /// Whether the test should be skipped or not.
+    pub skip_test: bool,
 }
 
 impl ErrorAttributes {
@@ -21,7 +21,7 @@ impl ErrorAttributes {
     pub fn from(args: AttributeArgs) -> Result<ErrorAttributes> {
         let mut result = ErrorAttributes {
             offset: None,
-            skip_task: false,
+            skip_test: false,
         };
 
         for arg in args {
@@ -39,8 +39,8 @@ impl ErrorAttributes {
                     }
                     Meta::List(v) => return Err(Error::new(v.span(), "Unknown argument")),
                     Meta::Path(v) => {
-                        if v.is_ident("skip_task") {
-                            result.skip_task = true;
+                        if v.is_ident("skip_test") {
+                            result.skip_test = true;
                         } else {
                             return Err(Error::new(v.span(), "Unknown argument"));
                         }

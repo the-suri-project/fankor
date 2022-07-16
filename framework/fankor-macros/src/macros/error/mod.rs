@@ -178,10 +178,31 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
     });
 
-    let test_unique_variant_error_codes = format_ident!(
-        "__fankor_internal__test__unique_variant_error_codes_{}",
-        name
-    );
+    let test = if !attributes.skip_test {
+        let test_unique_variant_error_codes = format_ident!(
+            "__fankor_internal__test__unique_variant_error_codes_{}",
+            name
+        );
+
+        quote! {
+            #[allow(non_snake_case)]
+            #[automatically_derived]
+            #[cfg(test)]
+            #[test]
+            fn #test_unique_variant_error_codes() {
+                let discriminators = [#(#discriminators),*];
+                let helper = &crate::__internal__idl_builder_test__root::ERROR_HELPER;
+
+                for (name, discriminator) in discriminators {
+                    if let Err(item) = helper.add_error(name, discriminator) {
+                        panic!("There is a discriminator collision between errors. First: {}, Second: {}, Discriminator: {}", name, item.name, discriminator);
+                    }
+                }
+            }
+        }
+    } else {
+        quote! {}
+    };
 
     let result = quote! {
         #[derive(::std::fmt::Debug, ::std::clone::Clone)]
@@ -229,20 +250,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             }
         }
 
-        #[allow(non_snake_case)]
-        #[automatically_derived]
-        #[cfg(test)]
-        #[test]
-        fn #test_unique_variant_error_codes() {
-            let discriminators = [#(#discriminators),*];
-            let helper = &crate::__internal__idl_builder_test__root::ERROR_HELPER;
-
-            for (name, discriminator) in discriminators {
-                if let Err(item) = helper.add_error(name, discriminator) {
-                    panic!("There is a discriminator collision between errors. First: {}, Second: {}, Discriminator: {}", name, item.name, discriminator);
-                }
-            }
-        }
+        #test
     };
 
     Ok(result.into())

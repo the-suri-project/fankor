@@ -7,6 +7,9 @@ use solana_program::pubkey::Pubkey;
 impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Option<T> {
     type CPI = Option<T::CPI>;
 
+    #[cfg(feature = "library")]
+    type LPI = Option<Pubkey>;
+
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
