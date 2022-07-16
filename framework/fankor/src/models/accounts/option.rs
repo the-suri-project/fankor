@@ -5,6 +5,8 @@ use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 
 impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Option<T> {
+    type CPI = Option<T::CPI>;
+
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,

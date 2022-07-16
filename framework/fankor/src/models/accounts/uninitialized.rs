@@ -102,6 +102,8 @@ impl<'info, T: Default + crate::traits::Account + AccountSize> UninitializedAcco
 impl<'info, T: crate::traits::Account> InstructionAccount<'info>
     for UninitializedAccount<'info, T>
 {
+    type CPI = &'info AccountInfo<'info>;
+
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,

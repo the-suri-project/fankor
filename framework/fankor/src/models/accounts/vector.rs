@@ -4,6 +4,8 @@ use crate::traits::InstructionAccount;
 use solana_program::account_info::AccountInfo;
 
 impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Vec<T> {
+    type CPI = Vec<T::CPI>;
+
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,

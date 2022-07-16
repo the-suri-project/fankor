@@ -1,6 +1,6 @@
 use crate::errors::{ErrorCode, FankorResult};
 use crate::models::FankorContext;
-use crate::traits::InstructionAccount;
+use crate::traits::{CpiInstructionAccount, InstructionAccount};
 use solana_program::account_info::AccountInfo;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -63,6 +63,8 @@ impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> Either<L
 impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> InstructionAccount<'info>
     for Either<L, R>
 {
+    type CPI = CpiEither<L::CPI, R::CPI>;
+
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
@@ -107,6 +109,22 @@ impl<'info, L: Debug + InstructionAccount<'info>, R: Debug + InstructionAccount<
                 .field("Left", &Option::<L>::None)
                 .field("Right", &v)
                 .finish(),
+        }
+    }
+}
+
+pub enum CpiEither<L, R> {
+    Left(L),
+    Right(R),
+}
+
+impl<'info, L: CpiInstructionAccount<'info>, R: CpiInstructionAccount<'info>>
+    CpiInstructionAccount<'info> for CpiEither<L, R>
+{
+    fn to_account_infos(&self, infos: &mut Vec<&'info AccountInfo<'info>>) -> FankorResult<()> {
+        match self {
+            CpiEither::Left(v) => v.to_account_infos(infos),
+            CpiEither::Right(v) => v.to_account_infos(infos),
         }
     }
 }

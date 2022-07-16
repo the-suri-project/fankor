@@ -84,6 +84,8 @@ impl<'info, T: crate::traits::Program> Program<'info, T> {
 }
 
 impl<'info, T: crate::traits::Program> InstructionAccount<'info> for Program<'info, T> {
+    type CPI = &'info AccountInfo<'info>;
+
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,

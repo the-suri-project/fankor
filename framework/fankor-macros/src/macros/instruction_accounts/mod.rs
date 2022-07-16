@@ -1,4 +1,4 @@
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{Error, Item};
 
@@ -14,6 +14,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
     let result = match &input {
         Item::Struct(item) => {
             let name = &item.ident;
+            let vis = &item.vis;
             let generic_params = &item.generics.params;
             let generic_params = if generic_params.is_empty() {
                 quote! {}
@@ -187,9 +188,9 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     }});
                 }
 
-                let min = if !v.max.is_some() {
-                    if let Some(min) = &v.min {
-                        Some(quote! {{
+                let min = if v.max.is_none() {
+                    v.min.as_ref().map(|min| {
+                        quote! {{
                             let expected = #min;
                             let actual = #name.len();
 
@@ -200,10 +201,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                     account: #name_str,
                                 }.into());
                             }
-                        }})
-                    } else {
-                        None
-                    }
+                        }}
+                    })
                 } else {
                     None
                 };
@@ -225,12 +224,33 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             let fields = item.fields.iter().map(|v| &v.ident);
 
+            // CpiInstructionAccount implementation
+            let account_infos_name = format_ident!("Cpi{}", name);
+            let account_infos_fields = mapped_fields.iter().map(|v| {
+                let name = &v.name;
+                let ty = &v.ty;
+
+                quote! {
+                    #name:<#ty as ::fankor::traits::InstructionAccount<'info>>::CPI
+                }
+            });
+            let to_account_infos_fn_elements = mapped_fields.iter().map(|v| {
+                let name = &v.name;
+
+                quote! {
+                    ::fankor::traits::CpiInstructionAccount::to_account_infos(&self.#name, infos)?;
+                }
+            });
+
+            // Result
             quote! {
-                 #[automatically_derived]
-                 impl #generic_params ::fankor::traits::InstructionAccount<'info> for #name #generic_params #generic_where_clause {
-                    fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
+                #[automatically_derived]
+                impl #generic_params ::fankor::traits::InstructionAccount<'info> for #name #generic_params #generic_where_clause {
+                    type CPI = #account_infos_name <'info>;
+
+                    fn verify_account_infos<F>(&self, f: &mut F) -> ::fankor::errors::FankorResult<()>
                     where
-                        F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
+                        F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> ::fankor::errors::FankorResult<()>,
                     {
                         #(#verify_fn_fields)*
                         Ok(())
@@ -239,7 +259,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     fn try_from(
                         context: &'info FankorContext<'info>,
                         accounts: &mut &'info [AccountInfo<'info>],
-                    ) -> FankorResult<Self> {
+                    ) -> ::fankor::errors::FankorResult<Self> {
                         #(#try_from_fn_deserialize)*
                         #(#try_from_fn_conditions)*
 
@@ -247,11 +267,25 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             #(#fields),*
                         })
                     }
-                 }
+                }
+
+                #[automatically_derived]
+                #vis struct #account_infos_name <'info> {
+                    #(#account_infos_fields),*
+                }
+
+                #[automatically_derived]
+                impl <'info> ::fankor::traits::CpiInstructionAccount<'info> for #account_infos_name <'info> {
+                    fn to_account_infos(&self, infos: &mut Vec<&'info AccountInfo<'info>>) -> ::fankor::errors::FankorResult<()> {
+                        #(#to_account_infos_fn_elements)*
+                        Ok(())
+                    }
+                }
             }
         }
         Item::Enum(item) => {
             let name = &item.ident;
+            let vis = &item.vis;
             let generic_params = &item.generics.params;
             let generic_params = if generic_params.is_empty() {
                 quote! {}
@@ -409,9 +443,9 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         }});
                     }
 
-                    let min = if !v.max.is_some() {
-                        if let Some(min) = &v.min {
-                            Some(quote! {{
+                    let min = if v.max.is_none() {
+                        v.min.as_ref().map(|min| {
+                            quote! {{
                                 let expected = #min;
                                 let actual = v.len();
 
@@ -422,10 +456,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                         account: #variant_name_str,
                                     }.into());
                                 }
-                            }})
-                        } else {
-                            None
-                        }
+                            }}
+                        })
                     } else {
                         None
                     };
@@ -473,12 +505,35 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     }
                 });
 
+            // CpiInstructionAccount implementation
+            let account_infos_name = format_ident!("Cpi{}", name);
+            let account_infos_fields = mapped_fields.iter().map(|v| {
+                let name = &v.name;
+                let ty = &v.ty;
+
+                quote! {
+                    #name(<#ty as ::fankor::traits::InstructionAccount<'info>>::CPI)
+                }
+            });
+            let to_account_infos_fn_elements = mapped_fields
+                .iter()
+                .map(|v| {
+                    let variant_name = &v.name;
+
+                    quote!{
+                        #account_infos_name::#variant_name(v) => ::fankor::traits::CpiInstructionAccount::to_account_infos(v, infos)?
+                    }
+                });
+
+            // Result
             quote! {
                 #[automatically_derived]
                 impl #generic_params ::fankor::traits::InstructionAccount<'info> for #name #generic_params #generic_where_clause {
-                    fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
+                    type CPI = #account_infos_name <'info>;
+
+                    fn verify_account_infos<F>(&self, f: &mut F) -> ::fankor::errors::FankorResult<()>
                     where
-                        F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
+                        F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> ::fankor::errors::FankorResult<()>,
                     {
                         match self {
                             #(#verify_fn_fields)*
@@ -488,10 +543,26 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     fn try_from(
                         context: &'info FankorContext<'info>,
                         accounts: &mut &'info [AccountInfo<'info>],
-                    ) -> FankorResult<Self> {
+                    ) -> ::fankor::errors::FankorResult<Self> {
                         #(#try_from_fn_deserialize)*
 
                         Err(err)
+                    }
+                }
+
+                #[automatically_derived]
+                #vis enum #account_infos_name <'info> {
+                    #(#account_infos_fields),*
+                }
+
+                #[automatically_derived]
+                impl <'info> ::fankor::traits::CpiInstructionAccount<'info> for #account_infos_name <'info> {
+                    fn to_account_infos(&self, infos: &mut Vec<&'info AccountInfo<'info>>) -> ::fankor::errors::FankorResult<()> {
+                        match self {
+                            #(#to_account_infos_fn_elements),*
+                        }
+
+                        Ok(())
                     }
                 }
             }

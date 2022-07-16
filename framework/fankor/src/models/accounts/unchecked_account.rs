@@ -167,6 +167,8 @@ impl<'info> UncheckedAccount<'info> {
 }
 
 impl<'info> InstructionAccount<'info> for UncheckedAccount<'info> {
+    type CPI = &'info AccountInfo<'info>;
+
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
