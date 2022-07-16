@@ -1,8 +1,7 @@
 use crate::errors::{ErrorCode, FankorResult};
 use crate::models::FankorContext;
-use crate::traits::{CpiInstructionAccount, InstructionAccount, LpiInstructionAccount};
+use crate::traits::{CpiInstructionAccount, InstructionAccount};
 use solana_program::account_info::AccountInfo;
-use solana_program::pubkey::Pubkey;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 
@@ -148,10 +147,10 @@ pub enum LpiEither<L, R> {
 }
 
 #[cfg(feature = "library")]
-impl<'info, L: LpiInstructionAccount<'info>, R: LpiInstructionAccount<'info>>
-    LpiInstructionAccount<'info> for LpiEither<L, R>
+impl<L: crate::traits::LpiInstructionAccount, R: crate::traits::LpiInstructionAccount>
+    crate::traits::LpiInstructionAccount for LpiEither<L, R>
 {
-    fn to_pubkeys(&self, pubkeys: &mut Vec<Pubkey>) -> FankorResult<()> {
+    fn to_pubkeys(&self, pubkeys: &mut Vec<solana_program::pubkey::Pubkey>) -> FankorResult<()> {
         match self {
             LpiEither::Left(v) => v.to_pubkeys(pubkeys),
             LpiEither::Right(v) => v.to_pubkeys(pubkeys),

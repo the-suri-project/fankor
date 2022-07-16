@@ -13,6 +13,7 @@ pub const ERROR_CODE_OFFSET: u32 = 6000;
 
 /// Error codes that can be returned by internal framework code.
 ///
+/// - 1000..2000 - Program
 /// - 3000..4000 - Accounts
 /// - 5500       - custom program error without code
 ///
@@ -20,15 +21,33 @@ pub const ERROR_CODE_OFFSET: u32 = 6000;
 /// by the [ERROR_CODE_OFFSET](crate::error::ERROR_CODE_OFFSET).
 #[error_code(offset = 0, skip_test)]
 pub enum ErrorCode {
+    // Program
+    /// The id of the program does not match the one defined in the code
+    #[msg("The id of the program does not match the one defined in the code")]
+    #[continue_from(1000)]
+    DeclaredProgramIdMismatch,
+
+    /// The instruction discriminator is missing
+    #[msg("The instruction discriminator is missing")]
+    InstructionDiscriminatorMissing,
+
+    /// The instruction discriminator did not match any valid
+    #[msg("The instruction discriminator did not match any valid")]
+    InstructionDiscriminatorNotFound,
+
+    /// The instructions contains too many accounts
+    #[msg("The instructions contains too many accounts")]
+    TooManyAccounts,
+
     // Accounts
     /// No 8 byte discriminator was found on the account
     #[msg("No 8 byte discriminator was found on the account: {}", account)]
     #[continue_from(3000)]
     AccountDiscriminatorNotFound { account: String },
 
-    /// 8 byte discriminator did not match what was expected
+    /// The account discriminator did not match what was expected
     #[msg(
-        "8 byte discriminator {:?} did not match what was expected {:?} of account {}",
+        "The account discriminator {:?} did not match what was expected {:?} of account {}",
         actual,
         expected,
         account
@@ -123,6 +142,10 @@ pub enum ErrorCode {
     /// There are not enough accounts to deserialize the instruction
     #[msg("There are not enough accounts to deserialize the instruction")]
     NotEnoughAccountKeys,
+
+    /// The instruction expects no accounts
+    #[msg("The instruction expects no accounts")]
+    NotAccountsExpected,
 
     /// There are not enough valid accounts to deserialize the account list
     #[msg("There are not enough valid accounts to deserialize the account list")]

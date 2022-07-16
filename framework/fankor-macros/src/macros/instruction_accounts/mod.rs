@@ -311,7 +311,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                 #[automatically_derived]
                 #[cfg(feature = "library")]
-                impl <'info> ::fankor::traits::LpiInstructionAccount<'info> for #lpi_name <'info> {
+                impl <'info> ::fankor::traits::LpiInstructionAccount for #lpi_name <'info> {
                     fn to_pubkeys(&self, pubkeys: &mut Vec<::fankor::prelude::Pubkey>) -> ::fankor::errors::FankorResult<()> {
                         #(#lpi_fn_elements)*
                         Ok(())
@@ -627,13 +627,13 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                 #[automatically_derived]
                 #[cfg(feature = "library")]
-                #vis enum #lpi_name <'info> {
+                #vis enum #lpi_name <'info>{
                     #(#lpi_fields),*
                 }
 
                 #[automatically_derived]
                 #[cfg(feature = "library")]
-                impl <'info> ::fankor::traits::LpiInstructionAccount<'info> for #lpi_name <'info> {
+                impl <'info> ::fankor::traits::LpiInstructionAccount for #lpi_name <'info> {
                     fn to_pubkeys(&self, pubkeys: &mut Vec<::fankor::prelude::Pubkey>) -> ::fankor::errors::FankorResult<()> {
                         match self {
                             #(#lpi_fn_elements),*

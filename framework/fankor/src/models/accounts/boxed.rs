@@ -2,13 +2,12 @@ use crate::errors::FankorResult;
 use crate::models::FankorContext;
 use crate::traits::InstructionAccount;
 use solana_program::account_info::AccountInfo;
-use solana_program::pubkey::Pubkey;
 
 impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Box<T> {
     type CPI = &'info AccountInfo<'info>;
 
     #[cfg(feature = "library")]
-    type LPI = Pubkey;
+    type LPI = solana_program::pubkey::Pubkey;
 
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where

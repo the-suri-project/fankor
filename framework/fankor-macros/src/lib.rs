@@ -148,3 +148,38 @@ pub fn error_code(args: TokenStream, input: TokenStream) -> TokenStream {
         Err(e) => e.to_compile_error().into(),
     }
 }
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/// This macro process a definition of a program.
+/// A program consist of a set of instructions expressed as methods following one
+/// of these signatures:
+///
+/// ```ignore
+/// # Instruction without arguments
+/// fn my_instruction(context: FankorContext, account: ACCOUNT) -> Result<RESULT>;
+///
+/// # Instruction with arguments
+/// fn my_instruction(context: FankorContext, account: ACCOUNT, arguments: ARGS) -> Result<RESULT>;
+///
+/// # Fallback method
+/// fn my_instruction(program_id: &Pubkey, accounts: &[AccountInfo], instruction_data: &[u8]) -> Result<RESULT>;
+/// ```
+///
+/// Being `ACCOUNT` a type that implements the `InstructionAccount` trait and being `ARGS` and `RESULT` types
+/// that implement the `borsh::serialize` and `borsh::deserialize` traits.
+///
+/// If `RESULT` is different from `()` then the instruction will store the result in the intermediate buffer as
+/// the instruction result.
+#[proc_macro_attribute]
+pub fn program(args: TokenStream, input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(args as AttributeArgs);
+    let input = parse_macro_input!(input as Item);
+
+    match macros::program::processor(args, input) {
+        Ok(v) => v,
+        Err(e) => e.to_compile_error().into(),
+    }
+}

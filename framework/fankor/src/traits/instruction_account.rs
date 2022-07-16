@@ -1,14 +1,13 @@
 use crate::errors::FankorResult;
 use crate::models::FankorContext;
 use solana_program::account_info::AccountInfo;
-use solana_program::pubkey::Pubkey;
 
 /// Trait for account wrappers.
 pub trait InstructionAccount<'info>: Sized {
     type CPI: CpiInstructionAccount<'info>;
 
     #[cfg(feature = "library")]
-    type LPI: LpiInstructionAccount<'info>;
+    type LPI: LpiInstructionAccount;
 
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
@@ -24,12 +23,10 @@ pub trait InstructionAccount<'info>: Sized {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-#[cfg(feature = "library")]
 pub trait CpiInstructionAccount<'info> {
     fn to_account_infos(&self, infos: &mut Vec<&'info AccountInfo<'info>>) -> FankorResult<()>;
 }
 
-#[cfg(feature = "library")]
 impl<'info> CpiInstructionAccount<'info> for &'info AccountInfo<'info> {
     fn to_account_infos(&self, infos: &mut Vec<&'info AccountInfo<'info>>) -> FankorResult<()> {
         infos.push(self);
@@ -37,7 +34,6 @@ impl<'info> CpiInstructionAccount<'info> for &'info AccountInfo<'info> {
     }
 }
 
-#[cfg(feature = "library")]
 impl<'info, T: CpiInstructionAccount<'info>> CpiInstructionAccount<'info> for Option<T> {
     fn to_account_infos(&self, infos: &mut Vec<&'info AccountInfo<'info>>) -> FankorResult<()> {
         if let Some(v) = self {
@@ -48,7 +44,6 @@ impl<'info, T: CpiInstructionAccount<'info>> CpiInstructionAccount<'info> for Op
     }
 }
 
-#[cfg(feature = "library")]
 impl<'info, T: CpiInstructionAccount<'info>> CpiInstructionAccount<'info> for Vec<T> {
     fn to_account_infos(&self, infos: &mut Vec<&'info AccountInfo<'info>>) -> FankorResult<()> {
         for v in self {
@@ -63,19 +58,22 @@ impl<'info, T: CpiInstructionAccount<'info>> CpiInstructionAccount<'info> for Ve
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-pub trait LpiInstructionAccount<'info> {
-    fn to_pubkeys(&self, pubkeys: &mut Vec<Pubkey>) -> FankorResult<()>;
+#[cfg(feature = "library")]
+pub trait LpiInstructionAccount {
+    fn to_pubkeys(&self, pubkeys: &mut Vec<solana_program::pubkey::Pubkey>) -> FankorResult<()>;
 }
 
-impl<'info> LpiInstructionAccount<'info> for Pubkey {
-    fn to_pubkeys(&self, pubkeys: &mut Vec<Pubkey>) -> FankorResult<()> {
+#[cfg(feature = "library")]
+impl LpiInstructionAccount for solana_program::pubkey::Pubkey {
+    fn to_pubkeys(&self, pubkeys: &mut Vec<solana_program::pubkey::Pubkey>) -> FankorResult<()> {
         pubkeys.push(*self);
         Ok(())
     }
 }
 
-impl<'info, T: LpiInstructionAccount<'info>> LpiInstructionAccount<'info> for Option<T> {
-    fn to_pubkeys(&self, pubkeys: &mut Vec<Pubkey>) -> FankorResult<()> {
+#[cfg(feature = "library")]
+impl<T: LpiInstructionAccount> LpiInstructionAccount for Option<T> {
+    fn to_pubkeys(&self, pubkeys: &mut Vec<solana_program::pubkey::Pubkey>) -> FankorResult<()> {
         if let Some(v) = self {
             v.to_pubkeys(pubkeys)?;
         }
@@ -84,8 +82,9 @@ impl<'info, T: LpiInstructionAccount<'info>> LpiInstructionAccount<'info> for Op
     }
 }
 
-impl<'info, T: LpiInstructionAccount<'info>> LpiInstructionAccount<'info> for Vec<T> {
-    fn to_pubkeys(&self, pubkeys: &mut Vec<Pubkey>) -> FankorResult<()> {
+#[cfg(feature = "library")]
+impl<T: LpiInstructionAccount> LpiInstructionAccount for Vec<T> {
+    fn to_pubkeys(&self, pubkeys: &mut Vec<solana_program::pubkey::Pubkey>) -> FankorResult<()> {
         for v in self {
             v.to_pubkeys(pubkeys)?;
         }

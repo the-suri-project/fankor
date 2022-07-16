@@ -1,6 +1,9 @@
 pub use accounts::*;
+pub use instructions::*;
 pub use program::*;
+
 mod accounts;
+mod instructions;
 mod program;
 
 use serde::{Deserialize, Serialize};
@@ -11,9 +14,11 @@ pub struct FankorConfig {
     /// The program configuration.
     pub program: FankorProgramConfig,
 
-    /// The initial delay in milliseconds.
     #[serde(default)]
     pub accounts: Option<FankorAccountsConfig>,
+
+    #[serde(default)]
+    pub instructions: Option<FankorInstructionsConfig>,
 }
 
 impl FankorConfig {
@@ -32,6 +37,12 @@ impl FankorConfig {
         } else {
             self.accounts = Some(FankorAccountsConfig::default());
         }
+
+        if let Some(build) = &mut self.instructions {
+            build.fill_with_defaults();
+        } else {
+            self.instructions = Some(FankorInstructionsConfig::default());
+        }
     }
 
     pub fn validate(&self) {
@@ -44,6 +55,7 @@ impl Default for FankorConfig {
         FankorConfig {
             program: FankorProgramConfig::default(),
             accounts: Some(FankorAccountsConfig::default()),
+            instructions: Some(FankorInstructionsConfig::default()),
         }
     }
 }

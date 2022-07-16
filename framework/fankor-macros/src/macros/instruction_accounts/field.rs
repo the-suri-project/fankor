@@ -24,7 +24,7 @@ pub struct Field {
 impl Field {
     // CONSTRUCTORS -----------------------------------------------------------
 
-    /// Creates a new instance of the ErrorAttributes struct from the given attributes.
+    /// Creates a new instance of the Field struct from the given attributes.
     pub fn from(field: syn::Field) -> Result<Field> {
         let mut new_field = Field {
             name: field.ident.unwrap(),
@@ -45,7 +45,7 @@ impl Field {
         Ok(new_field)
     }
 
-    /// Creates a new instance of the ErrorAttributes struct from the given attributes.
+    /// Creates a new instance of the Field struct from the given attributes.
     pub fn from_variant(variant: Variant) -> Result<Field> {
         match variant.fields {
             Fields::Unnamed(v) => {
