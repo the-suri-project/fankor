@@ -236,35 +236,52 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             });
             let cpi_fn_elements = mapped_fields.iter().map(|v| {
                 let name = &v.name;
-                let writable = if let Some(writable) = &v.writable {
-                    quote! { Some(#writable) }
+
+                let mut any = false;
+                let (writable_let, writable_for) = if let Some(writable) = &v.writable {
+                    let writable_let = quote! { let writable = #writable; };
+                    let writable_for = quote! {
+                        meta.is_writable = writable;
+                    };
+
+                    any = true;
+
+                    (writable_let, writable_for)
                 } else {
-                    quote! { None }
+                    (quote! {}, quote! {})
                 };
 
-                let signer = if let Some(signer) = &v.signer {
-                    quote! { Some(#signer) }
+                let (signer_let, signer_for) = if let Some(signer) = &v.signer {
+                    let signer_let = quote! { let signer = #signer; };
+                    let signer_for = quote! {
+                        meta.is_signer = signer;
+                    };
+
+                    any = true;
+
+                    (signer_let, signer_for)
                 } else {
-                    quote! { None }
+                    (quote! {}, quote! {})
                 };
 
-                quote! {
-                    {
-                        let from = metas.len();
-                        ::fankor::traits::CpiInstructionAccount::to_account_metas_and_infos(&self.#name, metas, infos)?;
-                        let to = metas.len();
-                        let writable = #writable;
-                        let signer = #signer;
+                if any {
+                    quote! {
+                        {
+                            let from = metas.len();
+                            ::fankor::traits::CpiInstructionAccount::to_account_metas_and_infos(&self.#name, metas, infos)?;
+                            let to = metas.len();
+                            #writable_let
+                            #signer_let
 
-                        for meta in &mut metas[from..to] {
-                            if let Some(writable) = writable {
-                                meta.is_writable = writable;
-                            }
-
-                            if let Some(signer) = signer {
-                                meta.is_signer = signer;
+                            for meta in &mut metas[from..to] {
+                                #writable_for
+                                #signer_for
                             }
                         }
+                    }
+                } else {
+                    quote! {
+                       ::fankor::traits::CpiInstructionAccount::to_account_metas_and_infos(&self.#name, metas, infos)?;
                     }
                 }
             });
@@ -281,35 +298,52 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             });
             let lpi_fn_elements = mapped_fields.iter().map(|v| {
                 let name = &v.name;
-                let writable = if let Some(writable) = &v.writable {
-                    quote! { Some(#writable) }
+
+                let mut any = false;
+                let (writable_let, writable_for) = if let Some(writable) = &v.writable {
+                    let writable_let = quote! { let writable = #writable; };
+                    let writable_for = quote! {
+                        meta.is_writable = writable;
+                    };
+
+                    any = true;
+
+                    (writable_let, writable_for)
                 } else {
-                    quote! { None }
+                    (quote! {}, quote! {})
                 };
 
-                let signer = if let Some(signer) = &v.signer {
-                    quote! { Some(#signer) }
+                let (signer_let, signer_for) = if let Some(signer) = &v.signer {
+                    let signer_let = quote! { let signer = #signer; };
+                    let signer_for = quote! {
+                        meta.is_signer = signer;
+                    };
+
+                    any = true;
+
+                    (signer_let, signer_for)
                 } else {
-                    quote! { None }
+                    (quote! {}, quote! {})
                 };
 
-                quote! {
-                    {
-                        let from = metas.len();
-                        ::fankor::traits::LpiInstructionAccount::to_account_metas(&self.#name, metas)?;
-                        let to = metas.len();
-                        let writable = #writable;
-                        let signer = #signer;
+                if any {
+                    quote! {
+                        {
+                            let from = metas.len();
+                            ::fankor::traits::LpiInstructionAccount::to_account_metas(&self.#name, metas)?;
+                            let to = metas.len();
+                            #writable_let
+                            #signer_let
 
-                        for meta in &mut metas[from..to] {
-                            if let Some(writable) = writable {
-                                meta.is_writable = writable;
-                            }
-
-                            if let Some(signer) = signer {
-                                meta.is_signer = signer;
+                            for meta in &mut metas[from..to] {
+                                #writable_for
+                                #signer_for
                             }
                         }
+                    }
+                } else {
+                    quote! {
+                        ::fankor::traits::LpiInstructionAccount::to_account_metas(&self.#name, metas)?;
                     }
                 }
             });
@@ -613,35 +647,51 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 .iter()
                 .map(|v| {
                     let variant_name = &v.name;
-                    let writable = if let Some(writable) = &v.writable {
-                        quote! { Some(#writable) }
+                    let mut any = false;
+                    let (writable_let, writable_for) = if let Some(writable) = &v.writable {
+                        let writable_let = quote! { let writable = #writable; };
+                        let writable_for = quote! {
+                            meta.is_writable = writable;
+                        };
+
+                        any = true;
+
+                        (writable_let, writable_for)
                     } else {
-                        quote! { None }
+                        (quote! {}, quote! {})
                     };
 
-                    let signer = if let Some(signer) = &v.signer {
-                        quote! { Some(#signer) }
+                    let (signer_let, signer_for) = if let Some(signer) = &v.signer {
+                        let signer_let = quote! { let signer = #signer; };
+                        let signer_for = quote! {
+                            meta.is_signer = signer;
+                        };
+
+                        any = true;
+
+                        (signer_let, signer_for)
                     } else {
-                        quote! { None }
+                        (quote! {}, quote! {})
                     };
 
-                    quote!{
-                        #cpi_name::#variant_name(v) => {
-                            let from = metas.len();
-                            ::fankor::traits::CpiInstructionAccount::to_account_metas_and_infos(v, metas, infos)?;
-                            let to = metas.len();
-                            let writable = #writable;
-                            let signer = #signer;
+                    if any {
+                        quote! {
+                            #cpi_name::#variant_name(v) => {
+                                let from = metas.len();
+                                ::fankor::traits::CpiInstructionAccount::to_account_metas_and_infos(v, metas, infos)?;
+                                let to = metas.len();
+                                #writable_let
+                                #signer_let
 
-                            for meta in &mut metas[from..to] {
-                                if let Some(writable) = writable {
-                                    meta.is_writable = writable;
-                                }
-
-                                if let Some(signer) = signer {
-                                    meta.is_signer = signer;
+                                for meta in &mut metas[from..to] {
+                                    #writable_for
+                                    #signer_for
                                 }
                             }
+                        }
+                    } else {
+                        quote! {
+                            #cpi_name::#variant_name(v) => ::fankor::traits::CpiInstructionAccount::to_account_metas_and_infos(v, metas, infos)?
                         }
                     }
                 });
@@ -658,35 +708,52 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             });
             let lpi_fn_elements = mapped_fields.iter().map(|v| {
                 let variant_name = &v.name;
-                let writable = if let Some(writable) = &v.writable {
-                    quote! { Some(#writable) }
+
+                let mut any = false;
+                let (writable_let, writable_for) = if let Some(writable) = &v.writable {
+                    let writable_let = quote! { let writable = #writable; };
+                    let writable_for = quote! {
+                        meta.is_writable = writable;
+                    };
+
+                    any = true;
+
+                    (writable_let, writable_for)
                 } else {
-                    quote! { None }
+                    (quote! {}, quote! {})
                 };
 
-                let signer = if let Some(signer) = &v.signer {
-                    quote! { Some(#signer) }
+                let (signer_let, signer_for) = if let Some(signer) = &v.signer {
+                    let signer_let = quote! { let signer = #signer; };
+                    let signer_for = quote! {
+                        meta.is_signer = signer;
+                    };
+
+                    any = true;
+
+                    (signer_let, signer_for)
                 } else {
-                    quote! { None }
+                    (quote! {}, quote! {})
                 };
 
-                quote! {
-                    #lpi_name::#variant_name(v) => {
-                        let from = metas.len();
-                        ::fankor::traits::LpiInstructionAccount::to_account_metas(v, metas)?;
-                        let to = metas.len();
-                        let writable = #writable;
-                        let signer = #signer;
+                if any {
+                    quote! {
+                        #lpi_name::#variant_name(v) => {
+                            let from = metas.len();
+                            ::fankor::traits::LpiInstructionAccount::to_account_metas(v, metas)?;
+                            let to = metas.len();
+                            #writable_let
+                            #signer_let
 
-                        for meta in &mut metas[from..to] {
-                            if let Some(writable) = writable {
-                                meta.is_writable = writable;
-                            }
-
-                            if let Some(signer) = signer {
-                                meta.is_signer = signer;
+                            for meta in &mut metas[from..to] {
+                                #writable_for
+                                #signer_for
                             }
                         }
+                    }
+                } else {
+                    quote! {
+                        #lpi_name::#variant_name(v) => ::fankor::traits::LpiInstructionAccount::to_account_metas(v, metas)?
                     }
                 }
             });
