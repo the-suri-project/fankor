@@ -84,7 +84,7 @@ impl<'info, T: crate::traits::Program> Program<'info, T> {
 }
 
 impl<'info, T: crate::traits::Program> InstructionAccount<'info> for Program<'info, T> {
-    type CPI = &'info AccountInfo<'info>;
+    type CPI = AccountInfo<'info>;
 
     #[cfg(feature = "library")]
     type LPI = Pubkey;

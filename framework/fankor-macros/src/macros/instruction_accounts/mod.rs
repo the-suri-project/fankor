@@ -236,9 +236,36 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             });
             let cpi_fn_elements = mapped_fields.iter().map(|v| {
                 let name = &v.name;
+                let writable = if let Some(writable) = &v.writable {
+                    quote! { Some(#writable) }
+                } else {
+                    quote! { None }
+                };
+
+                let signer = if let Some(signer) = &v.signer {
+                    quote! { Some(#signer) }
+                } else {
+                    quote! { None }
+                };
 
                 quote! {
-                    ::fankor::traits::CpiInstructionAccount::to_account_infos(&self.#name, infos)?;
+                    {
+                        let from = metas.len();
+                        ::fankor::traits::CpiInstructionAccount::to_account_metas_and_infos(&self.#name, metas, infos)?;
+                        let to = metas.len();
+                        let writable = #writable;
+                        let signer = #signer;
+
+                        for meta in &mut metas[from..to] {
+                            if let Some(writable) = writable {
+                                meta.is_writable = writable;
+                            }
+
+                            if let Some(signer) = signer {
+                                meta.is_signer = signer;
+                            }
+                        }
+                    }
                 }
             });
 
@@ -254,9 +281,36 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             });
             let lpi_fn_elements = mapped_fields.iter().map(|v| {
                 let name = &v.name;
+                let writable = if let Some(writable) = &v.writable {
+                    quote! { Some(#writable) }
+                } else {
+                    quote! { None }
+                };
+
+                let signer = if let Some(signer) = &v.signer {
+                    quote! { Some(#signer) }
+                } else {
+                    quote! { None }
+                };
 
                 quote! {
-                    ::fankor::traits::LpiInstructionAccount::to_pubkeys(&self.#name, pubkeys)?;
+                    {
+                        let from = metas.len();
+                        ::fankor::traits::LpiInstructionAccount::to_account_metas(&self.#name, metas)?;
+                        let to = metas.len();
+                        let writable = #writable;
+                        let signer = #signer;
+
+                        for meta in &mut metas[from..to] {
+                            if let Some(writable) = writable {
+                                meta.is_writable = writable;
+                            }
+
+                            if let Some(signer) = signer {
+                                meta.is_signer = signer;
+                            }
+                        }
+                    }
                 }
             });
 
@@ -297,7 +351,11 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                 #[automatically_derived]
                 impl <'info> ::fankor::traits::CpiInstructionAccount<'info> for #cpi_name <'info> {
-                    fn to_account_infos(&self, infos: &mut Vec<&'info AccountInfo<'info>>) -> ::fankor::errors::FankorResult<()> {
+                    fn to_account_metas_and_infos(
+                        &self,
+                        metas: &mut Vec<AccountMeta>,
+                        infos: &mut Vec<AccountInfo<'info>>,
+                    ) -> FankorResult<()> {
                         #(#cpi_fn_elements)*
                         Ok(())
                     }
@@ -312,7 +370,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 #[automatically_derived]
                 #[cfg(feature = "library")]
                 impl <'info> ::fankor::traits::LpiInstructionAccount for #lpi_name <'info> {
-                    fn to_pubkeys(&self, pubkeys: &mut Vec<::fankor::prelude::Pubkey>) -> ::fankor::errors::FankorResult<()> {
+                    fn to_account_metas(&self, metas: &mut Vec<::fankor::prelude::solana_program::instruction::AccountMeta>) -> ::fankor::errors::FankorResult<()> {
                         #(#lpi_fn_elements)*
                         Ok(())
                     }
@@ -528,7 +586,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                 Err(e) => e,
                             };
                         }
-                    }else{
+                    } else {
                         quote!{
                             let err = match <#ty as ::fankor::traits::InstructionAccount>::try_from(context, accounts) {
                                 Ok(v) => {
@@ -555,9 +613,36 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 .iter()
                 .map(|v| {
                     let variant_name = &v.name;
+                    let writable = if let Some(writable) = &v.writable {
+                        quote! { Some(#writable) }
+                    } else {
+                        quote! { None }
+                    };
+
+                    let signer = if let Some(signer) = &v.signer {
+                        quote! { Some(#signer) }
+                    } else {
+                        quote! { None }
+                    };
 
                     quote!{
-                        #cpi_name::#variant_name(v) => ::fankor::traits::CpiInstructionAccount::to_account_infos(v, infos)?
+                        #cpi_name::#variant_name(v) => {
+                            let from = metas.len();
+                            ::fankor::traits::CpiInstructionAccount::to_account_metas_and_infos(v, metas, infos)?;
+                            let to = metas.len();
+                            let writable = #writable;
+                            let signer = #signer;
+
+                            for meta in &mut metas[from..to] {
+                                if let Some(writable) = writable {
+                                    meta.is_writable = writable;
+                                }
+
+                                if let Some(signer) = signer {
+                                    meta.is_signer = signer;
+                                }
+                            }
+                        }
                     }
                 });
 
@@ -571,15 +656,40 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     #name(<#ty as ::fankor::traits::InstructionAccount<'info>>::LPI)
                 }
             });
-            let lpi_fn_elements = mapped_fields
-                .iter()
-                .map(|v| {
-                    let variant_name = &v.name;
+            let lpi_fn_elements = mapped_fields.iter().map(|v| {
+                let variant_name = &v.name;
+                let writable = if let Some(writable) = &v.writable {
+                    quote! { Some(#writable) }
+                } else {
+                    quote! { None }
+                };
 
-                    quote!{
-                        #lpi_name::#variant_name(v) => ::fankor::traits::LpiInstructionAccount::to_pubkeys(v, pubkeys)?
+                let signer = if let Some(signer) = &v.signer {
+                    quote! { Some(#signer) }
+                } else {
+                    quote! { None }
+                };
+
+                quote! {
+                    #lpi_name::#variant_name(v) => {
+                        let from = metas.len();
+                        ::fankor::traits::LpiInstructionAccount::to_account_metas(v, metas)?;
+                        let to = metas.len();
+                        let writable = #writable;
+                        let signer = #signer;
+
+                        for meta in &mut metas[from..to] {
+                            if let Some(writable) = writable {
+                                meta.is_writable = writable;
+                            }
+
+                            if let Some(signer) = signer {
+                                meta.is_signer = signer;
+                            }
+                        }
                     }
-                });
+                }
+            });
 
             // Result
             quote! {
@@ -616,7 +726,11 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                 #[automatically_derived]
                 impl <'info> ::fankor::traits::CpiInstructionAccount<'info> for #cpi_name <'info> {
-                    fn to_account_infos(&self, infos: &mut Vec<&'info AccountInfo<'info>>) -> ::fankor::errors::FankorResult<()> {
+                    fn to_account_metas_and_infos(
+                        &self,
+                        metas: &mut Vec<AccountMeta>,
+                        infos: &mut Vec<AccountInfo<'info>>,
+                    ) -> FankorResult<()> {
                         match self {
                             #(#cpi_fn_elements),*
                         }
@@ -634,7 +748,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 #[automatically_derived]
                 #[cfg(feature = "library")]
                 impl <'info> ::fankor::traits::LpiInstructionAccount for #lpi_name <'info> {
-                    fn to_pubkeys(&self, pubkeys: &mut Vec<::fankor::prelude::Pubkey>) -> ::fankor::errors::FankorResult<()> {
+                    fn to_account_metas(&self, metas: &mut Vec<::fankor::prelude::solana_program::instruction::AccountMeta>) -> ::fankor::errors::FankorResult<()> {
                         match self {
                             #(#lpi_fn_elements),*
                         }

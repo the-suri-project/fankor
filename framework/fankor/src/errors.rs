@@ -14,6 +14,7 @@ pub const ERROR_CODE_OFFSET: u32 = 6000;
 /// Error codes that can be returned by internal framework code.
 ///
 /// - 1000..2000 - Program
+/// - 2000..3000 - Accounts
 /// - 3000..4000 - Accounts
 /// - 5500       - custom program error without code
 ///
@@ -42,7 +43,7 @@ pub enum ErrorCode {
     // Accounts
     /// No 8 byte discriminator was found on the account
     #[msg("No 8 byte discriminator was found on the account: {}", account)]
-    #[continue_from(3000)]
+    #[continue_from(2000)]
     AccountDiscriminatorNotFound { account: String },
 
     /// The account discriminator did not match what was expected
@@ -229,6 +230,19 @@ pub enum ErrorCode {
         expected: usize,
         account: &'static str,
     },
+
+    // CPI
+    /// The intermediate buffer is empty
+    #[msg("The intermediate buffer is empty")]
+    EmptyIntermediateBuffer,
+
+    /// The result of the intermediate buffer is expected to belong to one program but it belongs to another program instead
+    #[msg(
+        "The result of the intermediate buffer is expected to belong to the program {} but it belongs to the program {} instead ",
+        expected,
+        actual,
+    )]
+    IntermediateBufferIncorrectProgramId { actual: Pubkey, expected: Pubkey },
 }
 
 // ----------------------------------------------------------------------------

@@ -393,7 +393,7 @@ impl<'info, T: crate::traits::Account + AccountSize> Account<'info, T> {
 }
 
 impl<'info, T: crate::traits::Account> InstructionAccount<'info> for Account<'info, T> {
-    type CPI = &'info AccountInfo<'info>;
+    type CPI = AccountInfo<'info>;
 
     #[cfg(feature = "library")]
     type LPI = Pubkey;

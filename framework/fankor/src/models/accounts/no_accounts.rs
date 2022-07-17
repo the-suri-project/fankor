@@ -2,6 +2,7 @@ use crate::errors::{ErrorCode, FankorResult};
 use crate::models::FankorContext;
 use crate::traits::{CpiInstructionAccount, InstructionAccount};
 use solana_program::account_info::AccountInfo;
+use solana_program::instruction::AccountMeta;
 
 /// A struct that receives no accounts.
 pub struct NoAccounts<'info> {
@@ -57,7 +58,11 @@ impl<'info> InstructionAccount<'info> for NoAccounts<'info> {
 pub struct CpiNoAccounts;
 
 impl<'info> CpiInstructionAccount<'info> for CpiNoAccounts {
-    fn to_account_infos(&self, _infos: &mut Vec<&'info AccountInfo<'info>>) -> FankorResult<()> {
+    fn to_account_metas_and_infos(
+        &self,
+        _metas: &mut Vec<AccountMeta>,
+        _infos: &mut Vec<AccountInfo<'info>>,
+    ) -> FankorResult<()> {
         Ok(())
     }
 }
@@ -71,7 +76,7 @@ pub struct LpiNoAccounts;
 
 #[cfg(feature = "library")]
 impl crate::traits::LpiInstructionAccount for LpiNoAccounts {
-    fn to_pubkeys(&self, _pubkeys: &mut Vec<solana_program::pubkey::Pubkey>) -> FankorResult<()> {
+    fn to_account_metas(&self, _metas: &mut Vec<AccountMeta>) -> FankorResult<()> {
         Ok(())
     }
 }

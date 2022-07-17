@@ -167,7 +167,7 @@ impl<'info> UncheckedAccount<'info> {
 }
 
 impl<'info> InstructionAccount<'info> for UncheckedAccount<'info> {
-    type CPI = &'info AccountInfo<'info>;
+    type CPI = AccountInfo<'info>;
 
     #[cfg(feature = "library")]
     type LPI = Pubkey;

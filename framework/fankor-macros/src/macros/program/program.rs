@@ -1,10 +1,10 @@
 use convert_case::{Boundary, Case, Converter};
 use fankor_syn::fankor::FankorInstructionsConfig;
 use proc_macro2::Ident;
-use quote::{format_ident, ToTokens};
+use quote::format_ident;
 use std::collections::HashSet;
 use syn::spanned::Spanned;
-use syn::{Error, FnArg, ImplItem, ItemImpl, ReturnType, Type};
+use syn::{Error, FnArg, GenericArgument, ImplItem, ItemImpl, PathArguments, ReturnType, Type};
 
 use crate::utils::generate_discriminator;
 use crate::Result;
@@ -233,14 +233,53 @@ fn type_from_fn_output(arg: &ReturnType) -> Result<Option<Type>> {
             arg.span(),
             "instructions must return a FankorResult",
         )),
-        ReturnType::Type(_, ty) => {
-            let type_str = ty.to_token_stream().to_string();
+        ReturnType::Type(_, ty) => match &**ty {
+            Type::Path(v) => {
+                let last_arg = v.path.segments.last().unwrap();
+                if &last_arg.ident.to_string() != "FankorResult" {
+                    return Err(Error::new(
+                        v.span(),
+                        "instructions must always return a FankorResult",
+                    ));
+                }
 
-            if type_str.ends_with("Fankor<()>") {
-                Ok(None)
-            } else {
-                Ok(Some((**ty).clone()))
+                match &last_arg.arguments {
+                    PathArguments::AngleBracketed(v) => {
+                        if v.args.len() != 1 {
+                            return Err(Error::new(
+                                last_arg.span(),
+                                "FankorResult has only one generic",
+                            ));
+                        }
+
+                        let first = v.args.first().unwrap();
+                        match first {
+                            GenericArgument::Type(v) => match v {
+                                Type::Tuple(v1) => {
+                                    if v1.elems.is_empty() {
+                                        Ok(None)
+                                    } else {
+                                        Ok(Some(v.clone()))
+                                    }
+                                }
+                                _ => Ok(Some(v.clone())),
+                            },
+                            _ => Err(Error::new(
+                                last_arg.span(),
+                                "The FankorResult's generic must be a type",
+                            )),
+                        }
+                    }
+                    _ => Err(Error::new(
+                        last_arg.span(),
+                        "FankorResult must have a generic",
+                    )),
+                }
             }
-        }
+            _ => Err(Error::new(
+                ty.span(),
+                "instructions must always return a FankorResult",
+            )),
+        },
     }
 }

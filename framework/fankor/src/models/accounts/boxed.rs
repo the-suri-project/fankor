@@ -4,7 +4,7 @@ use crate::traits::InstructionAccount;
 use solana_program::account_info::AccountInfo;
 
 impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Box<T> {
-    type CPI = &'info AccountInfo<'info>;
+    type CPI = AccountInfo<'info>;
 
     #[cfg(feature = "library")]
     type LPI = solana_program::pubkey::Pubkey;

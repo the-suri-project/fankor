@@ -102,7 +102,7 @@ impl<'info, T: Default + crate::traits::Account + AccountSize> UninitializedAcco
 impl<'info, T: crate::traits::Account> InstructionAccount<'info>
     for UninitializedAccount<'info, T>
 {
-    type CPI = &'info AccountInfo<'info>;
+    type CPI = AccountInfo<'info>;
 
     #[cfg(feature = "library")]
     type LPI = Pubkey;

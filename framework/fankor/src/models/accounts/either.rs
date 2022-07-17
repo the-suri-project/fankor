@@ -2,6 +2,7 @@ use crate::errors::{ErrorCode, FankorResult};
 use crate::models::FankorContext;
 use crate::traits::{CpiInstructionAccount, InstructionAccount};
 use solana_program::account_info::AccountInfo;
+use solana_program::instruction::AccountMeta;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 
@@ -128,10 +129,14 @@ pub enum CpiEither<L, R> {
 impl<'info, L: CpiInstructionAccount<'info>, R: CpiInstructionAccount<'info>>
     CpiInstructionAccount<'info> for CpiEither<L, R>
 {
-    fn to_account_infos(&self, infos: &mut Vec<&'info AccountInfo<'info>>) -> FankorResult<()> {
+    fn to_account_metas_and_infos(
+        &self,
+        metas: &mut Vec<AccountMeta>,
+        infos: &mut Vec<AccountInfo<'info>>,
+    ) -> FankorResult<()> {
         match self {
-            CpiEither::Left(v) => v.to_account_infos(infos),
-            CpiEither::Right(v) => v.to_account_infos(infos),
+            CpiEither::Left(v) => v.to_account_metas_and_infos(metas, infos),
+            CpiEither::Right(v) => v.to_account_metas_and_infos(metas, infos),
         }
     }
 }
@@ -150,10 +155,10 @@ pub enum LpiEither<L, R> {
 impl<L: crate::traits::LpiInstructionAccount, R: crate::traits::LpiInstructionAccount>
     crate::traits::LpiInstructionAccount for LpiEither<L, R>
 {
-    fn to_pubkeys(&self, pubkeys: &mut Vec<solana_program::pubkey::Pubkey>) -> FankorResult<()> {
+    fn to_account_metas(&self, metas: &mut Vec<AccountMeta>) -> FankorResult<()> {
         match self {
-            LpiEither::Left(v) => v.to_pubkeys(pubkeys),
-            LpiEither::Right(v) => v.to_pubkeys(pubkeys),
+            LpiEither::Left(v) => v.to_account_metas(metas),
+            LpiEither::Right(v) => v.to_account_metas(metas),
         }
     }
 }

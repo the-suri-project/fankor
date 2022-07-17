@@ -4,6 +4,7 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
+#[derive(Clone)]
 pub struct FankorContext<'info> {
     /// The length of the discriminator.
     discriminator_length: u8,

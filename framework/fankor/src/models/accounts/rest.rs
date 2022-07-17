@@ -36,7 +36,7 @@ impl<'info> Rest<'info> {
 }
 
 impl<'info> InstructionAccount<'info> for Rest<'info> {
-    type CPI = Vec<&'info AccountInfo<'info>>;
+    type CPI = Vec<AccountInfo<'info>>;
 
     #[cfg(feature = "library")]
     type LPI = Vec<solana_program::pubkey::Pubkey>;

@@ -6,7 +6,11 @@ use fankor_syn::fankor::read_fankor_toml;
 use fankor_syn::Result;
 
 use crate::macros::program::program::Program;
+use cpi::build_cpi;
+use lpi::build_lpi;
 
+mod cpi;
+mod lpi;
 mod program;
 
 pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenStream> {
@@ -43,6 +47,17 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let test_unique_program = format_ident!("__fankor_internal__test__unique_program_{}", name);
     let program_entry_name = format_ident!("__fankor_internal__program_{}_entry", name);
     let program_try_entry_name = format_ident!("__fankor_internal__program_{}_try_entry", name);
+
+    let discriminators = program.methods.iter().map(|v| {
+        let fn_name = format_ident!("{}_discriminator", v.name);
+        let discriminator = &v.discriminator;
+
+        quote! {
+            pub fn #fn_name() -> [u8; #discriminator_size] {
+                [#(#discriminator,)*]
+            }
+        }
+    });
 
     let dispatch_methods = program.methods.iter().map(|v| {
         let fn_name = &v.name;
@@ -98,8 +113,8 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
     });
 
-    let dispatch_default = if let Some(fallback_method) = program.fallback_method {
-        let fn_name = fallback_method.name;
+    let dispatch_default = if let Some(fallback_method) = &program.fallback_method {
+        let fn_name = &fallback_method.name;
         quote! {
             _ => {
                 ::fankor::prelude::msg!("Instruction: Fallback");
@@ -112,12 +127,21 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
     };
 
+    let cpi_mod = build_cpi(&program)?;
+    let lpi_mod = build_lpi(&program)?;
+
     let result = quote! {
         #[derive(Debug, Copy, Clone)]
         pub struct #name;
 
         #[cfg(not(feature = "library"))]
         #item
+
+        #[cfg(feature = "library")]
+        #[automatically_derived]
+        impl #name {
+            #(#discriminators)*
+        }
 
         #[automatically_derived]
         impl ::fankor::traits::Program for #name {
@@ -177,7 +201,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             };
 
             // Trick to change the lifetime of the context to 'info and avoid a second lifetime
-            // accross the whole library.
+            // across the whole library.
             let context = unsafe {
                 std::mem::transmute::<&::fankor::models::FankorContext, &'info ::fankor::models::FankorContext>(&context)
             };
@@ -187,6 +211,9 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 #dispatch_default
             }
         }
+
+        #cpi_mod
+        #lpi_mod
 
         #[allow(non_snake_case)]
         #[automatically_derived]
