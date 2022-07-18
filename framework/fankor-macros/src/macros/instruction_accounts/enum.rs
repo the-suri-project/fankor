@@ -239,31 +239,53 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                 }
             };
 
+            let min_accounts = if let Some(min_accounts) = &v.min_accounts {
+                quote! {
+                    (#min_accounts)
+                }
+            } else if let Some(min) = &v.min {
+                quote! {
+                    (#min)
+                }
+            } else {
+                quote! {
+                    <#ty as ::fankor::traits::InstructionAccount>::min_accounts()
+                }
+            };
+
             if v.kind.is_vec() && v.max.is_some() {
                 let min = v.min.as_ref().unwrap_or( &zero);
                 let max = v.max.as_ref().unwrap();
 
                 quote!{
-                    let err = match ::fankor::try_from_vec_accounts_with_bounds(context, accounts, #min, #max) {
-                        Ok(v) => {
-                            let v: #ty = v;
+                    if accounts_len >= #min_accounts {
+                        match ::fankor::try_from_vec_accounts_with_bounds(context, accounts, #min, #max) {
+                            Ok(v) => {
+                                let v: #ty = v;
 
-                            #conditions
+                                #conditions
 
-                            return Ok(#name::#variant_name(v));
-                        },
-                        Err(e) => e,
-                    };
+                                return Ok(#name::#variant_name(v));
+                            },
+                            Err(e) => {
+                                err = e;
+                            }
+                        }
+                    }
                 }
             } else {
                 quote!{
-                    let err = match <#ty as ::fankor::traits::InstructionAccount>::try_from(context, accounts) {
-                        Ok(v) => {
-                            #conditions
-                            return Ok(#name::#variant_name(v));
-                        },
-                        Err(e) => e,
-                    };
+                    if accounts_len >= #min_accounts {
+                        match <#ty as ::fankor::traits::InstructionAccount>::try_from(context, accounts) {
+                            Ok(v) => {
+                                #conditions
+                                return Ok(#name::#variant_name(v));
+                            },
+                            Err(e) => {
+                                err = e;
+                            }
+                        }
+                    }
                 }
             }
         });
@@ -456,6 +478,9 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                 context: &'info FankorContext<'info>,
                 accounts: &mut &'info [AccountInfo<'info>],
             ) -> ::fankor::errors::FankorResult<Self> {
+                let mut err: ::fankor::errors::Error = ::fankor::errors::ErrorCode::NotEnoughAccountKeys.into();
+                let accounts_len = accounts.len();
+
                 #(#try_from_fn_deserialize)*
 
                 Err(err)

@@ -20,6 +20,7 @@ pub struct Field {
     pub signer: Option<TokenStream>,
     pub min: Option<TokenStream>,
     pub max: Option<TokenStream>,
+    pub min_accounts: Option<TokenStream>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -55,9 +56,10 @@ impl Field {
             signer: None,
             min: None,
             max: None,
+            min_accounts: None,
         };
 
-        new_field.parse_attributes(field.attrs)?;
+        new_field.parse_attributes(field.attrs, false)?;
 
         Ok(new_field)
     }
@@ -87,9 +89,10 @@ impl Field {
                     signer: None,
                     min: None,
                     max: None,
+                    min_accounts: None,
                 };
 
-                new_field.parse_attributes(variant.attrs)?;
+                new_field.parse_attributes(variant.attrs, true)?;
 
                 Ok(new_field)
             }
@@ -100,7 +103,7 @@ impl Field {
         }
     }
 
-    fn parse_attributes(&mut self, mut attrs: Vec<Attribute>) -> Result<()> {
+    fn parse_attributes(&mut self, mut attrs: Vec<Attribute>, is_enum: bool) -> Result<()> {
         let mut size_attr = false;
 
         while let Some(attribute) = attrs.pop() {
@@ -247,6 +250,23 @@ impl Field {
                             self.max = Some(quote! {#value});
                             size_attr = true;
                         }
+                        "min_accounts" => {
+                            if !is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The min_accounts attribute is only allowed in enums",
+                                ));
+                            }
+
+                            if self.min_accounts.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The min_accounts argument can only be defined once",
+                                ));
+                            }
+
+                            self.min_accounts = Some(quote! {#value});
+                        }
                         _ => {
                             return Err(Error::new(name.span(), "Unknown argument"));
                         }
@@ -333,6 +353,19 @@ impl Field {
                                 "The size argument must use a value: size = <expr>",
                             ));
                         }
+                        "min_accounts" => {
+                            if !is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The min_accounts attribute is only allowed in enums",
+                                ));
+                            }
+
+                            return Err(Error::new(
+                                name.span(),
+                                "The min_accounts argument must use a value: min_accounts = <expr>",
+                            ));
+                        }
                         _ => {
                             return Err(Error::new(name.span(), "Unknown argument"));
                         }
@@ -392,7 +425,7 @@ pub fn check_fields(fields: &[Field]) -> Result<()> {
                 if field.min.is_some() || field.max.is_some() {
                     return Err(Error::new(
                         field.name.span(),
-                        "The min, max and size attributes are compatible only with Vec and Rest",
+                        "The min, max and size attributes are compatible only with Vec and Rest types",
                     ));
                 }
             }
@@ -405,6 +438,13 @@ pub fn check_fields(fields: &[Field]) -> Result<()> {
                 }
             }
             FieldKind::Rest => {
+                if field.min_accounts.is_some() {
+                    return Err(Error::new(
+                        field.name.span(),
+                        "The min_accounts field cannot be used for Rest, please use the min attribute instead",
+                    ));
+                }
+
                 if rest_field {
                     return Err(Error::new(
                         field.name.span(),

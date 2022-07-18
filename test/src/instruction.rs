@@ -100,6 +100,7 @@ pub enum InstructionEnumAccounts<'info> {
     List4(Vec<Account<'info, AccountData>>),
 
     #[account(max = 15)]
+    #[account(min_accounts = 10)]
     List5(Vec<Account<'info, AccountData>>),
 
     Either(Either<Account<'info, AccountData>, Account<'info, EnumAccountData>>),
@@ -112,6 +113,7 @@ pub enum InstructionEnumAccounts<'info> {
     OtherStruct(Box<InstructionStructAccounts<'info>>),
 
     #[account(writable)]
+    #[account(min_accounts = 10)]
     OtherEnum(Box<InstructionEnumAccounts<'info>>),
 
     // Must be placed in the last position.
