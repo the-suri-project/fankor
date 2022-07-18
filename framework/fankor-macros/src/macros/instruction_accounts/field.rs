@@ -29,6 +29,14 @@ pub enum FieldKind {
     Rest,
 }
 
+impl FieldKind {
+    // GETTERS -----------------------------------------------------------------
+
+    pub fn is_vec(&self) -> bool {
+        matches!(self, FieldKind::Vec(_))
+    }
+}
+
 impl Field {
     // CONSTRUCTORS -----------------------------------------------------------
 

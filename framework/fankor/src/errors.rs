@@ -218,14 +218,27 @@ pub enum ErrorCode {
     #[msg("The account '{}' must not be a signer", account)]
     AccountConstraintSigner { account: &'static str },
 
-    /// The length of the account list must be one value but it is another
+    /// The length of the account list must be greater or equal than one value but it is another
     #[msg(
-        "The length of the account list '{}' must be {} but it is {}",
+        "The length of the account list '{}' must be greater or equal than {} but it is {}",
         account,
         expected,
         actual
     )]
     AccountConstraintMinimumMismatch {
+        actual: usize,
+        expected: usize,
+        account: &'static str,
+    },
+
+    /// The length of the account list must be lower or equal than one value but it is another
+    #[msg(
+        "The length of the account list '{}' must be lower or equal than {} but it is {}",
+        account,
+        expected,
+        actual
+    )]
+    AccountConstraintMaximumMismatch {
         actual: usize,
         expected: usize,
         account: &'static str,

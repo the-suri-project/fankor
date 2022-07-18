@@ -80,7 +80,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                                 account: #variant_name_str,
                             }.into());
                         }
-                    }else if info.owner != &system_program::ID || info.lamports() > 0 {
+                    } else if info.owner != &system_program::ID || info.lamports() > 0 {
                         return Err(::fankor::errors::ErrorCode::AccountConstraintInitialized {
                             account: #variant_name_str,
                         }.into());
@@ -98,7 +98,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                                 account: #variant_name_str,
                             }.into());
                         }
-                    }else if info.is_writable {
+                    } else if info.is_writable {
                         return Err(::fankor::errors::ErrorCode::AccountConstraintWritable {
                             account: #variant_name_str,
                         }.into());
@@ -116,7 +116,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                                 account: #variant_name_str,
                             }.into());
                         }
-                    }else if info.executable {
+                    } else if info.executable {
                         return Err(::fankor::errors::ErrorCode::AccountConstraintExecutable {
                             account: #variant_name_str,
                         }.into());
@@ -140,7 +140,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                                 account: #variant_name_str,
                             }.into());
                         }
-                    }else if is_rent_exempt {
+                    } else if is_rent_exempt {
                         return Err(::fankor::errors::ErrorCode::AccountConstraintRentExempt {
                             account: #variant_name_str,
                         }.into());
@@ -158,7 +158,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                                 account: #variant_name_str,
                             }.into());
                         }
-                    }else if info.is_signer {
+                    } else if info.is_signer {
                         return Err(::fankor::errors::ErrorCode::AccountConstraintSigner {
                             account: #variant_name_str,
                         }.into());
@@ -166,8 +166,29 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                 }});
             }
 
-            let min = if v.max.is_none() {
-                v.min.as_ref().map(|min| {
+            let (min, max) = if v.kind != FieldKind::Rest {
+                let min = if v.max.is_none() {
+                    v.min.as_ref().map(|min| {
+                        quote! {{
+                            let expected = #min;
+                            let actual = v.len();
+
+                            if actual < expected {
+                                return Err(::fankor::errors::ErrorCode::AccountConstraintMinimumMismatch {
+                                    actual,
+                                    expected,
+                                    account: #variant_name_str,
+                                }.into());
+                            }
+                        }}
+                    })
+                } else {
+                    None
+                };
+
+                (min, None)
+            } else {
+                let min = v.min.as_ref().map(|min| {
                     quote! {{
                         let expected = #min;
                         let actual = v.len();
@@ -180,13 +201,28 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                             }.into());
                         }
                     }}
-                })
-            } else {
-                None
+                });
+
+                let max = v.max.as_ref().map(|max| {
+                    quote! {{
+                        let expected = #max;
+                        let actual = v.len();
+
+                        if actual > expected {
+                            return Err(::fankor::errors::ErrorCode::AccountConstraintMaximumMismatch {
+                                actual,
+                                expected,
+                                account: #variant_name_str,
+                            }.into());
+                        }
+                    }}
+                });
+
+                (min, max)
             };
 
             let conditions = if !conditions.is_empty() {
-                Some(quote! {
+                quote! {
                     v.verify_account_infos(&mut |context: &FankorContext<'info>, info: &AccountInfo<'info>| {
                         #(#conditions)*
 
@@ -194,12 +230,16 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                     })?;
 
                     #min
-                })
+                    #max
+                }
             } else {
-                min
+                quote! {
+                    #min
+                    #max
+                }
             };
 
-            if v.max.is_some() {
+            if v.kind.is_vec() && v.max.is_some() {
                 let min = v.min.as_ref().unwrap_or( &zero);
                 let max = v.max.as_ref().unwrap();
 

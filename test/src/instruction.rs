@@ -54,6 +54,7 @@ pub struct InstructionStructAccounts<'info> {
 
     // Must be placed in the last position.
     #[account(min = 2)]
+    #[account(max = 5)]
     #[account(writable)]
     pub rest: Rest<'info>,
 }
@@ -115,6 +116,7 @@ pub enum InstructionEnumAccounts<'info> {
 
     // Must be placed in the last position.
     #[account(min = 2)]
+    #[account(max = 5)]
     #[account(writable)]
     Rest(Rest<'info>),
 }

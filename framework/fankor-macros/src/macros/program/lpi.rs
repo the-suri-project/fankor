@@ -18,7 +18,7 @@ pub fn build_lpi(program: &Program) -> Result<TokenStream> {
             (arguments, quote! {
                 , arguments: #argument_type
             })
-        }else {
+        } else {
             (quote! {}, quote! {})
         };
 

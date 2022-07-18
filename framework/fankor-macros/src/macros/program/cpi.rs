@@ -18,7 +18,7 @@ pub fn build_cpi(program: &Program) -> Result<TokenStream> {
             (arguments, quote! {
                 , arguments: #argument_type
             })
-        }else {
+        } else {
             (quote! {}, quote! {})
         };
 
@@ -28,7 +28,7 @@ pub fn build_cpi(program: &Program) -> Result<TokenStream> {
             }, quote! {
                 ::fankor::models::CpiReturn<#result_type>
             })
-        }else {
+        } else {
             (quote! { Ok(()) }, quote! { () })
         };
 
