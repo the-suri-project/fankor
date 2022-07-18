@@ -3,7 +3,7 @@ use syn::ItemStruct;
 
 use fankor_syn::Result;
 
-use crate::macros::instruction_accounts::field::{Field, FieldKind};
+use crate::macros::instruction_accounts::field::{check_fields, Field, FieldKind};
 
 pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
     let name = &item.ident;
@@ -28,6 +28,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         .iter()
         .map(|v| Field::from(v.clone()))
         .collect::<Result<Vec<Field>>>()?;
+    check_fields(&mapped_fields)?;
 
     let zero = quote! {0};
     let try_from_fn_deserialize =mapped_fields

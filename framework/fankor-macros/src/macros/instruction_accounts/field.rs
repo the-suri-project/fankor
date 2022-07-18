@@ -364,3 +364,50 @@ fn discriminate_type(ty: &Type) -> FieldKind {
 
     FieldKind::Other
 }
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+pub fn check_fields(fields: &[Field]) -> Result<()> {
+    let mut rest_field = false;
+    for field in fields {
+        match &field.kind {
+            FieldKind::Other => {
+                if rest_field {
+                    return Err(Error::new(
+                        field.name.span(),
+                        "The rest field cannot be placed after other fields",
+                    ));
+                }
+
+                if field.min.is_some() || field.max.is_some() {
+                    return Err(Error::new(
+                        field.name.span(),
+                        "The min, max and size attributes are compatible only with Vec and Rest",
+                    ));
+                }
+            }
+            FieldKind::Vec(_) => {
+                if rest_field {
+                    return Err(Error::new(
+                        field.name.span(),
+                        "The rest field cannot be placed after other fields",
+                    ));
+                }
+            }
+            FieldKind::Rest => {
+                if rest_field {
+                    return Err(Error::new(
+                        field.name.span(),
+                        "The rest field can only be defined once",
+                    ));
+                }
+
+                rest_field = true;
+            }
+        }
+    }
+
+    Ok(())
+}
