@@ -9,6 +9,11 @@ impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Box<T> {
     #[cfg(feature = "library")]
     type LPI = solana_program::pubkey::Pubkey;
 
+    #[inline]
+    fn min_accounts() -> usize {
+        T::min_accounts()
+    }
+
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,

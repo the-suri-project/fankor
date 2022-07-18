@@ -172,6 +172,11 @@ impl<'info> InstructionAccount<'info> for UncheckedAccount<'info> {
     #[cfg(feature = "library")]
     type LPI = Pubkey;
 
+    #[inline(always)]
+    fn min_accounts() -> usize {
+        1
+    }
+
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,

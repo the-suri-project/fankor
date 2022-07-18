@@ -31,6 +31,11 @@ impl<'info> InstructionAccount<'info> for NoAccounts<'info> {
     #[cfg(feature = "library")]
     type LPI = LpiNoAccounts;
 
+    #[inline(always)]
+    fn min_accounts() -> usize {
+        0
+    }
+
     fn verify_account_infos<F>(&self, _f: &mut F) -> FankorResult<()>
     where
         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,

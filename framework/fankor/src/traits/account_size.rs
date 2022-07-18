@@ -26,14 +26,14 @@ macro_rules! define_trait {
 define_trait!(bool, u8, u16, u32, u64, u128, usize, i8, i16, i32, i64, i128, isize, char, f32, f64);
 
 impl AccountSize for Pubkey {
-    #[inline]
+    #[inline(always)]
     fn min_account_size() -> usize {
         size_of::<[u8; 32]>()
     }
 }
 
 impl AccountSize for String {
-    #[inline]
+    #[inline(always)]
     fn min_account_size() -> usize {
         size_of::<u32>() // Length
     }
@@ -46,7 +46,7 @@ impl AccountSize for String {
 }
 
 impl<T: AccountSize> AccountSize for Vec<T> {
-    #[inline]
+    #[inline(always)]
     fn min_account_size() -> usize {
         size_of::<u32>() // Length
     }
@@ -59,7 +59,7 @@ impl<T: AccountSize> AccountSize for Vec<T> {
 }
 
 impl<T: AccountSize> AccountSize for Option<T> {
-    #[inline]
+    #[inline(always)]
     fn min_account_size() -> usize {
         size_of::<u8>() // Discriminator
     }

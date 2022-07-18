@@ -25,6 +25,11 @@ impl<'info> Rest<'info> {
     // GETTERS ----------------------------------------------------------------
 
     #[inline(always)]
+    pub fn len(&self) -> usize {
+        self.accounts.len()
+    }
+
+    #[inline(always)]
     pub fn accounts(&self) -> &'info [AccountInfo<'info>] {
         self.accounts
     }
@@ -40,6 +45,11 @@ impl<'info> InstructionAccount<'info> for Rest<'info> {
 
     #[cfg(feature = "library")]
     type LPI = Vec<solana_program::pubkey::Pubkey>;
+
+    #[inline(always)]
+    fn min_accounts() -> usize {
+        0 // Because can be any size.
+    }
 
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where

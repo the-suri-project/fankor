@@ -10,6 +10,9 @@ pub trait InstructionAccount<'info>: Sized {
     #[cfg(feature = "library")]
     type LPI: LpiInstructionAccount;
 
+    /// Method to get the minimum number of accounts needed to decode the instruction account.
+    fn min_accounts() -> usize;
+
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>;

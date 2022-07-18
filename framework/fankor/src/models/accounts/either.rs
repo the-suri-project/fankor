@@ -69,6 +69,11 @@ impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> Instruct
     #[cfg(feature = "library")]
     type LPI = LpiEither<L::LPI, R::LPI>;
 
+    #[inline]
+    fn min_accounts() -> usize {
+        L::min_accounts().max(R::min_accounts())
+    }
+
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
         F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
