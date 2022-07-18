@@ -1,3 +1,4 @@
+pub use crate::cpi;
 pub use crate::errors::*;
 pub use crate::macros::*;
 pub use crate::models::types::maps::{FnkMapU16, FnkMapU24, FnkMapU8};
