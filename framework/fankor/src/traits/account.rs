@@ -18,9 +18,7 @@ pub trait Account:
 
 pub trait AccountSerialize {
     /// Serializes the account data into `writer`.
-    fn try_serialize<W: Write>(&self, _writer: &mut W) -> FankorResult<()> {
-        Ok(())
-    }
+    fn try_serialize<W: Write>(&self, _writer: &mut W) -> FankorResult<()>;
 }
 
 pub trait AccountDeserialize: Sized {

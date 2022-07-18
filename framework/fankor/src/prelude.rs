@@ -23,4 +23,5 @@ pub use solana_program::sysvar::rewards::Rewards;
 pub use solana_program::sysvar::slot_hashes::SlotHashes;
 pub use solana_program::sysvar::slot_history::SlotHistory;
 pub use solana_program::sysvar::stake_history::StakeHistory;
-pub use solana_program::sysvar::Sysvar as SolanaSysvar;
+#[cfg(feature = "spl-token")]
+pub use spl_token;

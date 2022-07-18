@@ -1,4 +1,4 @@
-use crate::errors::Error::ProgramError;
+use crate::errors::Error;
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
@@ -30,5 +30,5 @@ pub fn transfer_with_seed(
         &[accounts.from, accounts.base, accounts.to],
         signer_seeds,
     )
-    .map_or_else(|e| Err(ProgramError(e)), |_| Ok(()))
+    .map_or_else(|e| Err(Error::ProgramError(e)), |_| Ok(()))
 }
