@@ -127,6 +127,39 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
     };
 
+    let test_method = quote! {
+        #[allow(non_snake_case)]
+        #[automatically_derived]
+        fn new_program_test<'info>() -> ::solana_program_test::ProgramTest {
+            ::solana_program_test::ProgramTest::new(
+                #name_str,
+                crate::ID,
+                Some(
+                    |first_instruction_account: usize,
+                     invoke_context: &mut ::solana_program_test::InvokeContext| {
+                        ::solana_program_test::builtin_process_instruction(
+                            |program_id: &::fankor::prelude::Pubkey,
+                                accounts: &[::fankor::prelude::AccountInfo],
+                                data: &[u8]| {
+                                // Hacks to change the lifetime to 'info.
+                                let program_id = unsafe {
+                                    std::mem::transmute::<&::fankor::prelude::Pubkey, &'info ::fankor::prelude::Pubkey>(program_id)
+                                };
+                                let accounts = unsafe {
+                                    std::mem::transmute::<&[::fankor::prelude::AccountInfo], &'info [::fankor::prelude::AccountInfo<'info>]>(accounts)
+                                };
+
+                                #program_entry_name(program_id, accounts, data)
+                            },
+                            first_instruction_account,
+                            invoke_context,
+                        )
+                    },
+                )
+            )
+        }
+    };
+
     let cpi_mod = build_cpi(&program)?;
     let lpi_mod = build_lpi(&program)?;
 
@@ -134,13 +167,17 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[derive(Debug, Copy, Clone)]
         pub struct #name;
 
-        #[cfg(not(feature = "library"))]
         #item
 
-        #[cfg(feature = "library")]
         #[automatically_derived]
         impl #name {
             #(#discriminators)*
+        }
+
+        #[cfg(any(test, feature = "test"))]
+        #[automatically_derived]
+        impl #name {
+            #test_method
         }
 
         #[automatically_derived]
@@ -156,7 +193,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
         #[allow(non_snake_case)]
         #[automatically_derived]
-        #[cfg(not(feature = "library"))]
         fn #program_entry_name<'info>(
             program_id: &'info ::fankor::prelude::Pubkey,
             accounts: &'info [::fankor::prelude::AccountInfo<'info>],
@@ -170,7 +206,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
         #[allow(non_snake_case)]
         #[automatically_derived]
-        #[cfg(not(feature = "library"))]
         fn #program_try_entry_name<'info>(
             program_id: &'info ::fankor::prelude::Pubkey,
             accounts: &'info [::fankor::prelude::AccountInfo<'info>],
@@ -200,7 +235,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 )
             };
 
-            // Trick to change the lifetime of the context to 'info and avoid a second lifetime
+            // Hack to change the lifetime of the context to 'info and avoid a second lifetime
             // across the whole library.
             let context = unsafe {
                 std::mem::transmute::<&::fankor::models::FankorContext, &'info ::fankor::models::FankorContext>(&context)
@@ -217,7 +252,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
         #[allow(non_snake_case)]
         #[automatically_derived]
-        #[cfg(test)]
         #[test]
         fn #test_unique_program() {
            let program_name = #name_str;

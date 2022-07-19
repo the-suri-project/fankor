@@ -18,7 +18,6 @@ pub fn processor() -> Result<proc_macro::TokenStream> {
         /// Returns the program ID.
         pub fn id() -> ::fankor::prelude::solana_program::pubkey::Pubkey { ID }
 
-        #[cfg(test)]
         #[test]
         fn __fankor_internal__test__id() { assert!(check_id(&id())); }
 

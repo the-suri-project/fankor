@@ -5,8 +5,6 @@ use solana_program::account_info::AccountInfo;
 
 impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Option<T> {
     type CPI = Option<T::CPI>;
-
-    #[cfg(feature = "library")]
     type LPI = Option<T::LPI>;
 
     #[inline(always)]

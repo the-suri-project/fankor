@@ -394,8 +394,6 @@ impl<'info, T: crate::traits::Account + AccountSize> Account<'info, T> {
 
 impl<'info, T: crate::traits::Account> InstructionAccount<'info> for Account<'info, T> {
     type CPI = AccountInfo<'info>;
-
-    #[cfg(feature = "library")]
     type LPI = Pubkey;
 
     #[inline(always)]
@@ -434,11 +432,10 @@ impl<'info, T: crate::traits::Account> InstructionAccount<'info> for Account<'in
         }
 
         let mut data: &[u8] = &info.try_borrow_data()?;
-        Ok(Account::new_without_checks(
-            context,
-            info,
-            T::try_deserialize(&mut data)?,
-        ))
+        let result = Account::new_without_checks(context, info, T::try_deserialize(&mut data)?);
+
+        *accounts = &accounts[1..];
+        Ok(result)
     }
 }
 

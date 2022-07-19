@@ -28,7 +28,6 @@ impl<'info> NoAccounts<'info> {
 impl<'info> InstructionAccount<'info> for NoAccounts<'info> {
     type CPI = CpiNoAccounts;
 
-    #[cfg(feature = "library")]
     type LPI = LpiNoAccounts;
 
     #[inline(always)]
@@ -76,10 +75,8 @@ impl<'info> CpiInstructionAccount<'info> for CpiNoAccounts {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-#[cfg(feature = "library")]
 pub struct LpiNoAccounts;
 
-#[cfg(feature = "library")]
 impl crate::traits::LpiInstructionAccount for LpiNoAccounts {
     fn to_account_metas(&self, _metas: &mut Vec<AccountMeta>) -> FankorResult<()> {
         Ok(())

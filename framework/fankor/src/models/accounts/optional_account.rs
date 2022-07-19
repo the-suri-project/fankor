@@ -45,8 +45,6 @@ impl<'info, T: crate::traits::Account> OptionalAccount<'info, T> {
 
 impl<'info, T: crate::traits::Account> InstructionAccount<'info> for OptionalAccount<'info, T> {
     type CPI = AccountInfo<'info>;
-
-    #[cfg(feature = "library")]
     type LPI = Pubkey;
 
     #[inline(always)]
@@ -79,9 +77,12 @@ impl<'info, T: crate::traits::Account> InstructionAccount<'info> for OptionalAcc
             return Ok(OptionalAccount::Missing);
         }
 
-        Ok(OptionalAccount::Account(
+        let result = OptionalAccount::Account(
             <Account<'info, T> as InstructionAccount<'info>>::try_from(context, accounts)?,
-        ))
+        );
+
+        *accounts = &accounts[1..];
+        Ok(result)
     }
 }
 

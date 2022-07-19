@@ -421,8 +421,6 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         #[automatically_derived]
         impl #generic_params ::fankor::traits::InstructionAccount<'info> for #name #generic_params #generic_where_clause {
             type CPI = #cpi_name <'info>;
-
-            #[cfg(feature = "library")]
             type LPI = #lpi_name <'info>;
 
             fn min_accounts() -> usize {
@@ -470,13 +468,11 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         }
 
         #[automatically_derived]
-        #[cfg(feature = "library")]
         #vis struct #lpi_name <'info> {
             #(#lpi_fields),*
         }
 
         #[automatically_derived]
-        #[cfg(feature = "library")]
         impl <'info> ::fankor::traits::LpiInstructionAccount for #lpi_name <'info> {
             fn to_account_metas(&self, metas: &mut Vec<::fankor::prelude::solana_program::instruction::AccountMeta>) -> ::fankor::errors::FankorResult<()> {
                 #(#lpi_fn_elements)*

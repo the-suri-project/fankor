@@ -1,4 +1,4 @@
-use crate::errors::{ErrorCode, FankorResult};
+use crate::errors::FankorResult;
 use crate::models::FankorContext;
 use crate::traits::{CpiInstructionAccount, InstructionAccount};
 use solana_program::account_info::AccountInfo;
@@ -65,8 +65,6 @@ impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> Instruct
     for Either<L, R>
 {
     type CPI = CpiEither<L::CPI, R::CPI>;
-
-    #[cfg(feature = "library")]
     type LPI = LpiEither<L::LPI, R::LPI>;
 
     #[inline]
@@ -89,17 +87,14 @@ impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> Instruct
         context: &'info FankorContext<'info>,
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
-        if accounts.is_empty() {
-            return Err(ErrorCode::NotEnoughAccountKeys.into());
-        }
-
         let mut new_accounts = *accounts;
-        let result = match L::try_from(context, &mut new_accounts) {
-            Ok(l) => Either::Left(l),
-            Err(_) => Either::Right(R::try_from(context, accounts)?),
-        };
-
-        Ok(result)
+        match L::try_from(context, &mut new_accounts) {
+            Ok(l) => {
+                *accounts = new_accounts;
+                Ok(Either::Left(l))
+            }
+            Err(_) => Ok(Either::Right(R::try_from(context, accounts)?)),
+        }
     }
 }
 
@@ -150,13 +145,11 @@ impl<'info, L: CpiInstructionAccount<'info>, R: CpiInstructionAccount<'info>>
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-#[cfg(feature = "library")]
 pub enum LpiEither<L, R> {
     Left(L),
     Right(R),
 }
 
-#[cfg(feature = "library")]
 impl<L: crate::traits::LpiInstructionAccount, R: crate::traits::LpiInstructionAccount>
     crate::traits::LpiInstructionAccount for LpiEither<L, R>
 {

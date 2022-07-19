@@ -18,7 +18,9 @@ pub fn try_from_vec_accounts_with_bounds<'info, T: InstructionAccount<'info>>(
     let mut new_accounts = *accounts;
 
     while result.len() < max {
-        if let Ok(account) = T::try_from(context, &mut new_accounts) {
+        let mut step_accounts = new_accounts;
+        if let Ok(account) = T::try_from(context, &mut step_accounts) {
+            new_accounts = step_accounts;
             result.push(account);
         } else {
             break;

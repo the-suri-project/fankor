@@ -123,7 +123,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
         #[allow(non_snake_case)]
         #[automatically_derived]
-        #[cfg(test)]
         #[test]
         fn #test_unique_account_discriminator() {
             let account_name = #name_str;

@@ -158,8 +158,6 @@ impl<'info, T: crate::traits::Account> InstructionAccount<'info>
     for UninitializedAccount<'info, T>
 {
     type CPI = AccountInfo<'info>;
-
-    #[cfg(feature = "library")]
     type LPI = Pubkey;
 
     #[inline(always)]
@@ -184,6 +182,7 @@ impl<'info, T: crate::traits::Account> InstructionAccount<'info>
         }
 
         let info = &accounts[0];
+        *accounts = &accounts[1..];
         UninitializedAccount::new(context, info)
     }
 }

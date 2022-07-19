@@ -168,8 +168,6 @@ impl<'info> UncheckedAccount<'info> {
 
 impl<'info> InstructionAccount<'info> for UncheckedAccount<'info> {
     type CPI = AccountInfo<'info>;
-
-    #[cfg(feature = "library")]
     type LPI = Pubkey;
 
     #[inline(always)]
@@ -194,6 +192,7 @@ impl<'info> InstructionAccount<'info> for UncheckedAccount<'info> {
         }
 
         let info = &accounts[0];
+        *accounts = &accounts[1..];
         Ok(UncheckedAccount::new(context, info))
     }
 }

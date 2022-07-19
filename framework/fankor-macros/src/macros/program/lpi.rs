@@ -40,7 +40,6 @@ pub fn build_lpi(program: &Program) -> Result<TokenStream> {
     });
 
     Ok(quote! {
-        #[cfg(feature = "library")]
         pub mod lpi {
             use super::*;
 

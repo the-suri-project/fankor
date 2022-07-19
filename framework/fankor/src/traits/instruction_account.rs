@@ -6,8 +6,6 @@ use solana_program::instruction::AccountMeta;
 /// Trait for account wrappers.
 pub trait InstructionAccount<'info>: Sized {
     type CPI: CpiInstructionAccount<'info>;
-
-    #[cfg(feature = "library")]
     type LPI: LpiInstructionAccount;
 
     /// Method to get the minimum number of accounts needed to decode the instruction account.
@@ -83,12 +81,10 @@ impl<'info, T: CpiInstructionAccount<'info>> CpiInstructionAccount<'info> for Ve
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-#[cfg(feature = "library")]
 pub trait LpiInstructionAccount {
     fn to_account_metas(&self, metas: &mut Vec<AccountMeta>) -> FankorResult<()>;
 }
 
-#[cfg(feature = "library")]
 impl LpiInstructionAccount for solana_program::pubkey::Pubkey {
     fn to_account_metas(&self, metas: &mut Vec<AccountMeta>) -> FankorResult<()> {
         metas.push(AccountMeta {
@@ -100,7 +96,6 @@ impl LpiInstructionAccount for solana_program::pubkey::Pubkey {
     }
 }
 
-#[cfg(feature = "library")]
 impl<T: LpiInstructionAccount> LpiInstructionAccount for Option<T> {
     fn to_account_metas(&self, metas: &mut Vec<AccountMeta>) -> FankorResult<()> {
         if let Some(v) = self {
@@ -111,7 +106,6 @@ impl<T: LpiInstructionAccount> LpiInstructionAccount for Option<T> {
     }
 }
 
-#[cfg(feature = "library")]
 impl<T: LpiInstructionAccount> LpiInstructionAccount for Vec<T> {
     fn to_account_metas(&self, metas: &mut Vec<AccountMeta>) -> FankorResult<()> {
         for v in self {

@@ -421,28 +421,28 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
         match &v.kind {
             FieldKind::Other => {
                 quote! {
-                    min_accounts = min_accounts.max(<#ty as ::fankor::traits::InstructionAccount>::min_accounts());
+                    min_accounts = min_accounts.min(<#ty as ::fankor::traits::InstructionAccount>::min_accounts());
                 }
             }
             FieldKind::Vec(ty) => {
                 if let Some(min) = &v.min {
                     quote! {
-                        min_accounts = min_accounts.max(#min * <#ty>::min_accounts());
+                        min_accounts = min_accounts.min(#min * <#ty>::min_accounts());
                     }
                 } else {
                     quote! {
-                        min_accounts = min_accounts.max(<#ty as ::fankor::traits::InstructionAccount>::min_accounts());
+                        min_accounts = min_accounts.min(<#ty as ::fankor::traits::InstructionAccount>::min_accounts());
                     }
                 }
             }
             FieldKind::Rest => {
                 if let Some(min) = &v.min {
                     quote! {
-                        min_accounts = min_accounts.max(#min);
+                        min_accounts = min_accounts.min(#min);
                     }
                 } else {
                     quote! {
-                        min_accounts = min_accounts.max(<#ty as ::fankor::traits::InstructionAccount>::min_accounts());
+                        min_accounts = min_accounts.min(<#ty as ::fankor::traits::InstructionAccount>::min_accounts());
                     }
                 }
             }
@@ -450,16 +450,19 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
     });
 
     // Result
+    let min_accounts = if mapped_fields.is_empty() {
+        0
+    } else {
+        usize::MAX
+    };
     let result = quote! {
         #[automatically_derived]
         impl #generic_params ::fankor::traits::InstructionAccount<'info> for #name #generic_params #generic_where_clause {
             type CPI = #cpi_name <'info>;
-
-            #[cfg(feature = "library")]
             type LPI = #lpi_name <'info>;
 
             fn min_accounts() -> usize {
-                let mut min_accounts = 0;
+                let mut min_accounts = #min_accounts;
                 #(#min_accounts_fn_elements)*
                 min_accounts
             }
@@ -507,13 +510,11 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
         }
 
         #[automatically_derived]
-        #[cfg(feature = "library")]
         #vis enum #lpi_name <'info>{
             #(#lpi_fields),*
         }
 
         #[automatically_derived]
-        #[cfg(feature = "library")]
         impl <'info> ::fankor::traits::LpiInstructionAccount for #lpi_name <'info> {
             fn to_account_metas(&self, metas: &mut Vec<::fankor::prelude::solana_program::instruction::AccountMeta>) -> ::fankor::errors::FankorResult<()> {
                 match self {

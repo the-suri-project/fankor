@@ -78,6 +78,7 @@ pub enum InstructionEnumAccounts<'info> {
     #[account(signer = false)]
     Account2(Box<Account<'info, AccountData>>),
 
+    // Do not use `Optional` in enums, it invalidates the rest variants.
     Account3(Option<Account<'info, AccountData>>),
 
     OptionalAccount(OptionalAccount<'info, AccountData>),
