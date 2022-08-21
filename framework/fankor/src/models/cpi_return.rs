@@ -21,8 +21,8 @@ impl<T: BorshDeserialize> CpiReturn<T> {
     // METHODS ----------------------------------------------------------------
 
     pub fn get(&self, program_id: &Pubkey) -> FankorResult<T> {
-        let (key, data) = solana_program::program::get_return_data()
-            .ok_or_else(|| ErrorCode::EmptyIntermediateBuffer)?;
+        let (key, data) =
+            solana_program::program::get_return_data().ok_or(ErrorCode::EmptyIntermediateBuffer)?;
 
         if key != *program_id {
             return Err(ErrorCode::IntermediateBufferIncorrectProgramId {
@@ -36,8 +36,8 @@ impl<T: BorshDeserialize> CpiReturn<T> {
     }
 
     pub fn get_ignoring_program(&self) -> FankorResult<T> {
-        let (_key, data) = solana_program::program::get_return_data()
-            .ok_or_else(|| ErrorCode::EmptyIntermediateBuffer)?;
+        let (_key, data) =
+            solana_program::program::get_return_data().ok_or(ErrorCode::EmptyIntermediateBuffer)?;
         Ok(T::try_from_slice(&data)?)
     }
 }

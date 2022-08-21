@@ -26,7 +26,7 @@ pub struct Field {
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FieldKind {
     Other,
-    Vec(Type),
+    Vec(Box<Type>),
     Rest,
 }
 
@@ -390,7 +390,7 @@ fn discriminate_type(ty: &Type) -> FieldKind {
                 PathArguments::AngleBracketed(v) => {
                     let first = v.args.first().unwrap();
                     match first {
-                        GenericArgument::Type(v) => FieldKind::Vec(v.clone()),
+                        GenericArgument::Type(v) => FieldKind::Vec(Box::new(v.clone())),
                         _ => FieldKind::Other,
                     }
                 }

@@ -1,4 +1,4 @@
-use crate::macros::program::program::Program;
+use crate::macros::program::programs::Program;
 use fankor_syn::Result;
 use proc_macro2::TokenStream;
 use quote::quote;

@@ -48,7 +48,7 @@ impl AccountDeserialize for Mint {
     unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> FankorResult<Self> {
         spl_token::state::Mint::unpack(buf)
             .map(Mint)
-            .map_err(|e| crate::errors::Error::ProgramError(e))
+            .map_err(crate::errors::Error::ProgramError)
     }
 }
 
@@ -101,7 +101,7 @@ impl AccountDeserialize for TokenAccount {
     unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> FankorResult<Self> {
         spl_token::state::Account::unpack(buf)
             .map(TokenAccount)
-            .map_err(|e| crate::errors::Error::ProgramError(e))
+            .map_err(crate::errors::Error::ProgramError)
     }
 }
 

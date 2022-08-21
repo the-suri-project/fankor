@@ -5,13 +5,13 @@ use syn::{AttributeArgs, Error, Item};
 use fankor_syn::fankor::read_fankor_toml;
 use fankor_syn::Result;
 
-use crate::macros::program::program::Program;
+use crate::macros::program::programs::Program;
 use cpi::build_cpi;
 use lpi::build_lpi;
 
 mod cpi;
 mod lpi;
-mod program;
+mod programs;
 
 pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenStream> {
     // Process arguments.
@@ -39,7 +39,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let discriminator_size_u8 = instructions_config.discriminator_size.unwrap();
     let discriminator_size = discriminator_size_u8 as usize;
 
-    let program = Program::from(item, &instructions_config)?;
+    let program = Program::from(item, instructions_config)?;
     let name = &program.name;
     let name_str = name.to_string();
     let item = &program.item;

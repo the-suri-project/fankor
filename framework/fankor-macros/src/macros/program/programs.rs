@@ -131,7 +131,7 @@ impl Program {
             let method_name_str = method_name.to_string();
             let mut is_fallback = false;
 
-            if method_name.to_string() == "fallback" {
+            if method_name == "fallback" {
                 fallbacks += 1;
                 is_fallback = true;
             }
@@ -223,7 +223,7 @@ impl Program {
 fn type_from_fn_arg(arg: &FnArg) -> Result<Type> {
     match arg {
         FnArg::Typed(v) => Ok((*v.ty).clone()),
-        FnArg::Receiver(v) => return Err(Error::new(v.span(), "incorrect argument type")),
+        FnArg::Receiver(v) => Err(Error::new(v.span(), "incorrect argument type")),
     }
 }
 
