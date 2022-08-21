@@ -182,6 +182,10 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
         #[automatically_derived]
         impl ::fankor::traits::Program for #name {
+            fn name() -> &'static str {
+                #name_str
+            }
+
             fn address() -> &'static Pubkey {
                 &crate::ID
             }

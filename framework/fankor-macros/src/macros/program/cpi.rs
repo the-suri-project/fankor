@@ -5,6 +5,7 @@ use quote::quote;
 
 pub fn build_cpi(program: &Program) -> Result<TokenStream> {
     let methods = program.methods.iter().map(|v| {
+        let program_name = &program.name;
         let method_name = &v.name;
         let account_type = &v.account_type;
         let discriminator = &v.discriminator;
@@ -33,7 +34,7 @@ pub fn build_cpi(program: &Program) -> Result<TokenStream> {
         };
 
         quote! {
-            pub fn #method_name<'info>(accounts: <#account_type<'info> as ::fankor::traits::InstructionAccount<'info>>::CPI #argument_param, signer_seeds: &[&[&[u8]]]) -> ::fankor::errors::FankorResult<#result_param> {
+            pub fn #method_name<'info>(_program: &::fankor::models::Program<super::#program_name>, accounts: <#account_type<'info> as ::fankor::traits::InstructionAccount<'info>>::CPI #argument_param, signer_seeds: &[&[&[u8]]]) -> ::fankor::errors::FankorResult<#result_param> {
                 let mut data = [#(#discriminator),*].to_vec();
                 #arguments
 
@@ -42,7 +43,7 @@ pub fn build_cpi(program: &Program) -> Result<TokenStream> {
                 ::fankor::traits::CpiInstructionAccount::to_account_metas_and_infos(&accounts, &mut metas, &mut infos)?;
 
                 let instruction = ::fankor::prelude::solana_program::instruction::Instruction {
-                    program_id: crate::ID,
+                    program_id: *<super::#program_name as ::fankor::traits::Program>::address(),
                     accounts: metas,
                     data,
                 };
