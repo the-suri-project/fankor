@@ -1,6 +1,9 @@
 use solana_program::pubkey::Pubkey;
 
 pub trait Program {
-    /// The address that identify the program.
+    /// The name that identifies the program.
+    fn name() -> &'static str;
+
+    /// The address that identifies the program.
     fn address() -> &'static Pubkey;
 }

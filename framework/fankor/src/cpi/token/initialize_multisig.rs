@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::models::{Program, Token};
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 
@@ -8,13 +9,14 @@ pub struct CpiInitializeMultisig<'info> {
 }
 
 pub fn initialize_multisig(
+    program: &Program<Token>,
     accounts: CpiInitializeMultisig,
     m: u8,
     signer_seeds: &[&[&[u8]]],
 ) -> FankorResult<()> {
     let signer_pubkeys = accounts.signers.iter().map(|v| v.key).collect::<Vec<_>>();
     let ix = spl_token::instruction::initialize_multisig(
-        &spl_token::ID,
+        program.address(),
         accounts.multisignature.key,
         &signer_pubkeys,
         m,

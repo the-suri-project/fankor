@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::models::{Program, System};
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 
@@ -7,6 +8,7 @@ pub struct CpiUpgradeNonceAccount<'info> {
 }
 
 pub fn upgrade_nonce_account(
+    _program: &Program<System>,
     accounts: CpiUpgradeNonceAccount,
     signer_seeds: &[&[&[u8]]],
 ) -> FankorResult<()> {

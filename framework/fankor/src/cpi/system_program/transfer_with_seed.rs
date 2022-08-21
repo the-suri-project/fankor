@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::models::{Program, System};
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
@@ -10,6 +11,7 @@ pub struct CpiTransferWithSeed<'info> {
 }
 
 pub fn transfer_with_seed(
+    _program: &Program<System>,
     accounts: CpiTransferWithSeed,
     from_seed: String,
     from_owner: &Pubkey,

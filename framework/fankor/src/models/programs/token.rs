@@ -10,6 +10,10 @@ use std::ops::Deref;
 pub struct Token;
 
 impl Program for Token {
+    fn name() -> &'static str {
+        "Token"
+    }
+
     fn address() -> &'static Pubkey {
         &spl_token::ID
     }

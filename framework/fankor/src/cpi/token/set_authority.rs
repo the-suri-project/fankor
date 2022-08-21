@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::models::{Program, Token};
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
@@ -10,13 +11,14 @@ pub struct CpiSetAuthority<'info> {
 }
 
 pub fn set_authority(
+    program: &Program<Token>,
     accounts: CpiSetAuthority,
     authority_type: AuthorityType,
     new_authority: Option<&Pubkey>,
     signer_seeds: &[&[&[u8]]],
 ) -> FankorResult<()> {
     let ix = spl_token::instruction::set_authority(
-        &spl_token::ID,
+        program.address(),
         accounts.owned.key,
         new_authority,
         authority_type,
@@ -39,6 +41,7 @@ pub struct CpiSetAuthorityMultisig<'info> {
 }
 
 pub fn set_authority_multisig(
+    program: &Program<Token>,
     accounts: CpiSetAuthorityMultisig,
     authority_type: AuthorityType,
     new_authority: Option<&Pubkey>,
@@ -46,7 +49,7 @@ pub fn set_authority_multisig(
 ) -> FankorResult<()> {
     let signer_pubkeys = accounts.signers.iter().map(|v| v.key).collect::<Vec<_>>();
     let ix = spl_token::instruction::set_authority(
-        &spl_token::ID,
+        program.address(),
         accounts.owned.key,
         new_authority,
         authority_type,

@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::models::{Program, Token};
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 
@@ -8,9 +9,14 @@ pub struct CpiBurn<'info> {
     pub authority: AccountInfo<'info>,
 }
 
-pub fn burn(accounts: CpiBurn, amount: u64, signer_seeds: &[&[&[u8]]]) -> FankorResult<()> {
+pub fn burn(
+    program: &Program<Token>,
+    accounts: CpiBurn,
+    amount: u64,
+    signer_seeds: &[&[&[u8]]],
+) -> FankorResult<()> {
     let ix = spl_token::instruction::burn(
-        &spl_token::ID,
+        program.address(),
         accounts.from.key,
         accounts.mint.key,
         accounts.authority.key,
@@ -38,13 +44,14 @@ pub struct CpiBurnMultisig<'info> {
 }
 
 pub fn burn_multisig(
+    program: &Program<Token>,
     accounts: CpiBurnMultisig,
     amount: u64,
     signer_seeds: &[&[&[u8]]],
 ) -> FankorResult<()> {
     let signer_pubkeys = accounts.signers.iter().map(|v| v.key).collect::<Vec<_>>();
     let ix = spl_token::instruction::burn(
-        &spl_token::ID,
+        program.address(),
         accounts.from.key,
         accounts.mint.key,
         accounts.authority.key,

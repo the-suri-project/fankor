@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::models::{Program, Token};
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
@@ -8,6 +9,7 @@ pub struct CpiInitializeMint<'info> {
 }
 
 pub fn initialize_mint(
+    program: &Program<Token>,
     accounts: CpiInitializeMint,
     decimals: u8,
     mint_authority: &Pubkey,
@@ -15,7 +17,7 @@ pub fn initialize_mint(
     signer_seeds: &[&[&[u8]]],
 ) -> FankorResult<()> {
     let ix = spl_token::instruction::initialize_mint(
-        &spl_token::ID,
+        program.address(),
         accounts.mint.key,
         mint_authority,
         freeze_authority,

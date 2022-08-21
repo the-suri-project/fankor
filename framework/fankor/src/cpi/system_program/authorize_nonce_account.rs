@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::models::{Program, System};
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
@@ -9,6 +10,7 @@ pub struct CpiAuthorizeNonceAccount<'info> {
 }
 
 pub fn authorize_nonce_account(
+    _program: &Program<System>,
     accounts: CpiAuthorizeNonceAccount,
     new_authority: &Pubkey,
     signer_seeds: &[&[&[u8]]],

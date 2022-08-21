@@ -1,6 +1,7 @@
 use crate::cpi;
 use crate::cpi::system_program::CpiTransfer;
 use crate::errors::FankorResult;
+use crate::models::{Program, System};
 use solana_program::account_info::AccountInfo;
 use solana_program::rent::Rent;
 use solana_program::sysvar::Sysvar;
@@ -8,6 +9,7 @@ use solana_program::sysvar::Sysvar;
 /// Reallocates the `account` to have at least `size` capacity.
 /// If `payer` is provided it ensures it to be rent-exempt.
 pub(crate) fn realloc_account_to_size<'info>(
+    program: &Program<System>,
     info: &AccountInfo<'info>,
     size: usize,
     zero_bytes: bool,
@@ -26,6 +28,7 @@ pub(crate) fn realloc_account_to_size<'info>(
                 let lamports = minimum_balance - current_balance;
 
                 cpi::system_program::transfer(
+                    program,
                     CpiTransfer {
                         from: payer.clone(),
                         to: info.clone(),

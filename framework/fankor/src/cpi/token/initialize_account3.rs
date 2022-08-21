@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::models::{Program, Token};
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
@@ -9,12 +10,13 @@ pub struct CpiInitializeAccount3<'info> {
 }
 
 pub fn initialize_account3(
+    program: &Program<Token>,
     accounts: CpiInitializeAccount3,
     owner: &Pubkey,
     signer_seeds: &[&[&[u8]]],
 ) -> FankorResult<()> {
     let ix = spl_token::instruction::initialize_account3(
-        &spl_token::ID,
+        program.address(),
         accounts.account.key,
         accounts.mint.key,
         owner,

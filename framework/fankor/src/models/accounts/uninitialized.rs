@@ -1,8 +1,8 @@
-use crate::cpi;
 use crate::cpi::system_program::CpiCreateAccount;
 use crate::errors::{ErrorCode, FankorResult};
-use crate::models::{Account, Either, FankorContext};
-use crate::traits::{AccountSize, InstructionAccount};
+use crate::models::{Account, Either, FankorContext, System};
+use crate::traits::{AccountSize, InstructionAccount, Program};
+use crate::{cpi, models};
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
@@ -90,7 +90,19 @@ impl<'info, T: Default + crate::traits::Account> UninitializedAccount<'info, T> 
     pub fn init(self, payer: &AccountInfo<'info>, space: usize) -> FankorResult<Account<'info, T>> {
         let rent = Rent::get()?;
         let lamports = rent.minimum_balance(space as usize);
+        let program = match self.context.get_account_from_address(System::address()) {
+            Some(v) => v,
+            None => {
+                return Err(ErrorCode::MissingProgram {
+                    address: *System::address(),
+                    name: System::name(),
+                }
+                .into());
+            }
+        };
+
         cpi::system_program::create_account(
+            &models::Program::new(self.context, program)?,
             CpiCreateAccount {
                 from: payer.clone(),
                 to: self.info.clone(),
@@ -116,7 +128,19 @@ impl<'info, T: Default + crate::traits::Account> UninitializedAccount<'info, T> 
     ) -> FankorResult<Account<'info, T>> {
         let rent = Rent::get()?;
         let lamports = rent.minimum_balance(space as usize);
+        let program = match self.context.get_account_from_address(System::address()) {
+            Some(v) => v,
+            None => {
+                return Err(ErrorCode::MissingProgram {
+                    address: *System::address(),
+                    name: System::name(),
+                }
+                .into());
+            }
+        };
+
         cpi::system_program::create_account(
+            &models::Program::new(self.context, program)?,
             CpiCreateAccount {
                 from: payer.clone(),
                 to: self.info.clone(),

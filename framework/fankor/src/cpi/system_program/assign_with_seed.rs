@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::models::{Program, System};
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
@@ -9,6 +10,7 @@ pub struct CpiAssignWithSeed<'info> {
 }
 
 pub fn assign_with_seed(
+    _program: &Program<System>,
     accounts: CpiAssignWithSeed,
     seed: &str,
     owner: &Pubkey,

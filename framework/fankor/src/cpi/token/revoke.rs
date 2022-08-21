@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::models::{Program, Token};
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 
@@ -7,9 +8,13 @@ pub struct CpiRevoke<'info> {
     pub owner: AccountInfo<'info>,
 }
 
-pub fn revoke(accounts: CpiRevoke, signer_seeds: &[&[&[u8]]]) -> FankorResult<()> {
+pub fn revoke(
+    program: &Program<Token>,
+    accounts: CpiRevoke,
+    signer_seeds: &[&[&[u8]]],
+) -> FankorResult<()> {
     let ix = spl_token::instruction::revoke(
-        &spl_token::ID,
+        program.address(),
         accounts.source.key,
         accounts.owner.key,
         &[],
@@ -29,10 +34,14 @@ pub struct CpiRevokeMultisig<'info> {
     pub signers: Vec<AccountInfo<'info>>,
 }
 
-pub fn revoke_multisig(accounts: CpiRevokeMultisig, signer_seeds: &[&[&[u8]]]) -> FankorResult<()> {
+pub fn revoke_multisig(
+    program: &Program<Token>,
+    accounts: CpiRevokeMultisig,
+    signer_seeds: &[&[&[u8]]],
+) -> FankorResult<()> {
     let signer_pubkeys = accounts.signers.iter().map(|v| v.key).collect::<Vec<_>>();
     let ix = spl_token::instruction::revoke(
-        &spl_token::ID,
+        program.address(),
         accounts.source.key,
         accounts.owner.key,
         &signer_pubkeys,

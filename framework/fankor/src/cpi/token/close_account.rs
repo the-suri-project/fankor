@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::models::{Program, Token};
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 
@@ -8,9 +9,13 @@ pub struct CpiCloseAccount<'info> {
     pub authority: AccountInfo<'info>,
 }
 
-pub fn close_account(accounts: CpiCloseAccount, signer_seeds: &[&[&[u8]]]) -> FankorResult<()> {
+pub fn close_account(
+    program: &Program<Token>,
+    accounts: CpiCloseAccount,
+    signer_seeds: &[&[&[u8]]],
+) -> FankorResult<()> {
     let ix = spl_token::instruction::close_account(
-        &spl_token::ID,
+        program.address(),
         accounts.account.key,
         accounts.destination.key,
         accounts.authority.key,
@@ -37,12 +42,13 @@ pub struct CpiCloseAccountMultisig<'info> {
 }
 
 pub fn close_account_multisig(
+    program: &Program<Token>,
     accounts: CpiCloseAccountMultisig,
     signer_seeds: &[&[&[u8]]],
 ) -> FankorResult<()> {
     let signer_pubkeys = accounts.signers.iter().map(|v| v.key).collect::<Vec<_>>();
     let ix = spl_token::instruction::close_account(
-        &spl_token::ID,
+        program.address(),
         accounts.account.key,
         accounts.destination.key,
         accounts.authority.key,

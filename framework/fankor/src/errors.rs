@@ -1,12 +1,14 @@
-pub type FankorResult<T> = Result<T, Error>;
+use std::fmt::{Debug, Display};
 
-use fankor_macros::error_code;
 use solana_program::msg;
 use solana_program::program_error::ProgramError;
 use solana_program::pubkey::Pubkey;
-use std::fmt::{Debug, Display};
+
+use fankor_macros::error_code;
 
 use crate as fankor;
+
+pub type FankorResult<T> = Result<T, Error>;
 
 /// The starting point for user defined error codes.
 pub const ERROR_CODE_OFFSET: u32 = 6000;
@@ -256,6 +258,14 @@ pub enum ErrorCode {
         actual,
     )]
     IntermediateBufferIncorrectProgramId { actual: Pubkey, expected: Pubkey },
+
+    /// The result of the intermediate buffer is expected to belong to one program but it belongs to another program instead
+    #[msg(
+        "To call a CPI of the {} program ({}) you need to provide it in the account list",
+        name,
+        address
+    )]
+    MissingProgram { address: Pubkey, name: &'static str },
 }
 
 // ----------------------------------------------------------------------------

@@ -88,6 +88,10 @@ impl<'info> FankorContext<'info> {
 
     // METHODS ----------------------------------------------------------------
 
+    pub fn get_account_from_address(&self, address: &Pubkey) -> Option<&AccountInfo<'info>> {
+        self.accounts.iter().find(|account| account.key == address)
+    }
+
     pub(crate) fn get_index_for_account(&self, account: &AccountInfo<'info>) -> u8 {
         for (i, acc) in self.accounts.iter().enumerate() {
             if acc.key == account.key {

@@ -1,6 +1,7 @@
 use crate::errors::{ErrorCode, FankorResult};
-use crate::models::FankorContext;
-use crate::traits::InstructionAccount;
+use crate::models;
+use crate::models::{FankorContext, System};
+use crate::traits::{InstructionAccount, Program};
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use solana_program::account_info::AccountInfo;
@@ -138,6 +139,17 @@ impl<'info> UncheckedAccount<'info> {
         zero_bytes: bool,
         payer: Option<&'info AccountInfo<'info>>,
     ) -> FankorResult<()> {
+        let program = match self.context.get_account_from_address(System::address()) {
+            Some(v) => v,
+            None => {
+                return Err(ErrorCode::MissingProgram {
+                    address: *System::address(),
+                    name: System::name(),
+                }
+                .into());
+            }
+        };
+
         if !self.is_owned_by_program() {
             return Err(ErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
@@ -162,7 +174,13 @@ impl<'info> UncheckedAccount<'info> {
             .into());
         }
 
-        realloc_account_to_size(self.info, size, zero_bytes, payer)
+        realloc_account_to_size(
+            &models::Program::new(self.context, program)?,
+            self.info,
+            size,
+            zero_bytes,
+            payer,
+        )
     }
 }
 

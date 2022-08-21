@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::models::{Program, Token};
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 
@@ -8,9 +9,14 @@ pub struct CpiTransfer<'info> {
     pub authority: AccountInfo<'info>,
 }
 
-pub fn transfer(accounts: CpiTransfer, amount: u64, signer_seeds: &[&[&[u8]]]) -> FankorResult<()> {
+pub fn transfer(
+    program: &Program<Token>,
+    accounts: CpiTransfer,
+    amount: u64,
+    signer_seeds: &[&[&[u8]]],
+) -> FankorResult<()> {
     let ix = spl_token::instruction::transfer(
-        &spl_token::ID,
+        program.address(),
         accounts.from.key,
         accounts.to.key,
         accounts.authority.key,
@@ -38,13 +44,14 @@ pub struct CpiTransferMultisig<'info> {
 }
 
 pub fn transfer_multisig(
+    program: &Program<Token>,
     accounts: CpiTransferMultisig,
     amount: u64,
     signer_seeds: &[&[&[u8]]],
 ) -> FankorResult<()> {
     let signer_pubkeys = accounts.signers.iter().map(|v| v.key).collect::<Vec<_>>();
     let ix = spl_token::instruction::transfer(
-        &spl_token::ID,
+        program.address(),
         accounts.from.key,
         accounts.to.key,
         accounts.authority.key,

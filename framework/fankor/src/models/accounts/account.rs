@@ -1,6 +1,7 @@
 use crate::errors::{Error, ErrorCode, FankorResult};
-use crate::models::{FankorContext, FankorContextExitAction};
-use crate::traits::{AccountSize, InstructionAccount};
+use crate::models;
+use crate::models::{FankorContext, FankorContextExitAction, System};
+use crate::traits::{AccountSize, InstructionAccount, Program};
 use crate::utils::bpf_writer::BpfWriter;
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
@@ -256,6 +257,17 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
         zero_bytes: bool,
         payer: Option<&'info AccountInfo<'info>>,
     ) -> FankorResult<()> {
+        let program = match self.context.get_account_from_address(System::address()) {
+            Some(v) => v,
+            None => {
+                return Err(ErrorCode::MissingProgram {
+                    address: *System::address(),
+                    name: System::name(),
+                }
+                .into());
+            }
+        };
+
         if !self.is_owned_by_program() {
             return Err(ErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
@@ -280,7 +292,13 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
             .into());
         }
 
-        realloc_account_to_size(self.info, size, zero_bytes, payer)
+        realloc_account_to_size(
+            &models::Program::new(self.context, program)?,
+            self.info,
+            size,
+            zero_bytes,
+            payer,
+        )
     }
 
     /// Invalidates the exit action for this account.

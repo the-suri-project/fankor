@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::models::{Program, Token};
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 
@@ -9,13 +10,14 @@ pub struct CpiBurnChecked<'info> {
 }
 
 pub fn burn_checked(
+    program: &Program<Token>,
     accounts: CpiBurnChecked,
     amount: u64,
     decimals: u8,
     signer_seeds: &[&[&[u8]]],
 ) -> FankorResult<()> {
     let ix = spl_token::instruction::burn_checked(
-        &spl_token::ID,
+        program.address(),
         accounts.from.key,
         accounts.mint.key,
         accounts.authority.key,
@@ -44,6 +46,7 @@ pub struct CpiBurnCheckedMultisig<'info> {
 }
 
 pub fn burn_checked_multisig(
+    program: &Program<Token>,
     accounts: CpiBurnCheckedMultisig,
     amount: u64,
     decimals: u8,
@@ -51,7 +54,7 @@ pub fn burn_checked_multisig(
 ) -> FankorResult<()> {
     let signer_pubkeys = accounts.signers.iter().map(|v| v.key).collect::<Vec<_>>();
     let ix = spl_token::instruction::burn_checked(
-        &spl_token::ID,
+        program.address(),
         accounts.from.key,
         accounts.mint.key,
         accounts.authority.key,

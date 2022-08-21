@@ -1,4 +1,5 @@
 use crate::errors::Error;
+use crate::models::{Program, Token};
 use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 
@@ -8,9 +9,13 @@ pub struct CpiFreezeAccount<'info> {
     pub authority: AccountInfo<'info>,
 }
 
-pub fn freeze_account(accounts: CpiFreezeAccount, signer_seeds: &[&[&[u8]]]) -> FankorResult<()> {
+pub fn freeze_account(
+    program: &Program<Token>,
+    accounts: CpiFreezeAccount,
+    signer_seeds: &[&[&[u8]]],
+) -> FankorResult<()> {
     let ix = spl_token::instruction::freeze_account(
-        &spl_token::ID,
+        program.address(),
         accounts.account.key,
         accounts.mint.key,
         accounts.authority.key,
@@ -37,12 +42,13 @@ pub struct CpiFreezeAccountMultisig<'info> {
 }
 
 pub fn freeze_account_multisig(
+    program: &Program<Token>,
     accounts: CpiFreezeAccountMultisig,
     signer_seeds: &[&[&[u8]]],
 ) -> FankorResult<()> {
     let signer_pubkeys = accounts.signers.iter().map(|v| v.key).collect::<Vec<_>>();
     let ix = spl_token::instruction::freeze_account(
-        &spl_token::ID,
+        program.address(),
         accounts.account.key,
         accounts.mint.key,
         accounts.authority.key,
