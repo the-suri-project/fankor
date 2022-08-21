@@ -14,7 +14,7 @@ proc-macro = true
 borsh-derive-internal = "0.9.3"
 bs58 = "0.4.0"
 convert_case = "0.5.0"
-proc-macro2 = "1.0.40"
+proc-macro2 = "1.0.42"
 quote = "1.0.20"
 sha2 = "0.10.2"
 syn = { version = "1.0.98", features = ["full"] }
