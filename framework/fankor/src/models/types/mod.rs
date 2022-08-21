@@ -1,8 +1,9 @@
-use std::io::ErrorKind;
+pub mod integers;
 
 pub mod maps;
 pub mod sets;
 pub mod strings;
+pub mod unsigned;
 pub mod vectors;
 
 fn read_length(buf: &mut &[u8], size: usize) -> std::io::Result<u32> {

@@ -1,10 +1,11 @@
 pub use crate::cpi;
 pub use crate::errors::*;
 pub use crate::macros::*;
-pub use crate::models::types::maps::{FnkMapU16, FnkMapU24, FnkMapU8};
+pub use crate::models::types::integers::FnkInt;
 pub use crate::models::types::sets::{FnkSetU16, FnkSetU24, FnkSetU8};
 pub use crate::models::types::strings::{FnkStringU16, FnkStringU24, FnkStringU8};
 pub use crate::models::types::vectors::{FnkVecU16, FnkVecU24, FnkVecU8};
+pub use crate::models::types::unsigned::FnkUInt;
 pub use crate::models::*;
 pub use borsh;
 pub use bs58;

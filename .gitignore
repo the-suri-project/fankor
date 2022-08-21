@@ -12,3 +12,6 @@ Cargo.lock
 
 # IDE
 .idea
+
+## MacOS
+.DS_Store
