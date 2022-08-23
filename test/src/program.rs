@@ -1,4 +1,5 @@
 use crate::accounts::EnumAccountData;
+use crate::errors::Errors;
 use crate::instruction::{InstructionEnumAccounts, InstructionStructAccounts};
 use fankor::prelude::*;
 
@@ -25,6 +26,10 @@ impl TestProgram {
         instruction_data: &[u8],
     ) -> FankorResult<()> {
         msg!("instruction1");
+
+        require!(accounts.len() == 1, Errors::A);
+        require_not!(accounts.len() == 1, Errors::A);
+
         Ok(())
     }
 }
