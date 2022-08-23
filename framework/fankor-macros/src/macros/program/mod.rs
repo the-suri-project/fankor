@@ -174,7 +174,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             #(#discriminators)*
         }
 
-        #[cfg(any(test, feature = "test"))]
+        #[cfg(any(test))]
         #[automatically_derived]
         impl #name {
             #test_method
