@@ -9,6 +9,9 @@ discriminator_size = 1
 AccountData = [1]
 EnumAccountData = [2]
 
+[instructions]
+discriminator_size = 1
+
 [instructions.discriminators]
-Instruction1 = [1]
+instruction_with_args = [1]
 Instruction2 = [2]
