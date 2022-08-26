@@ -15,10 +15,10 @@ library = ["fankor/library"]
 test = ["fankor/test"]
 
 [dependencies]
-fankor = { path = "../framework/fankor", features = ["spl-token"] }
+fankor = { path = "../framework/fankor", features = ["token-program", "metadata-program"] }
 
 [dev-dependencies]
-fankor = { path = "../framework/fankor", features = ["spl-token", "test"] }
+fankor = { path = "../framework/fankor", features = ["token-program", "metadata-program", "test"] }
 solana-sdk = "1.11.7"
 solana-program-test = "1.11.7"
 tokio = { version = "1.14.1", features = ["macros"] }
