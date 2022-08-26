@@ -38,9 +38,9 @@ pub enum ErrorCode {
     #[msg("The instruction discriminator did not match any valid")]
     InstructionDiscriminatorNotFound,
 
-    /// The instructions contains too many accounts
-    #[msg("The instructions contains too many accounts")]
-    TooManyAccounts,
+    /// The instruction contains more accounts than required
+    #[msg("The instruction contains more accounts than required")]
+    UnusedAccounts,
 
     // Accounts
     /// No 8 byte discriminator was found on the account

@@ -82,7 +82,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             let accounts = <#account_type as fankor::traits::InstructionAccount>::try_from(&context, &mut ix_accounts)?;
 
             if ix_accounts.len() != 0 {
-                return Err(::fankor::errors::ErrorCode::TooManyAccounts.into());
+                return Err(::fankor::errors::ErrorCode::UnusedAccounts.into());
             }
         };
 
