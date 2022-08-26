@@ -22,7 +22,7 @@ impl AccountHelper {
 
     // METHODS ----------------------------------------------------------------
 
-    pub fn add_error(
+    pub fn add_account(
         &self,
         account_name: &'static str,
         discriminator: &'static [u8],

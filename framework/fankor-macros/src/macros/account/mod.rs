@@ -129,7 +129,11 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             let discriminator = <#name #generic_params as ::fankor::traits::Account>::discriminator();
             let helper = &crate::__internal__idl_builder_test__root::ACCOUNT_HELPER;
 
-            if let Err(item) = helper.add_error(account_name, discriminator) {
+            if discriminator.iter().all(|v| *v == 0) {
+                panic!("The discriminator of the account '{}' cannot be zero. It is reserved for uninitialized accounts", account_name);
+            }
+
+            if let Err(item) = helper.add_account(account_name, discriminator) {
                 panic!("There is a discriminator collision between accounts. First: {}, Second: {}, Discriminator: {:?}", account_name, item.account_name, discriminator);
             }
         }
