@@ -45,6 +45,10 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let item = &program.item;
 
     let test_unique_program = format_ident!("__fankor_internal__test__unique_program_{}", name);
+    let test_unique_instruction_discriminators = format_ident!(
+        "__fankor_internal__test__unique_instruction_discriminators_{}",
+        name
+    );
     let program_entry_name = format_ident!("__fankor_internal__program_{}_entry", name);
     let program_try_entry_name = format_ident!("__fankor_internal__program_{}_try_entry", name);
 
@@ -56,6 +60,15 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             pub fn #fn_name() -> [u8; #discriminator_size] {
                 [#(#discriminator,)*]
             }
+        }
+    });
+
+    let unique_instruction_discriminators = program.methods.iter().map(|v| {
+        let name_str = v.name.to_string();
+        let discriminator = &v.discriminator;
+
+        quote! {
+            (#name_str, &[#(#discriminator,)*])
         }
     });
 
@@ -264,6 +277,23 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
            if let Err(item) = helper.add_program(program_name) {
                panic!("More than one program in a single crate is not supported");
            }
+        }
+
+        #[allow(non_snake_case)]
+        #[automatically_derived]
+        #[test]
+        fn #test_unique_instruction_discriminators() {
+            let helper = &crate::__internal__idl_builder_test__root::INSTRUCTION_HELPER;
+
+            for (instruction_name, discriminator) in [#(#unique_instruction_discriminators),*] {
+                if discriminator.iter().all(|v| *v == 0) {
+                    panic!("The discriminator of the instruction '{}' cannot be zero. It is reserved", instruction_name);
+                }
+
+                if let Err(item) = helper.add_instruction(instruction_name, discriminator) {
+                    panic!("There is a discriminator collision between instructions. First: {}, Second: {}, Discriminator: {:?}", instruction_name, item.instruction_name, discriminator);
+                }
+            }
         }
     };
 
