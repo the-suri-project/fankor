@@ -28,4 +28,6 @@ pub use solana_program::sysvar::slot_hashes::SlotHashes;
 pub use solana_program::sysvar::slot_history::SlotHistory;
 pub use solana_program::sysvar::stake_history::StakeHistory;
 #[cfg(feature = "token-program")]
+pub use spl_associated_token_account;
+#[cfg(feature = "token-program")]
 pub use spl_token;
