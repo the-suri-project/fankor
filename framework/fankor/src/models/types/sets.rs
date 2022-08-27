@@ -6,7 +6,7 @@ use std::io::{ErrorKind, Write};
 use std::ops::{Deref, DerefMut};
 
 /// Wrapper over `BTreeSet` that serializes the length into a `FnkUInt`.
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FnkSet<T>(pub BTreeSet<T>);
 
 impl<T> FnkSet<T> {

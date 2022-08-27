@@ -6,7 +6,7 @@ use std::mem::{forget, size_of};
 use std::ops::{Deref, DerefMut};
 
 /// Wrapper over `Vec` that serializes the length into a `FnkUInt`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FnkVec<T>(pub Vec<T>);
 
 impl<T> FnkVec<T> {

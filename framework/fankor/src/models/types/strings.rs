@@ -6,7 +6,7 @@ use std::io::{ErrorKind, Write};
 use std::ops::{Deref, DerefMut};
 
 /// Wrapper over `String` that serializes the length into a `FnkUInt`.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FnkString<'a>(pub Cow<'a, str>);
 
 impl<'a> FnkString<'a> {
