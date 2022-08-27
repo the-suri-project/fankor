@@ -1,3 +1,4 @@
+use crate::traits::AccountSize;
 use borsh::{BorshDeserialize, BorshSerialize};
 use std::io::{ErrorKind, Write};
 use std::ops::{Deref, DerefMut};
@@ -242,6 +243,32 @@ impl BorshDeserialize for FnkUInt {
 
             *buf = &buf[byte_length as usize + 1..];
             Ok(Self(number))
+        }
+    }
+}
+
+impl AccountSize for FnkUInt {
+    fn min_account_size() -> usize {
+        1
+    }
+
+    fn actual_account_size(&self) -> usize {
+        let bit_length = 64 - self.0.leading_zeros();
+
+        if bit_length <= 13 {
+            // Flag encoding.
+            let byte_length = if bit_length <= 6 {
+                1
+            } else {
+                (bit_length - 6 + 8) / 8 + 1
+            };
+
+            byte_length as usize
+        } else {
+            // Length encoding.
+            let byte_length = ((bit_length + 8) / 8).min(8);
+
+            (byte_length + 1) as usize
         }
     }
 }

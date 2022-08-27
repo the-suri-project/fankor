@@ -1,4 +1,5 @@
 use crate::prelude::FnkUInt;
+use crate::traits::AccountSize;
 use borsh::{BorshDeserialize, BorshSerialize};
 use std::io::{ErrorKind, Write};
 use std::mem::{forget, size_of};
@@ -116,6 +117,23 @@ impl<T: BorshDeserialize> BorshDeserialize for FnkVec<T> {
             }
             Ok(FnkVec::new(result))
         }
+    }
+}
+
+impl<T: AccountSize> AccountSize for FnkVec<T> {
+    fn min_account_size() -> usize {
+        FnkUInt::min_account_size()
+    }
+
+    fn actual_account_size(&self) -> usize {
+        let length = FnkUInt::from(self.0.len() as u64);
+        let mut size = length.actual_account_size();
+
+        for v in &self.0 {
+            size += v.actual_account_size();
+        }
+
+        size
     }
 }
 

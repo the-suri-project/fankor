@@ -1,4 +1,5 @@
 use crate::prelude::FnkUInt;
+use crate::traits::AccountSize;
 use borsh::{BorshDeserialize, BorshSerialize};
 use std::collections::BTreeSet;
 use std::io::{ErrorKind, Write};
@@ -95,6 +96,23 @@ impl<T: BorshDeserialize + Ord> BorshDeserialize for FnkSet<T> {
         }
 
         Ok(FnkSet::new(set))
+    }
+}
+
+impl<T: AccountSize> AccountSize for FnkSet<T> {
+    fn min_account_size() -> usize {
+        FnkUInt::min_account_size()
+    }
+
+    fn actual_account_size(&self) -> usize {
+        let length = FnkUInt::from(self.0.len() as u64);
+        let mut size = length.actual_account_size();
+
+        for v in &self.0 {
+            size += v.actual_account_size();
+        }
+
+        size
     }
 }
 
