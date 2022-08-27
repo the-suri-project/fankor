@@ -284,8 +284,9 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[test]
         fn #test_unique_instruction_discriminators() {
             let helper = &crate::__internal__idl_builder_test__root::INSTRUCTION_HELPER;
+            let discriminators: &[(&str, &[u8])] = &[#(#unique_instruction_discriminators),*];
 
-            for (instruction_name, discriminator) in [#(#unique_instruction_discriminators),*] {
+            for (instruction_name, discriminator) in discriminators {
                 if discriminator.iter().all(|v| *v == 0) {
                     panic!("The discriminator of the instruction '{}' cannot be zero. It is reserved", instruction_name);
                 }
