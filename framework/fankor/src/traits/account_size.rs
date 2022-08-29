@@ -45,6 +45,18 @@ impl AccountSize for String {
     }
 }
 
+impl<T: AccountSize> AccountSize for Box<T> {
+    #[inline(always)]
+    fn min_account_size() -> usize {
+        T::min_account_size()
+    }
+
+    #[inline]
+    fn actual_account_size(&self) -> usize {
+        T::actual_account_size(&**self)
+    }
+}
+
 impl<T: AccountSize> AccountSize for Vec<T> {
     #[inline(always)]
     fn min_account_size() -> usize {
