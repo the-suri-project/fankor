@@ -19,8 +19,8 @@ fankor = { path = "../framework/fankor", features = ["token-program", "metadata-
 
 [dev-dependencies]
 fankor = { path = "../framework/fankor", features = ["token-program", "metadata-program", "test"] }
-solana-sdk = "1.11.7"
-solana-program-test = "1.11.7"
+solana-sdk = "1.14.5"
+solana-program-test = "1.14.5"
 tokio = { version = "1.14.1", features = ["macros"] }
 
 [package.metadata.docs.rs]
