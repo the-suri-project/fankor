@@ -70,7 +70,7 @@ impl<'info> InstructionAccount<'info> for Rest<'info> {
         context: &'info FankorContext<'info>,
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
-        let result = Rest::new(context, *accounts)?;
+        let result = Rest::new(context, accounts)?;
 
         *accounts = &[];
         Ok(result)

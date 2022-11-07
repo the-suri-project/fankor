@@ -6,7 +6,6 @@ use std::collections::HashSet;
 use syn::spanned::Spanned;
 use syn::{Error, FnArg, GenericArgument, ImplItem, ItemImpl, PathArguments, ReturnType, Type};
 
-use crate::utils::generate_discriminator;
 use crate::Result;
 
 pub struct Program {
@@ -155,13 +154,7 @@ impl Program {
 
                     let account_type = type_from_fn_arg(&arguments[1])?;
                     let result_type = type_from_fn_output(&item.sig.output)?;
-                    let discriminator =
-                        if let Some(discriminator) = config.get_discriminator(&method_name_str) {
-                            discriminator
-                        } else {
-                            let discriminator = generate_discriminator(&method_name_str);
-                            discriminator[..config.discriminator_size.unwrap() as usize].to_vec()
-                        };
+                    let discriminator = config.get_discriminator(&method_name_str);
 
                     self.methods.push(ProgramMethod {
                         pascal_name: format_ident!(
@@ -180,13 +173,7 @@ impl Program {
                     let account_type = type_from_fn_arg(&arguments[1])?;
                     let argument_type = type_from_fn_arg(&arguments[2])?;
                     let result_type = type_from_fn_output(&item.sig.output)?;
-                    let discriminator =
-                        if let Some(discriminator) = config.get_discriminator(&method_name_str) {
-                            discriminator
-                        } else {
-                            let discriminator = generate_discriminator(&method_name_str);
-                            discriminator[..config.discriminator_size.unwrap() as usize].to_vec()
-                        };
+                    let discriminator = config.get_discriminator(&method_name_str);
 
                     let method = ProgramMethod {
                         pascal_name: format_ident!(

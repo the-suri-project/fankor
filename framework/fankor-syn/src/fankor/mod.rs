@@ -14,13 +14,10 @@ pub fn read_fankor_toml() -> FankorConfig {
 
     let config = match std::fs::read_to_string(fankor_toml_path.as_path()) {
         Ok(file_content) => match toml::from_str::<FankorConfig>(file_content.as_str()) {
-            Ok(mut config) => {
-                config.fill_with_defaults();
-                config
-            }
+            Ok(v) => v,
             Err(e) => {
                 panic!(
-                    "ERROR: Failed to parse Fankor.toml at {:?}: {}",
+                    "Failed to parse Fankor.toml at {:?}: {}",
                     fankor_toml_path.as_os_str(),
                     e
                 );
@@ -28,7 +25,7 @@ pub fn read_fankor_toml() -> FankorConfig {
         },
         Err(e) => {
             panic!(
-                "ERROR: missing Fankor.toml at {:?}: {}",
+                "missing Fankor.toml at {:?}: {}",
                 fankor_toml_path.as_os_str(),
                 e
             );

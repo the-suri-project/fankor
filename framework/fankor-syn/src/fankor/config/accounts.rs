@@ -1,14 +1,12 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-pub const ACCOUNT_DISCRIMINATOR_SIZE: u8 = 8;
-
 /// The configuration for the building process.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FankorAccountsConfig {
-    /// The number of bytes of the account discriminators.
-    /// Default: [ACCOUNT_DISCRIMINATOR_SIZE](crate::fankor::config::ACCOUNT_DISCRIMINATOR_SIZE)
-    pub discriminator_size: Option<u8>,
+    /// The number of bytes used to defina the account discriminators.
+    /// Default: 1
+    pub discriminator_size: u8,
 
     /// A manual list of account discriminators.
     #[serde(default)]
@@ -18,47 +16,40 @@ pub struct FankorAccountsConfig {
 impl FankorAccountsConfig {
     // METHODS ----------------------------------------------------------------
 
-    pub fn fill_with_defaults(&mut self) {
+    pub fn validate(&self) {
         // Validate the account discriminator size.
-        match &self.discriminator_size {
-            Some(v) => {
-                if *v > 32 {
-                    panic!("The account_discriminator_size cannot be greater than 32");
-                }
-
-                if *v < 1 {
-                    panic!("The account_discriminator_size cannot be less than 1");
-                }
-            }
-            None => {
-                self.discriminator_size = Some(ACCOUNT_DISCRIMINATOR_SIZE);
-            }
+        if self.discriminator_size > 32 {
+            panic!("The account_discriminator_size cannot be greater than 32");
         }
 
-        // Note: the account discriminators will be validated when they are used.
+        if self.discriminator_size < 1 {
+            panic!("The account_discriminator_size cannot be less than 1");
+        }
+
+        // Note: the account discriminators will be validated if used.
     }
 
-    pub fn get_discriminator(&self, name: &str) -> Option<Vec<u8>> {
+    pub fn get_discriminator(&self, name: &str) -> Vec<u8> {
         let result = match self.discriminators.get(name).cloned() {
             Some(v) => v,
-            None => return None,
+            None => panic!("The discriminator for the account '{}' is missing", name),
         };
 
-        if result.len() != self.discriminator_size.unwrap() as usize {
+        if result.len() != self.discriminator_size as usize {
             panic!(
-                "The discriminator for account {} is not the correct size",
+                "The discriminator size of the account '{}' is incorrect",
                 name
             );
         }
 
-        Some(result)
+        result
     }
 }
 
 impl Default for FankorAccountsConfig {
     fn default() -> Self {
         FankorAccountsConfig {
-            discriminator_size: Some(ACCOUNT_DISCRIMINATOR_SIZE),
+            discriminator_size: 1,
             discriminators: HashMap::new(),
         }
     }

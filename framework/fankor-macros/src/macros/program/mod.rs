@@ -35,11 +35,11 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
     // Read the Fankor.toml file.
     let config = read_fankor_toml();
-    let instructions_config = config.instructions.as_ref().unwrap();
-    let discriminator_size_u8 = instructions_config.discriminator_size.unwrap();
+    let instructions_config = config.instructions;
+    let discriminator_size_u8 = instructions_config.discriminator_size;
     let discriminator_size = discriminator_size_u8 as usize;
 
-    let program = Program::from(item, instructions_config)?;
+    let program = Program::from(item, &instructions_config)?;
     let name = &program.name;
     let name_str = name.to_string();
     let item = &program.item;

@@ -6,7 +6,6 @@ use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{AttributeArgs, Error, Item};
 
-use crate::utils::generate_discriminator;
 use fankor_syn::Result;
 
 pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenStream> {
@@ -20,7 +19,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
     // Read the Fankor.toml file.
     let config = read_fankor_toml();
-    let accounts_config = config.accounts.as_ref().unwrap();
+    let accounts_config = config.accounts;
 
     // Process input.
     let (name, generics, item) = match &input {
@@ -43,12 +42,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         quote! { < #generic_params > }
     };
 
-    let discriminator = if let Some(discriminator) = accounts_config.get_discriminator(&name_str) {
-        discriminator
-    } else {
-        let discriminator = generate_discriminator(&name_str);
-        discriminator[..accounts_config.discriminator_size.unwrap() as usize].to_vec()
-    };
+    let discriminator = accounts_config.get_discriminator(&name_str);
 
     let test_unique_account_discriminator = format_ident!(
         "__fankor_internal__test__unique_account_discriminator_{}",
