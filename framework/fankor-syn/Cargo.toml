@@ -9,9 +9,9 @@ edition = "2021"
 
 [dependencies]
 bs58 = "0.4.0"
-proc-macro2 = "1.0.46"
+proc-macro2 = "1.0.47"
 quote = "1.0.21"
-serde = { version = "1.0.145", features = ["derive"] }
-solana-program = "1.14.5"
-syn = { version = "1.0.101", features = ["full"] }
+serde = { version = "1.0.147", features = ["derive"] }
+solana-program = "1.14.7"
+syn = { version = "1.0.103", features = ["full"] }
 toml = "0.5.9"
