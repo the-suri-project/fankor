@@ -13,7 +13,7 @@ pub struct ErrorVariant {
     pub message: Option<Punctuated<NestedMeta, Token![,]>>,
     pub attributes: Vec<Attribute>,
     pub fields: Fields,
-    pub continue_from: Option<LitInt>,
+    pub code: Option<LitInt>,
     pub deprecated: bool,
 }
 
@@ -25,7 +25,7 @@ impl ErrorVariant {
         if let Some((_, discriminant)) = variant.discriminant {
             return Err(Error::new(
                 discriminant.span(),
-                "Discriminants are not supported, please use the `#[continue_from]` attribute instead.",
+                "Discriminants are not supported, please use the `#[code]` attribute instead.",
             ));
         }
 
@@ -34,7 +34,7 @@ impl ErrorVariant {
             message: None,
             attributes: variant.attrs,
             fields: variant.fields,
-            continue_from: None,
+            code: None,
             deprecated: false,
         };
 
@@ -89,14 +89,14 @@ impl ErrorVariant {
                 }
 
                 self.message = Some(args.nested);
-            } else if attribute.path.is_ident("continue_from") {
+            } else if attribute.path.is_ident("code") {
                 let attribute = self.attributes.remove(index);
                 let attribute_span = attribute.span();
 
-                if self.continue_from.is_some() {
+                if self.code.is_some() {
                     return Err(Error::new(
                         attribute_span,
-                        "The continue_from attribute can only be used once",
+                        "The code attribute can only be used once",
                     ));
                 }
 
@@ -109,7 +109,7 @@ impl ErrorVariant {
                     Err(_) => {
                         return Err(Error::new(
                             attribute_span,
-                            "The continue_from attribute expects one integer literal as arguments",
+                            "The code attribute expects one integer literal as arguments",
                         ));
                     }
                 };
@@ -117,7 +117,7 @@ impl ErrorVariant {
                 if args.nested.len() != 1 {
                     return Err(Error::new(
                         attribute_span,
-                        "The continue_from attribute expects only one argument",
+                        "The code attribute expects only one argument",
                     ));
                 }
 
@@ -126,7 +126,7 @@ impl ErrorVariant {
                 match first_argument {
                     NestedMeta::Lit(v) => match v {
                         Lit::Int(v) => {
-                            self.continue_from = Some(v.clone());
+                            self.code = Some(v.clone());
                         }
                         v => {
                             return Err(Error::new(v.span(), "This must be a literal string"));

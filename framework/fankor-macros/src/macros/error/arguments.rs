@@ -24,7 +24,7 @@ pub struct ErrorArguments {
 impl ErrorArguments {
     // CONSTRUCTORS -----------------------------------------------------------
 
-    /// Creates a new instance of the ErrorAttributes struct from the given attributes.
+    /// Creates a new instance of the ErrorArguments struct from the given attributes.
     pub fn from(args: AttributeArgs, enum_item: &ItemEnum) -> Result<ErrorArguments> {
         let mut result = ErrorArguments {
             offset: None,

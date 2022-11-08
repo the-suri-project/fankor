@@ -27,7 +27,7 @@ pub enum ErrorCode {
     // Program
     /// The id of the program does not match the one defined in the code
     #[msg("The id of the program does not match the one defined in the code")]
-    #[continue_from(1000)]
+    #[code(1000)]
     DeclaredProgramIdMismatch,
 
     /// The instruction discriminator is missing
@@ -45,7 +45,7 @@ pub enum ErrorCode {
     // Accounts
     /// No 8 byte discriminator was found on the account
     #[msg("No 8 byte discriminator was found on the account: {}", account)]
-    #[continue_from(2000)]
+    #[code(2000)]
     AccountDiscriminatorNotFound { account: String },
 
     /// The account discriminator did not match what was expected

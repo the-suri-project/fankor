@@ -1,4 +1,5 @@
 use quote::{format_ident, quote};
+use std::collections::{ HashSet};
 use syn::spanned::Spanned;
 use syn::{AttributeArgs, Error, Fields, Item};
 
@@ -36,10 +37,12 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         .map(|v| {
             let result = ErrorVariant::from(v)?;
 
-            if last_deprecated && result.continue_from.is_none() {
+            if last_deprecated && result.code.is_none() {
                 return Err(Error::new(
                     result.name.span(),
-                    format!("The next error after a deprecated one must have the #[continue_from] attribute"),
+                    format!(
+                        "The next error after a deprecated one must have the #[code] attribute"
+                    ),
                 ));
             }
 
@@ -100,57 +103,64 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     };
 
     let mut u32_index = 0u32;
-    let mut discriminators = Vec::with_capacity(variants.len());
-    let from_u32_fn_variants = variants.iter().map(|v| {
-        let ErrorVariant {
-            name: variant_name,
-            fields,
-            continue_from,
-            ..
-        } = &v;
-        let discriminant = {
-            if let Some(v) = continue_from {
-                let new_value = v.base10_parse::<u32>()?;
+    let mut used_codes = HashSet::new();
+    let mut codes = Vec::with_capacity(variants.len());
+    let from_u32_fn_variants = variants
+        .iter()
+        .map(|v| {
+            let span = v.name.span();
+            let ErrorVariant {
+                name: variant_name,
+                fields,
+                code,
+                ..
+            } = &v;
+            let discriminant = {
+                if let Some(v) = code {
+                    let new_value = v.base10_parse::<u32>()?;
 
-                if new_value < u32_index {
+                    u32_index = new_value;
+                }
+
+                if used_codes.contains(&u32_index) {
                     return Err(Error::new(
-                        v.span(),
-                        format!("The continue_from attribute cannot be lower than the current one: {}", u32_index),
+                        span,
+                        format!("The code attribute is already in use: {}", u32_index),
                     ));
                 }
 
-                u32_index = new_value;
-            }
+                used_codes.insert(u32_index);
 
-            if attributes.contains_removed_code(u32_index) {
-                return Err(Error::new(
-                    name.span(),
-                    format!("The discriminator '{}' is marked as removed", u32_index),
-                ));
-            }
+                if attributes.contains_removed_code(u32_index) {
+                    return Err(Error::new(
+                        name.span(),
+                        format!("The discriminator '{}' is marked as removed", u32_index),
+                    ));
+                }
 
-            let result = quote! { #u32_index };
-            u32_index += 1;
-            result
-        };
+                let result = quote! { #u32_index };
+                u32_index += 1;
+                result
+            };
 
-        let discriminant_field_name = format!("{}::{}", name, variant_name);
-        discriminators.push(quote! {
-            (#discriminant_field_name, #discriminant)
-        });
+            let discriminant_field_name = format!("{}::{}", name, variant_name);
+            codes.push(quote! {
+                (#discriminant_field_name, #discriminant)
+            });
 
-        Ok(match fields {
-            Fields::Named(_) => quote! {
-                #name::#variant_name{..} => (#discriminant) #offset
-            },
-            Fields::Unnamed(_) => quote! {
-                #name::#variant_name(..) => (#discriminant) #offset
-            },
-            Fields::Unit => quote! {
-                #name::#variant_name => (#discriminant) #offset
-            },
+            Ok(match fields {
+                Fields::Named(_) => quote! {
+                    #name::#variant_name{..} => (#discriminant) #offset
+                },
+                Fields::Unnamed(_) => quote! {
+                    #name::#variant_name(..) => (#discriminant) #offset
+                },
+                Fields::Unit => quote! {
+                    #name::#variant_name => (#discriminant) #offset
+                },
+            })
         })
-    }).collect::<Result<Vec<_>>>()?;
+        .collect::<Result<Vec<_>>>()?;
 
     let display_fn_variants = variants.iter().map(|v| {
         let ErrorVariant {
