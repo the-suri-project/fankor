@@ -4,16 +4,13 @@ use syn::{AttributeArgs, Error, Fields, Item};
 
 use fankor_syn::Result;
 
-use crate::macros::error::attributes::ErrorAttributes;
+use crate::macros::error::arguments::ErrorArguments;
 use crate::macros::error::variant::ErrorVariant;
 
-mod attributes;
+mod arguments;
 mod variant;
 
 pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenStream> {
-    // Process arguments.
-    let attributes = ErrorAttributes::from(args)?;
-
     // Process input.
     let enum_item = match input {
         Item::Enum(v) => v,
@@ -25,14 +22,33 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
     };
 
-    let name = enum_item.ident;
+    // Process arguments.
+    let attributes = ErrorArguments::from(args, &enum_item)?;
 
-    // Parse fields.
+    let name = enum_item.ident;
+    let attrs = &attributes.attrs;
+
+    // Parse fields taking into account whether any variant is deprecated or not.
+    let mut last_deprecated = false;
     let variants = enum_item
         .variants
         .into_iter()
-        .map(ErrorVariant::from)
+        .map(|v| {
+            let result = ErrorVariant::from(v)?;
+
+            if last_deprecated && result.continue_from.is_none() {
+                return Err(Error::new(
+                    result.name.span(),
+                    format!("The next error after a deprecated one must have the #[continue_from] attribute"),
+                ));
+            }
+
+            last_deprecated = result.deprecated;
+
+            Ok(result)
+        })
         .collect::<Result<Vec<_>>>()?;
+
     let visibility = enum_item.vis;
     let generic_params = &enum_item.generics.params;
     let generic_params = if generic_params.is_empty() {
@@ -56,6 +72,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             #name #fields
         }
     });
+
     let name_fn_variants = variants.iter().map(|v| {
         let ErrorVariant {
             name: variant_name,
@@ -77,50 +94,44 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
     });
 
-    let offset = match attributes.offset {
+    let offset = match &attributes.offset {
         Some(offset) => quote! { + #offset },
         None => quote! { + 6000 },
     };
 
-    let mut named_args = false;
     let mut u32_index = 0u32;
     let mut discriminators = Vec::with_capacity(variants.len());
     let from_u32_fn_variants = variants.iter().map(|v| {
         let ErrorVariant {
             name: variant_name,
             fields,
-            discriminant,
             continue_from,
             ..
         } = &v;
-        let discriminant = match discriminant {
-            Some(v) => {named_args = true; quote! {#v} },
-            None => {
-                if named_args {
+        let discriminant = {
+            if let Some(v) = continue_from {
+                let new_value = v.base10_parse::<u32>()?;
+
+                if new_value < u32_index {
                     return Err(Error::new(
-                        variant_name.span(),
-                        "The variant without a discriminator are not allowed after another one that has it",
+                        v.span(),
+                        format!("The continue_from attribute cannot be lower than the current one: {}", u32_index),
                     ));
                 }
 
-                if let Some(v) = continue_from {
-                    let new_value = v.base10_parse::<u32>()?;
-
-                    if new_value < u32_index {
-                        return Err(Error::new(
-                            v.span(),
-                            format!("The continue_from attribute cannot be lower than the current one: {}", u32_index),
-                        ));
-                    }
-
-                    u32_index = new_value;
-                }
-
-
-                let result = quote! { #u32_index};
-                u32_index += 1;
-                result
+                u32_index = new_value;
             }
+
+            if attributes.contains_removed_code(u32_index) {
+                return Err(Error::new(
+                    name.span(),
+                    format!("The discriminator '{}' is marked as removed", u32_index),
+                ));
+            }
+
+            let result = quote! { #u32_index };
+            u32_index += 1;
+            result
         };
 
         let discriminant_field_name = format!("{}::{}", name, variant_name);
@@ -178,34 +189,10 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
     });
 
-    let test = if !attributes.skip_test {
-        let test_unique_variant_error_codes = format_ident!(
-            "__fankor_internal__test__unique_variant_error_codes_{}",
-            name
-        );
-
-        quote! {
-            #[allow(non_snake_case)]
-            #[automatically_derived]
-            #[test]
-            fn #test_unique_variant_error_codes() {
-                let discriminators = [#(#discriminators),*];
-                let helper = &crate::__internal__idl_builder_test__root::ERROR_HELPER;
-
-                for (name, discriminator) in discriminators {
-                    if let Err(item) = helper.add_error(name, discriminator) {
-                        panic!("There is a discriminator collision between errors. First: {}, Second: {}, Discriminator: {}", name, item.name, discriminator);
-                    }
-                }
-            }
-        }
-    } else {
-        quote! {}
-    };
-
     let result = quote! {
         #[derive(::std::fmt::Debug, ::std::clone::Clone)]
         #[repr(u32)]
+        #(#attrs)*
         #visibility enum #name #generic_params #generic_where_clause {
             #(#final_enum_variants,)*
         }
@@ -248,8 +235,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 })
             }
         }
-
-        #test
     };
 
     Ok(result.into())

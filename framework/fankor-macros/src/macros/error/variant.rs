@@ -3,8 +3,7 @@ use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::{
-    parse_macro_input, Attribute, Error, Expr, Fields, Lit, LitInt, MetaList, NestedMeta, Token,
-    Variant,
+    parse_macro_input, Attribute, Error, Fields, Lit, LitInt, MetaList, NestedMeta, Token, Variant,
 };
 
 use crate::Result;
@@ -14,8 +13,8 @@ pub struct ErrorVariant {
     pub message: Option<Punctuated<NestedMeta, Token![,]>>,
     pub attributes: Vec<Attribute>,
     pub fields: Fields,
-    pub discriminant: Option<Expr>,
     pub continue_from: Option<LitInt>,
+    pub deprecated: bool,
 }
 
 impl ErrorVariant {
@@ -23,13 +22,20 @@ impl ErrorVariant {
 
     /// Creates a new instance of the ErrorAttributes struct from the given attributes.
     pub fn from(variant: Variant) -> Result<ErrorVariant> {
+        if let Some((_, discriminant)) = variant.discriminant {
+            return Err(Error::new(
+                discriminant.span(),
+                "Discriminants are not supported, please use the `#[continue_from]` attribute instead.",
+            ));
+        }
+
         let mut error_variant = ErrorVariant {
             name: variant.ident,
             message: None,
             attributes: variant.attrs,
             fields: variant.fields,
-            discriminant: variant.discriminant.map(|v| v.1),
             continue_from: None,
+            deprecated: false,
         };
 
         error_variant.parse_attributes()?;
@@ -94,13 +100,6 @@ impl ErrorVariant {
                     ));
                 }
 
-                if self.discriminant.is_some() {
-                    return Err(Error::new(
-                        attribute_span,
-                        "The continue_from attribute is incompatible with the discriminant",
-                    ));
-                }
-
                 let path = &attribute.path;
                 let tokens = &attribute.tokens;
                 let tokens = quote! {#path #tokens};
@@ -137,6 +136,18 @@ impl ErrorVariant {
                         return Err(Error::new(v.span(), "This must be a literal string"));
                     }
                 }
+            } else if attribute.path.is_ident("deprecated") {
+                let attribute_span = attribute.span();
+
+                if self.deprecated {
+                    return Err(Error::new(
+                        attribute_span,
+                        "The deprecated attribute can only be used once",
+                    ));
+                }
+
+                self.deprecated = true;
+                index += 1;
             } else {
                 index += 1;
             }

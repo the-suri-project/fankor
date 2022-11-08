@@ -6,19 +6,19 @@ use syn::spanned::Spanned;
 use syn::{Error, Ident, Item, ItemImpl};
 
 pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
-    let cratename = Ident::new("borsh", Span::call_site());
+    let crate_name = Ident::new("borsh", Span::call_site());
 
     // Process input.
     let (res, initial_where_clause) = match input {
         Item::Struct(input) => {
             let initial_where_clause = input.generics.where_clause.clone();
 
-            (struct_de(&input, cratename)?, initial_where_clause)
+            (struct_de(&input, crate_name)?, initial_where_clause)
         }
         Item::Enum(input) => {
             let initial_where_clause = input.generics.where_clause.clone();
 
-            (enum_de(&input, cratename)?, initial_where_clause)
+            (enum_de(&input, crate_name)?, initial_where_clause)
         }
         _ => {
             return Err(Error::new(

@@ -56,10 +56,8 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
 
 /// This macro marks defines a new account implementing the traits:
 /// - `Account`
-/// - `AccountSerialize`
-/// - `AccountDeserialize`
-/// - `BorshSerialize`
-/// - `BorshDeserialize`
+/// - `FankorSerialize`
+/// - `FankorDeserialize`
 #[proc_macro_attribute]
 pub fn account(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
@@ -168,7 +166,7 @@ pub fn error_code(args: TokenStream, input: TokenStream) -> TokenStream {
 /// ```
 ///
 /// Being `ACCOUNT` a type that implements the `InstructionAccount` trait and being `ARGS` and `RESULT` types
-/// that implement the `borsh::serialize` and `borsh::deserialize` traits.
+/// that implement the `FankorSerialize` and `FankorDeserialize` traits.
 ///
 /// If `RESULT` is different from `()` then the instruction will store the result in the intermediate buffer as
 /// the instruction result.

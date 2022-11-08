@@ -28,7 +28,6 @@ pub fn processor() -> Result<proc_macro::TokenStream> {
         #[cfg(test)]
         pub mod __internal__idl_builder_test__root {
             ::fankor::test_helpers::lazy_static::lazy_static! {
-                pub static ref ERROR_HELPER: ::fankor::test_helpers::ErrorHelper = ::fankor::test_helpers::ErrorHelper::new();
                 pub static ref ACCOUNT_HELPER: ::fankor::test_helpers::AccountHelper = ::fankor::test_helpers::AccountHelper::new();
                 pub static ref INSTRUCTION_HELPER: ::fankor::test_helpers::InstructionHelper = ::fankor::test_helpers::InstructionHelper::new();
                 pub static ref PROGRAM_HELPER: ::fankor::test_helpers::ProgramHelper = ::fankor::test_helpers::ProgramHelper::new();
