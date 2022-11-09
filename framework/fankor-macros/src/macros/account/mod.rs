@@ -2,7 +2,7 @@ pub mod offset;
 pub mod size;
 
 use fankor_syn::fankor::read_fankor_toml;
-use quote::{format_ident, quote};
+use quote::quote;
 use syn::spanned::Spanned;
 use syn::{AttributeArgs, Error, Item};
 
@@ -43,11 +43,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     };
 
     let discriminator = accounts_config.get_discriminator(&name_str);
-
-    let test_unique_account_discriminator = format_ident!(
-        "__fankor_internal__test__unique_account_discriminator_{}",
-        name
-    );
 
     let result = quote! {
         #[derive(FankorSerialize, FankorDeserialize)]
@@ -112,23 +107,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
              fn owner() -> &'static Pubkey {
                 &crate::ID
-            }
-        }
-
-        #[allow(non_snake_case)]
-        #[automatically_derived]
-        #[test]
-        fn #test_unique_account_discriminator() {
-            let account_name = #name_str;
-            let discriminator = <#name #generic_params as ::fankor::traits::Account>::discriminator();
-            let helper = &crate::__internal__idl_builder_test__root::ACCOUNT_HELPER;
-
-            if discriminator.iter().all(|v| *v == 0) {
-                panic!("The discriminator of the account '{}' cannot be zero. It is reserved for uninitialized accounts", account_name);
-            }
-
-            if let Err(item) = helper.add_account(account_name, discriminator) {
-                panic!("There is a discriminator collision between accounts. First: {}, Second: {}, Discriminator: {:?}", account_name, item.account_name, discriminator);
             }
         }
     };

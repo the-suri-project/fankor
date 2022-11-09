@@ -6,7 +6,7 @@ pubkey = "7JKciYMdWKBo1yPhjVe5eDDjoxYfB8YhkAL7DRpJj3xE"
 discriminator_size = 1
 
 [accounts.discriminators]
-AccountData = [1]
+StructAccountData = [1]
 EnumAccountData = [2]
 
 [instructions]

@@ -55,6 +55,25 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 
 /// This macro marks defines a new account implementing the traits:
+/// - `Accounts`
+/// - `FankorSerialize`
+/// - `FankorDeserialize`
+#[proc_macro_attribute]
+pub fn accounts(args: TokenStream, input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(args as AttributeArgs);
+    let input = parse_macro_input!(input as Item);
+
+    match macros::accounts::processor(args, input) {
+        Ok(v) => v,
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/// This macro marks defines a new account implementing the traits:
 /// - `Account`
 /// - `FankorSerialize`
 /// - `FankorDeserialize`

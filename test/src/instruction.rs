@@ -1,4 +1,4 @@
-use crate::accounts::{AccountData, EnumAccountData};
+use crate::accounts::{EnumAccountData, StructAccountData};
 use fankor::prelude::*;
 
 #[derive(InstructionAccounts)]
@@ -8,43 +8,43 @@ pub struct InstructionStructAccounts<'info> {
     #[account(executable)]
     #[account(rent_exempt)]
     #[account(signer)]
-    pub account1: Account<'info, AccountData>,
+    pub account1: Account<'info, StructAccountData>,
 
     #[account(writable = false)]
     #[account(executable = false)]
     #[account(rent_exempt = false)]
     #[account(signer = false)]
-    pub account2: Box<Account<'info, AccountData>>,
+    pub account2: Box<Account<'info, StructAccountData>>,
 
-    pub account3: Option<Account<'info, AccountData>>,
+    pub account3: Option<Account<'info, StructAccountData>>,
 
-    pub optional_account: OptionalAccount<'info, AccountData>,
+    pub optional_account: OptionalAccount<'info, StructAccountData>,
 
     pub unchecked_account: UncheckedAccount<'info>,
 
     #[account(address = &crate::ID)]
     pub program: Program<'info, System>,
 
-    pub list: Vec<Account<'info, AccountData>>,
+    pub list: Vec<Account<'info, StructAccountData>>,
 
     #[account(min = 2)]
-    pub list2: Vec<Account<'info, AccountData>>,
+    pub list2: Vec<Account<'info, StructAccountData>>,
 
     #[account(min = 2)]
     #[account(max = 5)]
-    pub list3: Vec<Account<'info, AccountData>>,
+    pub list3: Vec<Account<'info, StructAccountData>>,
 
     #[account(size = 15)]
-    pub list4: Vec<Account<'info, AccountData>>,
+    pub list4: Vec<Account<'info, StructAccountData>>,
 
     #[account(max = 5)]
-    pub list5: Vec<Account<'info, AccountData>>,
+    pub list5: Vec<Account<'info, StructAccountData>>,
 
-    pub either: Either<Account<'info, AccountData>, Account<'info, EnumAccountData>>,
+    pub either: Either<Account<'info, StructAccountData>, Account<'info, EnumAccountData>>,
 
-    pub uninitialized: UninitializedAccount<'info, AccountData>,
+    pub uninitialized: UninitializedAccount<'info, StructAccountData>,
 
-    pub maybe_uninitialized: MaybeUninitializedAccount<'info, AccountData>,
+    pub maybe_uninitialized: MaybeUninitializedAccount<'info, StructAccountData>,
 
     #[account(writable)]
     pub other_struct: Box<InstructionStructAccounts<'info>>,
@@ -70,44 +70,44 @@ pub enum InstructionEnumAccounts<'info> {
     #[account(executable)]
     #[account(rent_exempt)]
     #[account(signer)]
-    Account1(Account<'info, AccountData>),
+    Account1(Account<'info, StructAccountData>),
 
     #[account(writable = false)]
     #[account(executable = false)]
     #[account(rent_exempt = false)]
     #[account(signer = false)]
-    Account2(Box<Account<'info, AccountData>>),
+    Account2(Box<Account<'info, StructAccountData>>),
 
     // Do not use `Optional` in enums, it invalidates the next variants.
-    // Account3(Option<Account<'info, AccountData>>),
-    OptionalAccount(OptionalAccount<'info, AccountData>),
+    // Account3(Option<Account<'info, StructAccountData>>),
+    OptionalAccount(OptionalAccount<'info, StructAccountData>),
 
     UncheckedAccount(UncheckedAccount<'info>),
 
     #[account(address = &crate::ID)]
     Program(Program<'info, System>),
 
-    List(Vec<Account<'info, AccountData>>),
+    List(Vec<Account<'info, StructAccountData>>),
 
     #[account(min = 2)]
-    List2(Vec<Account<'info, AccountData>>),
+    List2(Vec<Account<'info, StructAccountData>>),
 
     #[account(min = 2)]
     #[account(max = 5)]
-    List3(Vec<Account<'info, AccountData>>),
+    List3(Vec<Account<'info, StructAccountData>>),
 
     #[account(size = 15)]
-    List4(Vec<Account<'info, AccountData>>),
+    List4(Vec<Account<'info, StructAccountData>>),
 
     #[account(max = 15)]
     #[account(min_accounts = 10)]
-    List5(Vec<Account<'info, AccountData>>),
+    List5(Vec<Account<'info, StructAccountData>>),
 
-    Either(Either<Account<'info, AccountData>, Account<'info, EnumAccountData>>),
+    Either(Either<Account<'info, StructAccountData>, Account<'info, EnumAccountData>>),
 
-    Uninitialized(UninitializedAccount<'info, AccountData>),
+    Uninitialized(UninitializedAccount<'info, StructAccountData>),
 
-    MaybeUninitialized(MaybeUninitializedAccount<'info, AccountData>),
+    MaybeUninitialized(MaybeUninitializedAccount<'info, StructAccountData>),
 
     #[account(writable)]
     OtherStruct(Box<InstructionStructAccounts<'info>>),
