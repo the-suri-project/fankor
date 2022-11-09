@@ -1,25 +1,17 @@
+mod arguments;
 pub mod offset;
 pub mod size;
 
-use fankor_syn::fankor::read_fankor_toml;
-use quote::quote;
+use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{AttributeArgs, Error, Item};
 
+use crate::macros::account::arguments::AccountArguments;
 use fankor_syn::Result;
 
 pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenStream> {
     // Process arguments.
-    if !args.is_empty() {
-        return Err(Error::new(
-            input.span(),
-            "account macro does not accept arguments",
-        ));
-    }
-
-    // Read the Fankor.toml file.
-    let config = read_fankor_toml();
-    let accounts_config = config.accounts;
+    let arguments = AccountArguments::from(args, input.span())?;
 
     // Process input.
     let (name, generics, item) = match &input {
@@ -34,6 +26,8 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     };
 
     let name_str = name.to_string();
+    let accounts_name = &arguments.accounts_type_name;
+    let account_discriminants_name = format_ident!("{}Discriminant", accounts_name);
     let generic_where_clause = &generics.where_clause;
     let generic_params = &generics.params;
     let generic_params = if generic_params.is_empty() {
@@ -42,8 +36,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         quote! { < #generic_params > }
     };
 
-    let discriminator = accounts_config.get_discriminator(&name_str);
-
     let result = quote! {
         #[derive(FankorSerialize, FankorDeserialize)]
         #item
@@ -51,7 +43,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[automatically_derived]
         impl #generic_params ::fankor::traits::AccountSerialize for #name #generic_params #generic_where_clause {
             fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
-                if writer.write_all(<#name #generic_params as ::fankor::traits::Account>::discriminator()).is_err() {
+                if writer.write_all(&[<#name #generic_params as ::fankor::traits::Account>::discriminator()]).is_err() {
                     return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
                         account: #name_str.to_string()
                     }.into());
@@ -69,26 +61,24 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[automatically_derived]
         impl #generic_params ::fankor::traits::AccountDeserialize for #name #generic_params #generic_where_clause {
             fn try_deserialize(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
-                let discriminator = <#name #generic_params as ::fankor::traits::Account>::discriminator();
-                let discriminator_len = discriminator.len();
+                let account: #accounts_name = ::fankor::prelude::borsh::BorshDeserialize::deserialize(buf)
+                    .map_err(|_| ::fankor::errors::FankorErrorCode::AccountDiscriminatorNotFound {
+                    account: #name_str.to_string()
+                })?;
 
-                if buf.len() < discriminator_len {
-                    return Err(::fankor::errors::FankorErrorCode::AccountDiscriminatorNotFound{
-                        account: #name_str.to_string()
-                    }.into());
-                }
+                let account = match account {
+                    #accounts_name::#name(v) => v,
+                    _ => return Err(
+                        ::fankor::errors::FankorErrorCode::AccountDiscriminatorMismatch {
+                            account: #name_str.to_string(),
+                            expected: <#name #generic_params as ::fankor::traits::Account>::discriminator(),
+                            actual: account.discriminant_code()
+                        }
+                        .into(),
+                    )
+                };
 
-                let given_disc = &buf[..discriminator_len];
-                if discriminator != given_disc {
-                    return Err(::fankor::errors::FankorErrorCode::AccountDiscriminatorMismatch{
-                        actual: given_disc.to_vec(),
-                        expected: discriminator.to_vec(),
-                        account: #name_str.to_string(),
-                    }.into());
-                }
-
-                *buf = &buf[discriminator_len..];
-                unsafe {Self::try_deserialize_unchecked(buf)}
+                Ok(account)
             }
 
             unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
@@ -101,8 +91,8 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
         #[automatically_derived]
         impl #generic_params ::fankor::traits::Account for #name #generic_params #generic_where_clause {
-             fn discriminator() -> &'static [u8] {
-                &[#(#discriminator,)*]
+             fn discriminator() -> u8 {
+                #account_discriminants_name::#name.code()
             }
 
              fn owner() -> &'static Pubkey {

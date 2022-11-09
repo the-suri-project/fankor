@@ -10,7 +10,7 @@ pub struct InstructionHelper {
 #[derive(Clone)]
 pub struct InstructionHelperItem {
     pub instruction_name: &'static str,
-    pub discriminator: &'static [u8],
+    pub discriminator: u8,
 }
 
 impl InstructionHelper {
@@ -25,7 +25,7 @@ impl InstructionHelper {
     pub fn add_instruction(
         &self,
         instruction_name: &'static str,
-        discriminator: &'static [u8],
+        discriminator: u8,
     ) -> Result<(), InstructionHelperItem> {
         let mut discriminators = self.discriminators.lock();
         let discriminator_str = bs58::encode(discriminator).into_string();

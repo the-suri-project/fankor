@@ -5,8 +5,8 @@ macro_rules! impl_account {
         pub struct $name($ty);
 
         impl crate::traits::Account for $name {
-            fn discriminator() -> &'static [u8] {
-                &[]
+            fn discriminator() -> u8 {
+                0
             }
 
             fn owner() -> &'static Pubkey {

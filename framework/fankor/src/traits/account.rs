@@ -9,8 +9,8 @@ pub const CLOSED_ACCOUNT_DISCRIMINATOR: [u8; 32] = [0; 32];
 pub trait Account:
     borsh::BorshSerialize + borsh::BorshDeserialize + AccountSerialize + AccountDeserialize
 {
-    /// The identifier of the account.
-    fn discriminator() -> &'static [u8];
+    /// The discriminator of the account.
+    fn discriminator() -> u8;
 
     /// Defines an address expected to own an account.
     fn owner() -> &'static Pubkey;
