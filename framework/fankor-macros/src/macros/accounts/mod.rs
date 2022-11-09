@@ -28,6 +28,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let arguments = AccountsArguments::from(args, &enum_item)?;
 
     let name = enum_item.ident;
+    let name_str = name.to_string();
     let discriminant_name = format_ident!("{}Discriminant", name);
     let attrs = &arguments.attrs;
 
@@ -236,7 +237,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
 
         #[automatically_derived]
-        impl #name {
+        impl #generic_params #name {
             #(#unwrap_methods)*
 
             #(#as_ref_methods)*
@@ -258,7 +259,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
         #(#from_methods)*
 
-        impl borsh::BorshSerialize for #name #generic_params #generic_where_clause {
+        impl #generic_params borsh::BorshSerialize for #name #generic_params #generic_where_clause {
             fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
                 match self {
                     #(#serialize_entries)*
@@ -279,6 +280,49 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                         "Invalid discriminant value",
                     )),
                 }
+            }
+        }
+
+        #[automatically_derived]
+        impl #generic_params ::fankor::traits::AccountSerialize for #name #generic_params #generic_where_clause {
+            fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
+                if writer.write_all(&[<#name #generic_params as ::fankor::traits::Account>::discriminator()]).is_err() {
+                    return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
+                        account: #name_str.to_string()
+                    }.into());
+                }
+
+                if ::fankor::prelude::borsh::BorshSerialize::serialize(self, writer).is_err() {
+                    return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize {
+                        account: #name_str.to_string()
+                    }.into());
+                }
+                Ok(())
+            }
+        }
+
+        #[automatically_derived]
+        impl #generic_params ::fankor::traits::AccountDeserialize for #name #generic_params #generic_where_clause {
+            fn try_deserialize(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
+                unsafe { Self::try_deserialize_unchecked(buf) }
+            }
+
+            unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
+                ::fankor::prelude::borsh::BorshDeserialize::deserialize(buf)
+                    .map_err(|_| ::fankor::errors::FankorErrorCode::AccountDidNotDeserialize {
+                    account: #name_str.to_string()
+                }.into())
+            }
+        }
+
+        #[automatically_derived]
+        impl #generic_params ::fankor::traits::Account for #name #generic_params #generic_where_clause {
+            fn discriminator() -> u8 {
+                0
+            }
+
+            fn owner() -> &'static Pubkey {
+                &crate::ID
             }
         }
 

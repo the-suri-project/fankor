@@ -1,8 +1,6 @@
-pub use accounts::*;
 pub use instructions::*;
 pub use program::*;
 
-mod accounts;
 mod instructions;
 mod program;
 
@@ -15,9 +13,6 @@ pub struct FankorConfig {
     pub program: FankorProgramConfig,
 
     #[serde(default)]
-    pub accounts: FankorAccountsConfig,
-
-    #[serde(default)]
     pub instructions: FankorInstructionsConfig,
 }
 
@@ -26,7 +21,6 @@ impl FankorConfig {
 
     pub fn validate(&self) {
         self.program.validate();
-        self.accounts.validate();
         self.instructions.validate();
     }
 }

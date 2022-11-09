@@ -50,14 +50,14 @@ pub enum FankorErrorCode {
 
     /// The account discriminator did not match what was expected
     #[msg(
-        "The account discriminator {:?} did not match what was expected {:?} of account {}",
+        "The account discriminator {} did not match what was expected {} of account {}",
         actual,
         expected,
         account
     )]
     AccountDiscriminatorMismatch {
-        actual: Vec<u8>,
-        expected: Vec<u8>,
+        actual: u8,
+        expected: u8,
         account: String,
     },
 

@@ -2,13 +2,6 @@
 name = "FankorTest"
 pubkey = "7JKciYMdWKBo1yPhjVe5eDDjoxYfB8YhkAL7DRpJj3xE"
 
-[accounts]
-discriminator_size = 1
-
-[accounts.discriminators]
-StructAccountData = [1]
-EnumAccountData = [2]
-
 [instructions]
 discriminator_size = 1
 
