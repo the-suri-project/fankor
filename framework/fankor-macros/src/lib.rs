@@ -134,7 +134,7 @@ pub fn instruction_accounts(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-/// This macro transforms an enum into an error enum.
+/// This macro defines an error list from an enum.
 #[proc_macro_attribute]
 pub fn error_code(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);

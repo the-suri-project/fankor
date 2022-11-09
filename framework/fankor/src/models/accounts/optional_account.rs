@@ -1,4 +1,4 @@
-use crate::errors::{ErrorCode, FankorResult};
+use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{Account, FankorContext};
 use crate::traits::InstructionAccount;
 use solana_program::account_info::AccountInfo;
@@ -68,7 +68,7 @@ impl<'info, T: crate::traits::Account> InstructionAccount<'info> for OptionalAcc
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
         if accounts.is_empty() {
-            return Err(ErrorCode::NotEnoughAccountKeys.into());
+            return Err(FankorErrorCode::NotEnoughAccountKeys.into());
         }
 
         let info = &accounts[0];

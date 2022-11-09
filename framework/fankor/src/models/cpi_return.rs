@@ -1,4 +1,4 @@
-use crate::errors::{ErrorCode, FankorResult};
+use crate::errors::{FankorErrorCode, FankorResult};
 use borsh::BorshDeserialize;
 use solana_program::pubkey::Pubkey;
 use std::marker::PhantomData;
@@ -21,11 +21,11 @@ impl<T: BorshDeserialize> CpiReturn<T> {
     // METHODS ----------------------------------------------------------------
 
     pub fn get(&self, program_id: &Pubkey) -> FankorResult<T> {
-        let (key, data) =
-            solana_program::program::get_return_data().ok_or(ErrorCode::EmptyIntermediateBuffer)?;
+        let (key, data) = solana_program::program::get_return_data()
+            .ok_or(FankorErrorCode::EmptyIntermediateBuffer)?;
 
         if key != *program_id {
-            return Err(ErrorCode::IntermediateBufferIncorrectProgramId {
+            return Err(FankorErrorCode::IntermediateBufferIncorrectProgramId {
                 actual: key,
                 expected: *program_id,
             }
@@ -36,8 +36,8 @@ impl<T: BorshDeserialize> CpiReturn<T> {
     }
 
     pub fn get_ignoring_program(&self) -> FankorResult<T> {
-        let (_key, data) =
-            solana_program::program::get_return_data().ok_or(ErrorCode::EmptyIntermediateBuffer)?;
+        let (_key, data) = solana_program::program::get_return_data()
+            .ok_or(FankorErrorCode::EmptyIntermediateBuffer)?;
         Ok(T::try_from_slice(&data)?)
     }
 }

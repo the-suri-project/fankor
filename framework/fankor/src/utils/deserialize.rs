@@ -1,4 +1,4 @@
-use crate::errors::{ErrorCode, FankorResult};
+use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
 use crate::traits::InstructionAccount;
 use solana_program::account_info::AccountInfo;
@@ -11,7 +11,7 @@ pub fn try_from_vec_accounts_with_bounds<'info, T: InstructionAccount<'info>>(
     max: usize,
 ) -> FankorResult<Vec<T>> {
     if accounts.len() < min {
-        return Err(ErrorCode::NotEnoughAccountKeys.into());
+        return Err(FankorErrorCode::NotEnoughAccountKeys.into());
     }
 
     let mut result = Vec::new();
@@ -28,7 +28,7 @@ pub fn try_from_vec_accounts_with_bounds<'info, T: InstructionAccount<'info>>(
     }
 
     if result.len() < min {
-        return Err(ErrorCode::NotEnoughValidAccountForVec.into());
+        return Err(FankorErrorCode::NotEnoughValidAccountForVec.into());
     }
 
     *accounts = new_accounts;

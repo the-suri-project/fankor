@@ -1,4 +1,4 @@
-use crate::errors::{ErrorCode, FankorResult};
+use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
 use crate::traits::CLOSED_ACCOUNT_DISCRIMINATOR;
 use crate::utils::bpf_writer::BpfWriter;
@@ -12,7 +12,7 @@ pub(crate) fn close_account<'info>(
     sol_destination: &AccountInfo<'info>,
 ) -> FankorResult<()> {
     if info.key != context.program_id() {
-        return Err(ErrorCode::AccountNotOwnedByProgram {
+        return Err(FankorErrorCode::AccountNotOwnedByProgram {
             address: *info.key,
             action: "close",
         }
@@ -20,7 +20,7 @@ pub(crate) fn close_account<'info>(
     }
 
     if !info.is_writable {
-        return Err(ErrorCode::ReadonlyAccountModification {
+        return Err(FankorErrorCode::ReadonlyAccountModification {
             address: *info.key,
             action: "close",
         }
@@ -42,7 +42,7 @@ pub(crate) fn close_account<'info>(
         &CLOSED_ACCOUNT_DISCRIMINATOR[0..context.discriminator_length() as usize];
     writer
         .write_all(closed_account_discriminator)
-        .map_err(|_| ErrorCode::AccountDidNotSerialize {
+        .map_err(|_| FankorErrorCode::AccountDidNotSerialize {
             account: info.key.to_string(),
         })?;
 

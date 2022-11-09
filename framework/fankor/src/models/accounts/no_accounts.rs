@@ -1,4 +1,4 @@
-use crate::errors::{ErrorCode, FankorResult};
+use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
 use crate::traits::{CpiInstructionAccount, InstructionAccount};
 use solana_program::account_info::AccountInfo;
@@ -48,7 +48,7 @@ impl<'info> InstructionAccount<'info> for NoAccounts<'info> {
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
         if !accounts.is_empty() {
-            return Err(ErrorCode::NotAccountsExpected.into());
+            return Err(FankorErrorCode::NotAccountsExpected.into());
         }
 
         Ok(NoAccounts::new(context))

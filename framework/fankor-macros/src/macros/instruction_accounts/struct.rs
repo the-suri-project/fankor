@@ -62,7 +62,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                 let expected = #owner;
 
                 if actual != expected {
-                    return Err(::fankor::errors::ErrorCode::AccountConstraintOwnerMismatch {
+                    return Err(::fankor::errors::FankorErrorCode::AccountConstraintOwnerMismatch {
                         actual: *actual,
                         expected: *expected,
                         account: #name_str,
@@ -77,7 +77,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                 let expected = #address;
 
                 if actual != expected {
-                    return Err(::fankor::errors::ErrorCode::AccountConstraintAddressMismatch {
+                    return Err(::fankor::errors::FankorErrorCode::AccountConstraintAddressMismatch {
                         actual: *actual,
                         expected: *expected,
                         account: #name_str,
@@ -92,12 +92,12 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
                 if initialized {
                     if info.owner == &system_program::ID && info.lamports() == 0 {
-                        return Err(::fankor::errors::ErrorCode::AccountConstraintNotInitialized {
+                        return Err(::fankor::errors::FankorErrorCode::AccountConstraintNotInitialized {
                             account: #name_str,
                         }.into());
                     }
                 } else if info.owner != &system_program::ID || info.lamports() > 0 {
-                    return Err(::fankor::errors::ErrorCode::AccountConstraintInitialized {
+                    return Err(::fankor::errors::FankorErrorCode::AccountConstraintInitialized {
                         account: #name_str,
                     }.into());
                 }
@@ -110,12 +110,12 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
                 if writable {
                     if !info.is_writable {
-                        return Err(::fankor::errors::ErrorCode::AccountConstraintNotWritable {
+                        return Err(::fankor::errors::FankorErrorCode::AccountConstraintNotWritable {
                             account: #name_str,
                         }.into());
                     }
                 } else if info.is_writable {
-                    return Err(::fankor::errors::ErrorCode::AccountConstraintWritable {
+                    return Err(::fankor::errors::FankorErrorCode::AccountConstraintWritable {
                         account: #name_str,
                     }.into());
                 }
@@ -128,12 +128,12 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
                 if executable {
                     if !info.executable {
-                        return Err(::fankor::errors::ErrorCode::AccountConstraintNotExecutable {
+                        return Err(::fankor::errors::FankorErrorCode::AccountConstraintNotExecutable {
                             account: #name_str,
                         }.into());
                     }
                 } else if info.executable {
-                    return Err(::fankor::errors::ErrorCode::AccountConstraintExecutable {
+                    return Err(::fankor::errors::FankorErrorCode::AccountConstraintExecutable {
                         account: #name_str,
                     }.into());
                 }
@@ -151,12 +151,12 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
                 if rent_exempt {
                     if !is_rent_exempt {
-                        return Err(::fankor::errors::ErrorCode::AccountConstraintNotRentExempt {
+                        return Err(::fankor::errors::FankorErrorCode::AccountConstraintNotRentExempt {
                             account: #name_str,
                         }.into());
                     }
                 } else if is_rent_exempt {
-                    return Err(::fankor::errors::ErrorCode::AccountConstraintRentExempt {
+                    return Err(::fankor::errors::FankorErrorCode::AccountConstraintRentExempt {
                         account: #name_str,
                     }.into());
                 }
@@ -169,12 +169,12 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
                 if signer {
                     if !info.is_signer {
-                        return Err(::fankor::errors::ErrorCode::AccountConstraintNotSigner {
+                        return Err(::fankor::errors::FankorErrorCode::AccountConstraintNotSigner {
                             account: #name_str,
                         }.into());
                     }
                 } else if info.is_signer {
-                    return Err(::fankor::errors::ErrorCode::AccountConstraintSigner {
+                    return Err(::fankor::errors::FankorErrorCode::AccountConstraintSigner {
                         account: #name_str,
                     }.into());
                 }
@@ -189,7 +189,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                         let actual = #name.len();
 
                         if actual < expected {
-                            return Err(::fankor::errors::ErrorCode::AccountConstraintMinimumMismatch {
+                            return Err(::fankor::errors::FankorErrorCode::AccountConstraintMinimumMismatch {
                                 actual,
                                 expected,
                                 account: #name_str,
@@ -209,7 +209,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                     let actual = #name.len();
 
                     if actual < expected {
-                        return Err(::fankor::errors::ErrorCode::AccountConstraintMinimumMismatch {
+                        return Err(::fankor::errors::FankorErrorCode::AccountConstraintMinimumMismatch {
                             actual,
                             expected,
                             account: #name_str,
@@ -224,7 +224,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                     let actual = #name.len();
 
                     if actual > expected {
-                        return Err(::fankor::errors::ErrorCode::AccountConstraintMaximumMismatch {
+                        return Err(::fankor::errors::FankorErrorCode::AccountConstraintMaximumMismatch {
                             actual,
                             expected,
                             account: #name_str,

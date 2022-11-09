@@ -1,4 +1,4 @@
-use crate::errors::{ErrorCode, FankorResult};
+use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
 use crate::traits::InstructionAccount;
 use solana_program::account_info::AccountInfo;
@@ -22,7 +22,7 @@ impl<'info, T: crate::traits::Program> Program<'info, T> {
         info: &'info AccountInfo<'info>,
     ) -> FankorResult<Program<'info, T>> {
         if info.key != T::address() {
-            return Err(ErrorCode::InvalidProgram {
+            return Err(FankorErrorCode::InvalidProgram {
                 expected: *T::address(),
                 actual: *info.key,
             }
@@ -30,7 +30,7 @@ impl<'info, T: crate::traits::Program> Program<'info, T> {
         }
 
         if !info.executable {
-            return Err(ErrorCode::ProgramIsNotExecutable { program: *info.key }.into());
+            return Err(FankorErrorCode::ProgramIsNotExecutable { program: *info.key }.into());
         }
 
         Ok(Program {
@@ -105,7 +105,7 @@ impl<'info, T: crate::traits::Program> InstructionAccount<'info> for Program<'in
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
         if accounts.is_empty() {
-            return Err(ErrorCode::NotEnoughAccountKeys.into());
+            return Err(FankorErrorCode::NotEnoughAccountKeys.into());
         }
 
         let info = &accounts[0];

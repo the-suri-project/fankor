@@ -1,4 +1,4 @@
-use crate::errors::{ErrorCode, FankorResult};
+use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models;
 use crate::models::{FankorContext, System};
 use crate::traits::{InstructionAccount, Program};
@@ -142,7 +142,7 @@ impl<'info> UncheckedAccount<'info> {
         let program = match self.context.get_account_from_address(System::address()) {
             Some(v) => v,
             None => {
-                return Err(ErrorCode::MissingProgram {
+                return Err(FankorErrorCode::MissingProgram {
                     address: *System::address(),
                     name: System::name(),
                 }
@@ -151,7 +151,7 @@ impl<'info> UncheckedAccount<'info> {
         };
 
         if !self.is_owned_by_program() {
-            return Err(ErrorCode::AccountNotOwnedByProgram {
+            return Err(FankorErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
                 action: "reallocate",
             }
@@ -159,7 +159,7 @@ impl<'info> UncheckedAccount<'info> {
         }
 
         if !self.is_writable() {
-            return Err(ErrorCode::ReadonlyAccountModification {
+            return Err(FankorErrorCode::ReadonlyAccountModification {
                 address: *self.address(),
                 action: "reallocate",
             }
@@ -167,7 +167,7 @@ impl<'info> UncheckedAccount<'info> {
         }
 
         if self.context.is_account_closed(self.info) {
-            return Err(ErrorCode::AlreadyClosedAccount {
+            return Err(FankorErrorCode::AlreadyClosedAccount {
                 address: *self.address(),
                 action: "reallocate",
             }
@@ -206,7 +206,7 @@ impl<'info> InstructionAccount<'info> for UncheckedAccount<'info> {
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
         if accounts.is_empty() {
-            return Err(ErrorCode::NotEnoughAccountKeys.into());
+            return Err(FankorErrorCode::NotEnoughAccountKeys.into());
         }
 
         let info = &accounts[0];

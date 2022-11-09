@@ -1,5 +1,5 @@
 use crate::cpi::system_program::CpiCreateAccount;
-use crate::errors::{ErrorCode, FankorResult};
+use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{Account, Either, FankorContext, System};
 use crate::traits::{AccountSize, InstructionAccount, Program};
 use crate::{cpi, models};
@@ -31,7 +31,7 @@ impl<'info, T: crate::traits::Account> UninitializedAccount<'info, T> {
         info: &'info AccountInfo<'info>,
     ) -> FankorResult<UninitializedAccount<'info, T>> {
         if info.owner != &system_program::ID || info.lamports() > 0 {
-            return Err(ErrorCode::AccountAlreadyInitialized { address: *info.key }.into());
+            return Err(FankorErrorCode::AccountAlreadyInitialized { address: *info.key }.into());
         }
 
         Ok(UninitializedAccount {
@@ -93,7 +93,7 @@ impl<'info, T: Default + crate::traits::Account> UninitializedAccount<'info, T> 
         let program = match self.context.get_account_from_address(System::address()) {
             Some(v) => v,
             None => {
-                return Err(ErrorCode::MissingProgram {
+                return Err(FankorErrorCode::MissingProgram {
                     address: *System::address(),
                     name: System::name(),
                 }
@@ -131,7 +131,7 @@ impl<'info, T: Default + crate::traits::Account> UninitializedAccount<'info, T> 
         let program = match self.context.get_account_from_address(System::address()) {
             Some(v) => v,
             None => {
-                return Err(ErrorCode::MissingProgram {
+                return Err(FankorErrorCode::MissingProgram {
                     address: *System::address(),
                     name: System::name(),
                 }
@@ -202,7 +202,7 @@ impl<'info, T: crate::traits::Account> InstructionAccount<'info>
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
         if accounts.is_empty() {
-            return Err(ErrorCode::NotEnoughAccountKeys.into());
+            return Err(FankorErrorCode::NotEnoughAccountKeys.into());
         }
 
         let info = &accounts[0];

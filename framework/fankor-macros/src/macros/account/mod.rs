@@ -57,13 +57,13 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         impl #generic_params ::fankor::traits::AccountSerialize for #name #generic_params #generic_where_clause {
             fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
                 if writer.write_all(<#name #generic_params as ::fankor::traits::Account>::discriminator()).is_err() {
-                    return Err(::fankor::errors::ErrorCode::AccountDidNotSerialize{
+                    return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
                         account: #name_str.to_string()
                     }.into());
                 }
 
                 if ::fankor::prelude::borsh::BorshSerialize::serialize(self, writer).is_err() {
-                    return Err(::fankor::errors::ErrorCode::AccountDidNotSerialize {
+                    return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize {
                         account: #name_str.to_string()
                     }.into());
                 }
@@ -78,14 +78,14 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 let discriminator_len = discriminator.len();
 
                 if buf.len() < discriminator_len {
-                    return Err(::fankor::errors::ErrorCode::AccountDiscriminatorNotFound{
+                    return Err(::fankor::errors::FankorErrorCode::AccountDiscriminatorNotFound{
                         account: #name_str.to_string()
                     }.into());
                 }
 
                 let given_disc = &buf[..discriminator_len];
                 if discriminator != given_disc {
-                    return Err(::fankor::errors::ErrorCode::AccountDiscriminatorMismatch{
+                    return Err(::fankor::errors::FankorErrorCode::AccountDiscriminatorMismatch{
                         actual: given_disc.to_vec(),
                         expected: discriminator.to_vec(),
                         account: #name_str.to_string(),
@@ -98,7 +98,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
             unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
                 ::fankor::prelude::borsh::BorshDeserialize::deserialize(buf)
-                    .map_err(|_| ::fankor::errors::ErrorCode::AccountDidNotDeserialize {
+                    .map_err(|_| ::fankor::errors::FankorErrorCode::AccountDidNotDeserialize {
                     account: #name_str.to_string()
                 }.into())
             }

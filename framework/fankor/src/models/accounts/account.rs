@@ -1,4 +1,4 @@
-use crate::errors::{Error, ErrorCode, FankorResult};
+use crate::errors::{Error, FankorErrorCode, FankorResult};
 use crate::models;
 use crate::models::{FankorContext, FankorContextExitAction, System};
 use crate::traits::{AccountSize, InstructionAccount, Program};
@@ -31,11 +31,11 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
         data: T,
     ) -> FankorResult<Account<'info, T>> {
         if info.owner == &system_program::ID && info.lamports() == 0 {
-            return Err(ErrorCode::AccountNotInitialized { address: *info.key }.into());
+            return Err(FankorErrorCode::AccountNotInitialized { address: *info.key }.into());
         }
 
         if info.owner != T::owner() {
-            return Err(ErrorCode::AccountOwnedByWrongProgram {
+            return Err(FankorErrorCode::AccountOwnedByWrongProgram {
                 address: *info.key,
                 expected: *T::owner(),
                 actual: *info.owner,
@@ -45,7 +45,7 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
 
         // Check it is not closed.
         if context.is_account_closed(info) {
-            return Err(ErrorCode::NewFromClosedAccount { address: *info.key }.into());
+            return Err(FankorErrorCode::NewFromClosedAccount { address: *info.key }.into());
         }
 
         Ok(Account {
@@ -213,7 +213,7 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
     /// to expose new content before a CPI.
     pub fn save(&self) -> FankorResult<()> {
         if !self.is_owned_by_program() {
-            return Err(ErrorCode::AccountNotOwnedByProgram {
+            return Err(FankorErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
                 action: "write",
             }
@@ -221,7 +221,7 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
         }
 
         if !self.is_writable() {
-            return Err(ErrorCode::ReadonlyAccountModification {
+            return Err(FankorErrorCode::ReadonlyAccountModification {
                 address: *self.address(),
                 action: "write",
             }
@@ -229,7 +229,7 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
         }
 
         if self.context.is_account_closed(self.info) {
-            return Err(ErrorCode::AlreadyClosedAccount {
+            return Err(FankorErrorCode::AlreadyClosedAccount {
                 address: *self.address(),
                 action: "write",
             }
@@ -260,7 +260,7 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
         let program = match self.context.get_account_from_address(System::address()) {
             Some(v) => v,
             None => {
-                return Err(ErrorCode::MissingProgram {
+                return Err(FankorErrorCode::MissingProgram {
                     address: *System::address(),
                     name: System::name(),
                 }
@@ -269,7 +269,7 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
         };
 
         if !self.is_owned_by_program() {
-            return Err(ErrorCode::AccountNotOwnedByProgram {
+            return Err(FankorErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
                 action: "reallocate",
             }
@@ -277,7 +277,7 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
         }
 
         if !self.is_writable() {
-            return Err(ErrorCode::ReadonlyAccountModification {
+            return Err(FankorErrorCode::ReadonlyAccountModification {
                 address: *self.address(),
                 action: "reallocate",
             }
@@ -285,7 +285,7 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
         }
 
         if self.context.is_account_closed(self.info) {
-            return Err(ErrorCode::AlreadyClosedAccount {
+            return Err(FankorErrorCode::AlreadyClosedAccount {
                 address: *self.address(),
                 action: "reallocate",
             }
@@ -326,7 +326,7 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
         zero_bytes: bool,
     ) -> FankorResult<()> {
         if !self.is_owned_by_program() {
-            return Err(ErrorCode::AccountNotOwnedByProgram {
+            return Err(FankorErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
                 action: "reallocate",
             }
@@ -334,7 +334,7 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
         }
 
         if !self.is_writable() {
-            return Err(ErrorCode::ReadonlyAccountModification {
+            return Err(FankorErrorCode::ReadonlyAccountModification {
                 address: *self.address(),
                 action: "reallocate",
             }
@@ -342,7 +342,7 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
         }
 
         if self.context.is_account_closed(self.info) {
-            return Err(ErrorCode::AlreadyClosedAccount {
+            return Err(FankorErrorCode::AlreadyClosedAccount {
                 address: *self.address(),
                 action: "reallocate",
             }
@@ -366,7 +366,7 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
         sol_destination: &'info AccountInfo<'info>,
     ) -> FankorResult<()> {
         if !self.is_owned_by_program() {
-            return Err(ErrorCode::AccountNotOwnedByProgram {
+            return Err(FankorErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
                 action: "close",
             }
@@ -374,7 +374,7 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
         }
 
         if !self.is_writable() {
-            return Err(ErrorCode::ReadonlyAccountModification {
+            return Err(FankorErrorCode::ReadonlyAccountModification {
                 address: *self.address(),
                 action: "close",
             }
@@ -432,16 +432,16 @@ impl<'info, T: crate::traits::Account> InstructionAccount<'info> for Account<'in
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
         if accounts.is_empty() {
-            return Err(ErrorCode::NotEnoughAccountKeys.into());
+            return Err(FankorErrorCode::NotEnoughAccountKeys.into());
         }
 
         let info = &accounts[0];
         if info.owner == &system_program::ID && info.lamports() == 0 {
-            return Err(ErrorCode::AccountNotInitialized { address: *info.key }.into());
+            return Err(FankorErrorCode::AccountNotInitialized { address: *info.key }.into());
         }
 
         if info.owner != T::owner() {
-            return Err(ErrorCode::AccountOwnedByWrongProgram {
+            return Err(FankorErrorCode::AccountOwnedByWrongProgram {
                 address: *info.key,
                 expected: *T::owner(),
                 actual: *info.owner,
@@ -488,7 +488,7 @@ fn drop_aux<T: crate::traits::Account>(account: &mut Account<T>) -> FankorResult
         Some(FankorContextExitAction::Ignore) => {}
         Some(FankorContextExitAction::Realloc { zero_bytes, payer }) => {
             if !account.is_writable() {
-                return Err(ErrorCode::ReadonlyAccountModification {
+                return Err(FankorErrorCode::ReadonlyAccountModification {
                     address: *account.address(),
                     action: "reallocate",
                 }
@@ -496,7 +496,7 @@ fn drop_aux<T: crate::traits::Account>(account: &mut Account<T>) -> FankorResult
             }
 
             if account.context.is_account_closed(account.info) {
-                return Err(ErrorCode::AlreadyClosedAccount {
+                return Err(FankorErrorCode::AlreadyClosedAccount {
                     address: *account.address(),
                     action: "reallocate",
                 }

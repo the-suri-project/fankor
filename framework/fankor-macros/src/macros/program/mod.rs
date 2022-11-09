@@ -82,7 +82,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             let accounts = <#account_type as fankor::traits::InstructionAccount>::try_from(&context, &mut ix_accounts)?;
 
             if ix_accounts.len() != 0 {
-                return Err(::fankor::errors::ErrorCode::UnusedAccounts.into());
+                return Err(::fankor::errors::FankorErrorCode::UnusedAccounts.into());
             }
         };
 
@@ -136,7 +136,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
     } else {
         quote! {
-            _ => Err(::fankor::errors::ErrorCode::InstructionDiscriminatorNotFound.into())
+            _ => Err(::fankor::errors::FankorErrorCode::InstructionDiscriminatorNotFound.into())
         }
     };
 
@@ -229,11 +229,11 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             data: &[u8],
         ) -> ::fankor::errors::FankorResult<()> {
             if *program_id != crate::ID {
-                return Err(::fankor::errors::ErrorCode::DeclaredProgramIdMismatch.into());
+                return Err(::fankor::errors::FankorErrorCode::DeclaredProgramIdMismatch.into());
             }
 
             if data.len() < #discriminator_size {
-                return Err(::fankor::errors::ErrorCode::InstructionDiscriminatorMissing.into());
+                return Err(::fankor::errors::FankorErrorCode::InstructionDiscriminatorMissing.into());
             }
 
             // Process data.
