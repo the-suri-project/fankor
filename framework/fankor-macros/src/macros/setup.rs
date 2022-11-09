@@ -12,15 +12,6 @@ pub fn processor() -> Result<proc_macro::TokenStream> {
         /// The static program ID.
         pub static ID: ::fankor::prelude::solana_program::pubkey::Pubkey = #id;
 
-        /// Confirms that a given pubkey is equivalent to the program ID.
-        pub fn check_id(id: &::fankor::prelude::solana_program::pubkey::Pubkey) -> bool { id == &ID }
-
-        /// Returns the program ID.
-        pub fn id() -> ::fankor::prelude::solana_program::pubkey::Pubkey { ID }
-
-        #[test]
-        fn __fankor_internal__test__id() { assert!(check_id(&id())); }
-
         // --------------------------------------------------------------------
         // --------------------------------------------------------------------
         // --------------------------------------------------------------------
