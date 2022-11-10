@@ -1,7 +1,7 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models;
 use crate::models::{FankorContext, System};
-use crate::traits::{InstructionAccount, Program};
+use crate::traits::{InstructionAccount, Program, CLOSED_ACCOUNT_DISCRIMINATOR};
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use solana_program::account_info::AccountInfo;
@@ -112,16 +112,7 @@ impl<'info> UncheckedAccount<'info> {
             )
         });
 
-        for i in data
-            .iter()
-            .take(self.context().discriminator_length() as usize)
-        {
-            if *i != 0 {
-                return false;
-            }
-        }
-
-        true
+        data[0] == CLOSED_ACCOUNT_DISCRIMINATOR
     }
 
     // METHODS ----------------------------------------------------------------

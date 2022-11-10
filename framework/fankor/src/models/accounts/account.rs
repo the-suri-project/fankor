@@ -1,7 +1,7 @@
 use crate::errors::{Error, FankorErrorCode, FankorResult};
 use crate::models;
 use crate::models::{FankorContext, FankorContextExitAction, System};
-use crate::traits::{AccountSize, InstructionAccount, Program};
+use crate::traits::{AccountSize, InstructionAccount, Program, CLOSED_ACCOUNT_DISCRIMINATOR};
 use crate::utils::bpf_writer::BpfWriter;
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
@@ -171,16 +171,7 @@ impl<'info, T: crate::traits::Account> Account<'info, T> {
             )
         });
 
-        for i in data
-            .iter()
-            .take(self.context().discriminator_length() as usize)
-        {
-            if *i != 0 {
-                return false;
-            }
-        }
-
-        true
+        data[0] == CLOSED_ACCOUNT_DISCRIMINATOR
     }
 
     // METHODS ----------------------------------------------------------------
@@ -402,11 +393,7 @@ impl<'info, T: crate::traits::Account + AccountSize> Account<'info, T> {
         zero_bytes: bool,
         payer: Option<&'info AccountInfo<'info>>,
     ) -> FankorResult<()> {
-        self.realloc(
-            self.data.actual_account_size() + self.context().discriminator_length() as usize,
-            zero_bytes,
-            payer,
-        )
+        self.realloc(self.data.actual_account_size() + 1, zero_bytes, payer)
     }
 }
 

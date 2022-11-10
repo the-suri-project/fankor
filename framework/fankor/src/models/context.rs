@@ -6,9 +6,6 @@ use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct FankorContext<'info> {
-    /// The length of the discriminator.
-    discriminator_length: u8,
-
     /// The accounts that need to be writen in the end.
     program_id: &'info Pubkey,
 
@@ -57,12 +54,10 @@ impl<'info> FankorContext<'info> {
     /// The params are not not checked. If you use this method manually, it can cause
     /// undefined behaviours.
     pub unsafe fn new(
-        discriminator_length: u8,
         program_id: &'info Pubkey,
         accounts: &'info [AccountInfo<'info>],
     ) -> FankorContext<'info> {
         Self {
-            discriminator_length,
             program_id,
             accounts,
             inner: Rc::new(RefCell::new(FankorContextInnerMut {
@@ -73,10 +68,6 @@ impl<'info> FankorContext<'info> {
     }
 
     // GETTERS ----------------------------------------------------------------
-
-    pub fn discriminator_length(&self) -> u8 {
-        self.discriminator_length
-    }
 
     pub fn program_id(&self) -> &'info Pubkey {
         self.program_id
