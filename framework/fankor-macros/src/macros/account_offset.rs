@@ -3,7 +3,7 @@ use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{Error, Fields, Item};
 
-use crate::macros::account::size::get_min_size_of;
+use crate::macros::account_size::get_min_size_of;
 use fankor_syn::Result;
 
 pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {

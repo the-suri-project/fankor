@@ -98,7 +98,7 @@ pub fn account(args: TokenStream, input: TokenStream) -> TokenStream {
 pub fn account_size(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 
-    match macros::account::size::processor(input) {
+    match macros::account_size::processor(input) {
         Ok(v) => v,
         Err(e) => e.to_compile_error().into(),
     }
@@ -128,7 +128,7 @@ pub fn account_size(input: TokenStream) -> TokenStream {
 pub fn account_offsets(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 
-    match macros::account::offset::processor(input) {
+    match macros::account_offset::processor(input) {
         Ok(v) => v,
         Err(e) => e.to_compile_error().into(),
     }
