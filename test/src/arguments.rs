@@ -1,6 +1,6 @@
 use fankor::prelude::*;
 
-#[derive(Clone, FankorSerialize, FankorDeserialize)]
+#[derive(Clone, FankorDeserialize)]
 pub struct InstructionArgs {
     pub arg1: bool,
     pub arg2: u32,

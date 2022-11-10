@@ -1,7 +1,7 @@
 extern crate core;
 
 use proc_macro::TokenStream;
-use syn::{parse_macro_input, AttributeArgs, Item};
+use syn::{parse_macro_input, AttributeArgs, Item, LitStr};
 
 use fankor_syn::Result;
 
@@ -10,11 +10,9 @@ mod macros;
 /// This macro setups the entry point of the framework.
 #[proc_macro]
 pub fn setup(args: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(args as AttributeArgs);
+    let pubkey = parse_macro_input!(args as LitStr);
 
-    assert!(args.is_empty(), "setup macro takes no arguments");
-
-    match macros::setup::processor() {
+    match macros::setup::processor(pubkey) {
         Ok(v) => v,
         Err(e) => e.to_compile_error().into(),
     }
