@@ -7,7 +7,7 @@ pub fn build_lpi(program: &Program) -> Result<TokenStream> {
     let methods = program.methods.iter().map(|v| {
         let method_name = &v.name;
         let account_type = &v.account_type;
-        let discriminator = &v.discriminator;
+        let discriminant = &v.discriminant;
 
         let (arguments, argument_param) = if let Some(argument_type) = &v.argument_type {
             let arguments = quote! {
@@ -24,7 +24,7 @@ pub fn build_lpi(program: &Program) -> Result<TokenStream> {
 
         quote! {
             pub fn #method_name<'info>(accounts: <#account_type<'info> as ::fankor::traits::InstructionAccount<'info>>::LPI #argument_param) -> ::fankor::errors::FankorResult<::fankor::prelude::solana_program::instruction::Instruction> {
-                let mut data = [#(#discriminator),*].to_vec();
+                let mut data = [#discriminant].to_vec();
                 #arguments
 
                 let mut metas = Vec::new();

@@ -2,7 +2,6 @@ use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{AttributeArgs, Error, Item};
 
-use fankor_syn::fankor::read_fankor_toml;
 use fankor_syn::Result;
 
 use crate::macros::program::programs::Program;
@@ -34,47 +33,28 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     };
 
     // Read the Fankor.toml file.
-    let config = read_fankor_toml();
-    let instructions_config = config.instructions;
-    let discriminator_size_u8 = instructions_config.discriminator_size;
-    let discriminator_size = discriminator_size_u8 as usize;
-
-    let program = Program::from(item, &instructions_config)?;
+    let program = Program::from(item)?;
     let name = &program.name;
     let name_str = name.to_string();
     let item = &program.item;
 
-    let test_unique_program = format_ident!("__fankor_internal__test__unique_program_{}", name);
-    let test_unique_instruction_discriminators = format_ident!(
-        "__fankor_internal__test__unique_instruction_discriminators_{}",
-        name
-    );
     let program_entry_name = format_ident!("__fankor_internal__program_{}_entry", name);
     let program_try_entry_name = format_ident!("__fankor_internal__program_{}_try_entry", name);
 
     let discriminators = program.methods.iter().map(|v| {
         let fn_name = format_ident!("{}_discriminator", v.name);
-        let discriminator = &v.discriminator;
+        let discriminant = &v.discriminant;
 
         quote! {
-            pub fn #fn_name() -> [u8; #discriminator_size] {
-                [#(#discriminator,)*]
+            pub fn #fn_name() -> u8 {
+                #discriminant
             }
-        }
-    });
-
-    let unique_instruction_discriminators = program.methods.iter().map(|v| {
-        let name_str = v.name.to_string();
-        let discriminator = &v.discriminator;
-
-        quote! {
-            (#name_str, &[#(#discriminator,)*])
         }
     });
 
     let dispatch_methods = program.methods.iter().map(|v| {
         let fn_name = &v.name;
-        let discriminator = &v.discriminator;
+        let discriminant = &v.discriminant;
         let account_type = &v.account_type;
 
         let accounts_tokens = quote! {
@@ -97,7 +77,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         let instruction_msg = format!("Instruction: {}", v.pascal_name);
         if let Some(argument_type) = &v.argument_type {
             quote! {
-                [#(#discriminator,)*] => {
+                #discriminant => {
                     ::fankor::prelude::msg!(#instruction_msg);
 
                     #accounts_tokens
@@ -112,7 +92,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             }
         } else {
             quote! {
-                [#(#discriminator,)*] => {
+                #discriminant => {
                     ::fankor::prelude::msg!(#instruction_msg);
 
                     #accounts_tokens
@@ -232,21 +212,16 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 return Err(::fankor::errors::FankorErrorCode::DeclaredProgramIdMismatch.into());
             }
 
-            if data.len() < #discriminator_size {
+            if data.is_empty() {
                 return Err(::fankor::errors::FankorErrorCode::InstructionDiscriminatorMissing.into());
             }
 
             // Process data.
-            let (sighash, ix_data) = {
-                let mut sighash: [u8; #discriminator_size] = [0; #discriminator_size];
-                sighash.copy_from_slice(&data[..#discriminator_size]);
-                (sighash, &data[#discriminator_size..])
-            };
+            let (sighash, ix_data) = (data[0], &data[1..]);
 
             // Build context.
             let context = unsafe {
                 ::fankor::models::FankorContext::<'info>::new(
-                    #discriminator_size_u8,
                     program_id,
                     accounts
                 )
@@ -266,36 +241,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
         #cpi_mod
         #lpi_mod
-
-        #[allow(non_snake_case)]
-        #[automatically_derived]
-        #[test]
-        fn #test_unique_program() {
-           let program_name = #name_str;
-           let helper = &crate::__internal__idl_builder_test__root::PROGRAM_HELPER;
-
-           if let Err(item) = helper.add_program(program_name) {
-               panic!("More than one program in a single crate is not supported");
-           }
-        }
-
-        #[allow(non_snake_case)]
-        #[automatically_derived]
-        #[test]
-        fn #test_unique_instruction_discriminators() {
-            let helper = &crate::__internal__idl_builder_test__root::INSTRUCTION_HELPER;
-            let discriminators: &[(&str, &[u8])] = &[#(#unique_instruction_discriminators),*];
-
-            for (instruction_name, discriminator) in discriminators {
-                if discriminator.iter().all(|v| *v == 0) {
-                    panic!("The discriminator of the instruction '{}' cannot be zero. It is reserved", instruction_name);
-                }
-
-                if let Err(item) = helper.add_instruction(instruction_name, discriminator) {
-                    panic!("There is a discriminator collision between instructions. First: {}, Second: {}, Discriminator: {:?}", instruction_name, item.instruction_name, discriminator);
-                }
-            }
-        }
     };
 
     Ok(result.into())

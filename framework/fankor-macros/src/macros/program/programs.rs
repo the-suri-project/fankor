@@ -1,10 +1,15 @@
 use convert_case::{Boundary, Case, Converter};
-use fankor_syn::fankor::FankorInstructionsConfig;
+use fankor_syn::expressions::unwrap_int_from_literal;
 use proc_macro2::Ident;
-use quote::format_ident;
+use quote::{format_ident, quote};
 use std::collections::HashSet;
+use std::ops::RangeInclusive;
+use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{Error, FnArg, GenericArgument, ImplItem, ItemImpl, PathArguments, ReturnType, Type};
+use syn::{
+    parse_macro_input, Attribute, Error, Expr, ExprParen, ExprTuple, FnArg, GenericArgument,
+    ImplItem, ItemImpl, Lit, MetaList, NestedMeta, PathArguments, RangeLimits, ReturnType, Type,
+};
 
 use crate::Result;
 
@@ -14,6 +19,12 @@ pub struct Program {
     pub item: ItemImpl,
     pub methods: Vec<ProgramMethod>,
     pub fallback_method: Option<ProgramMethod>,
+
+    /// Discriminants that cannot be used in the account list.
+    pub removed_discriminants: Vec<RangeInclusive<u8>>,
+
+    /// List of attributes to apply to the enum.
+    pub attrs: Vec<Attribute>,
 }
 
 pub struct ProgramMethod {
@@ -22,14 +33,15 @@ pub struct ProgramMethod {
     pub account_type: Type,
     pub argument_type: Option<Type>,
     pub result_type: Option<Type>,
-    pub discriminator: Vec<u8>,
+    pub discriminant: u8,
+    pub deprecated: bool,
 }
 
 impl Program {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Creates a new instance of the Field struct from the given attributes.
-    pub fn from(item: ItemImpl, config: &FankorInstructionsConfig) -> Result<Program> {
+    pub fn from(item: ItemImpl) -> Result<Program> {
         let name = Self::verify_impl_and_get_name(&item)?;
         let case_converter = Converter::new()
             .from_case(Case::Pascal)
@@ -46,23 +58,129 @@ impl Program {
         let mut program = Program {
             name,
             snake_name,
-            item,
+            item: item.clone(),
             methods: vec![],
             fallback_method: None,
+            removed_discriminants: Vec::new(),
+            attrs: Vec::new(),
         };
 
-        program.parse_methods(config)?;
+        // Process attributes.
+        for attr in &item.attrs {
+            if attr.path.is_ident("removed_discriminants") {
+                let elems = match parse_macro_input::parse::<ExprTuple>(attr.tokens.clone().into())
+                {
+                    Ok(v) => v.elems,
+                    Err(e) => {
+                        match parse_macro_input::parse::<ExprParen>(attr.tokens.clone().into()) {
+                            Ok(v) => {
+                                let mut res = Punctuated::new();
+                                res.push(*v.expr);
+                                res
+                            }
+                            Err(_) => return Err(Error::new(attr.span(), e.to_string())),
+                        }
+                    }
+                };
 
-        // Check discriminators are unique.
-        let mut discriminators = HashSet::new();
-        for method in &program.methods {
-            if !discriminators.insert(format!("{:?}", method.discriminator)) {
-                return Err(Error::new(
-                    method.name.span(),
-                    format!("The discriminator for {} is not unique. Please increase discriminator size or change its name", method.name),
-                ));
+                for el in elems {
+                    match el {
+                        Expr::Lit(v) => {
+                            let value = unwrap_int_from_literal(v.lit)?.base10_parse()?;
+                            program.removed_discriminants.push(value..=value);
+                        }
+                        Expr::Range(v) => {
+                            if v.from.is_none() {
+                                return Err(Error::new(v.span(), "Range must have a start value"));
+                            }
+
+                            if v.to.is_none() {
+                                return Err(Error::new(v.span(), "Range must have an end value"));
+                            }
+
+                            let half_open = matches!(v.limits, RangeLimits::HalfOpen(_));
+
+                            let span = v.span();
+                            let from = match *v.from.unwrap() {
+                                Expr::Lit(v) => unwrap_int_from_literal(v.lit)?.base10_parse()?,
+                                _ => {
+                                    return Err(Error::new(
+                                        span,
+                                        "Only literal values are allowed in ranges",
+                                    ));
+                                }
+                            };
+
+                            let to = match *v.to.unwrap() {
+                                Expr::Lit(v) => unwrap_int_from_literal(v.lit)?.base10_parse()?,
+                                _ => {
+                                    return Err(Error::new(
+                                        span,
+                                        "Only literal values are allowed in ranges",
+                                    ));
+                                }
+                            };
+
+                            if half_open {
+                                program.removed_discriminants.push(from..=to - 1);
+                            } else {
+                                program.removed_discriminants.push(from..=to);
+                            }
+                        }
+                        _ => {
+                            return Err(Error::new(el.span(), "Unknown argument"));
+                        }
+                    }
+                }
+
+                continue;
+            }
+
+            program.attrs.push(attr.clone());
+        }
+
+        // Validate removed_codes attribute.
+        if !program.removed_discriminants.is_empty() {
+            let mut prev = program.removed_discriminants.first().unwrap();
+
+            assert!(
+                prev.start() <= prev.end(),
+                "Ranges must be defined in ascending order. {}..={} is not valid",
+                prev.start(),
+                prev.end()
+            );
+
+            for el in program.removed_discriminants.iter().skip(1) {
+                assert!(
+                    el.start() <= el.end(),
+                    "Ranges must be defined in ascending order. {}..={} is not valid",
+                    el.start(),
+                    el.end()
+                );
+                assert!(
+                    prev.end() < el.start(),
+                    "Ranges cannot collide. {}..={} and {}..={} are colliding",
+                    prev.start(),
+                    prev.end(),
+                    el.start(),
+                    el.end()
+                );
+                assert_ne!(
+                    prev.end() + 1,
+                    *el.start(),
+                    "Ranges can be collided. Replace {}..={} and {}..={} by {}..={}",
+                    prev.start(),
+                    prev.end(),
+                    el.start(),
+                    el.end(),
+                    prev.start(),
+                    el.end()
+                );
+                prev = el;
             }
         }
+
+        program.parse_methods()?;
 
         Ok(program)
     }
@@ -114,12 +232,15 @@ impl Program {
         }
     }
 
-    fn parse_methods(&mut self, config: &FankorInstructionsConfig) -> Result<()> {
+    fn parse_methods(&mut self) -> Result<()> {
         let case_converter = Converter::new()
             .from_case(Case::Snake)
             .to_case(Case::Pascal);
 
-        let mut fallbacks = 0;
+        let mut u8_index = 1u8;
+        let mut last_deprecated = false;
+        let mut used_discriminants = HashSet::new();
+
         for item in self.item.items.iter_mut() {
             let item = match item {
                 ImplItem::Method(v) => v,
@@ -127,19 +248,17 @@ impl Program {
             };
 
             let method_name = item.sig.ident.clone();
-            let method_name_str = method_name.to_string();
             let mut is_fallback = false;
 
             if method_name == "fallback" {
-                fallbacks += 1;
                 is_fallback = true;
-            }
 
-            if fallbacks > 1 {
-                return Err(Error::new(
-                    item.span(),
-                    "the fallback attribute can only be used once",
-                ));
+                if self.fallback_method.is_some() {
+                    return Err(Error::new(
+                        item.span(),
+                        "can only exist one fallback method",
+                    ));
+                }
             }
 
             let arguments = &item.sig.inputs;
@@ -154,7 +273,117 @@ impl Program {
 
                     let account_type = type_from_fn_arg(&arguments[1])?;
                     let result_type = type_from_fn_output(&item.sig.output)?;
-                    let discriminator = config.get_discriminator(&method_name_str);
+
+                    let mut discriminant = None;
+                    let mut deprecated = false;
+                    let mut index = 0;
+
+                    while index < item.attrs.len() {
+                        let attribute = &item.attrs[index];
+
+                        if attribute.path.is_ident("discriminant") {
+                            let attribute = item.attrs.remove(index);
+                            let attribute_span = attribute.span();
+
+                            if discriminant.is_some() {
+                                return Err(Error::new(
+                                    attribute_span,
+                                    "The discriminant attribute can only be used once",
+                                ));
+                            }
+
+                            let path = &attribute.path;
+                            let tokens = &attribute.tokens;
+                            let tokens = quote! {#path #tokens};
+
+                            let args = match parse_macro_input::parse::<MetaList>(tokens.into()) {
+                                Ok(v) => v,
+                                Err(_) => {
+                                    return Err(Error::new(
+                                        attribute_span,
+                                        "The discriminant attribute expects one integer literal as arguments",
+                                    ));
+                                }
+                            };
+
+                            if args.nested.len() != 1 {
+                                return Err(Error::new(
+                                    attribute_span,
+                                    "The discriminant attribute expects only one argument",
+                                ));
+                            }
+
+                            // Check first argument is a literal string.
+                            let first_argument = args.nested.first().unwrap();
+                            match first_argument {
+                                NestedMeta::Lit(v) => match v {
+                                    Lit::Int(v) => {
+                                        discriminant = Some(v.clone());
+                                    }
+                                    v => {
+                                        return Err(Error::new(
+                                            v.span(),
+                                            "This must be a literal string",
+                                        ));
+                                    }
+                                },
+                                NestedMeta::Meta(v) => {
+                                    return Err(Error::new(
+                                        v.span(),
+                                        "This must be a literal string",
+                                    ));
+                                }
+                            }
+                        } else if attribute.path.is_ident("deprecated") {
+                            let attribute_span = attribute.span();
+
+                            if deprecated {
+                                return Err(Error::new(
+                                    attribute_span,
+                                    "The deprecated attribute can only be used once",
+                                ));
+                            }
+
+                            deprecated = true;
+                            index += 1;
+                        } else {
+                            index += 1;
+                        }
+                    }
+
+                    if !is_fallback {
+                        if last_deprecated && discriminant.is_none() {
+                            return Err(Error::new(
+                                item.span(),
+                                format!("The next method after a deprecated one must have the #[discriminant] attribute"),
+                            ));
+                        }
+
+                        last_deprecated = deprecated;
+                    }
+
+                    // Calculate the discriminator.
+                    if let Some(v) = discriminant {
+                        let new_value = v.base10_parse::<u8>()?;
+
+                        u8_index = new_value;
+                    }
+
+                    if u8_index == 0 {
+                        return Err(Error::new(
+                            item.span(),
+                            "Zero discriminant is reserved for uninitialized accounts, please provide another one".to_string(),
+                        ));
+                    }
+
+                    if used_discriminants.contains(&u8_index) {
+                        return Err(Error::new(
+                            item.span(),
+                            format!("The discriminant attribute is already in use: {}", u8_index),
+                        ));
+                    }
+
+                    used_discriminants.insert(u8_index);
 
                     self.methods.push(ProgramMethod {
                         pascal_name: format_ident!(
@@ -166,14 +395,124 @@ impl Program {
                         account_type,
                         argument_type: None,
                         result_type,
-                        discriminator,
+                        discriminant: u8_index,
+                        deprecated,
                     });
+
+                    u8_index += 1;
                 }
                 3 => {
                     let account_type = type_from_fn_arg(&arguments[1])?;
                     let argument_type = type_from_fn_arg(&arguments[2])?;
                     let result_type = type_from_fn_output(&item.sig.output)?;
-                    let discriminator = config.get_discriminator(&method_name_str);
+
+                    let mut discriminant = None;
+                    let mut deprecated = false;
+                    let mut index = 0;
+                    while index < item.attrs.len() {
+                        let attribute = &item.attrs[index];
+
+                        if attribute.path.is_ident("discriminant") {
+                            let attribute = item.attrs.remove(index);
+                            let attribute_span = attribute.span();
+
+                            if discriminant.is_some() {
+                                return Err(Error::new(
+                                    attribute_span,
+                                    "The discriminant attribute can only be used once",
+                                ));
+                            }
+
+                            let path = &attribute.path;
+                            let tokens = &attribute.tokens;
+                            let tokens = quote! {#path #tokens};
+
+                            let args = match parse_macro_input::parse::<MetaList>(tokens.into()) {
+                                Ok(v) => v,
+                                Err(_) => {
+                                    return Err(Error::new(
+                                        attribute_span,
+                                        "The discriminant attribute expects one integer literal as arguments",
+                                    ));
+                                }
+                            };
+
+                            if args.nested.len() != 1 {
+                                return Err(Error::new(
+                                    attribute_span,
+                                    "The discriminant attribute expects only one argument",
+                                ));
+                            }
+
+                            // Check first argument is a literal string.
+                            let first_argument = args.nested.first().unwrap();
+                            match first_argument {
+                                NestedMeta::Lit(v) => match v {
+                                    Lit::Int(v) => {
+                                        discriminant = Some(v.clone());
+                                    }
+                                    v => {
+                                        return Err(Error::new(
+                                            v.span(),
+                                            "This must be a literal string",
+                                        ));
+                                    }
+                                },
+                                NestedMeta::Meta(v) => {
+                                    return Err(Error::new(
+                                        v.span(),
+                                        "This must be a literal string",
+                                    ));
+                                }
+                            }
+                        } else if attribute.path.is_ident("deprecated") {
+                            let attribute_span = attribute.span();
+
+                            if deprecated {
+                                return Err(Error::new(
+                                    attribute_span,
+                                    "The deprecated attribute can only be used once",
+                                ));
+                            }
+
+                            deprecated = true;
+                            index += 1;
+                        } else {
+                            index += 1;
+                        }
+                    }
+
+                    if !is_fallback {
+                        if last_deprecated && discriminant.is_none() {
+                            return Err(Error::new(
+                                item.span(),
+                                format!("The next method after a deprecated one must have the #[discriminant] attribute"),
+                            ));
+                        }
+
+                        last_deprecated = deprecated;
+                    }
+
+                    // Calculate the discriminator.
+                    if let Some(v) = &discriminant {
+                        let new_value = v.base10_parse::<u8>()?;
+
+                        u8_index = new_value;
+                    }
+
+                    if u8_index == 0 {
+                        return Err(Error::new(
+                            item.span(),
+                            "Zero discriminant is reserved for uninitialized accounts, please provide another one".to_string(),
+                        ));
+                    }
+
+                    if used_discriminants.contains(&u8_index) {
+                        return Err(Error::new(
+                            item.span(),
+                            format!("The discriminant attribute is already in use: {}", u8_index),
+                        ));
+                    }
 
                     let method = ProgramMethod {
                         pascal_name: format_ident!(
@@ -185,13 +524,27 @@ impl Program {
                         account_type,
                         argument_type: Some(argument_type),
                         result_type,
-                        discriminator,
+                        discriminant: u8_index,
+                        deprecated,
                     };
 
                     if is_fallback {
                         self.fallback_method = Some(method);
+
+                        if discriminant.is_some() {
+                            return Err(Error::new(
+                                item.span(),
+                                format!(
+                                    "The fallback method cannot have the #[discriminant] attribute"
+                                ),
+                            ));
+                        }
                     } else {
+                        used_discriminants.insert(u8_index);
+
                         self.methods.push(method);
+
+                        u8_index += 1;
                     }
                 }
                 _ => {
