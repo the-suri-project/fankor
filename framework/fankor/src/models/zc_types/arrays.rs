@@ -123,9 +123,9 @@ impl<'info, T: ZeroCopyType, const N: usize> Iterator for Iter<'info, T, N> {
         let bytes = (*self.data.data).borrow();
         let bytes = &bytes[self.offset..];
 
-        self.offset += T::byte_size(bytes).expect("Deserialization failed in iterator");
-
+        self.offset += T::byte_size(bytes).expect("Deserialization failed in array iterator");
         self.index += 1;
+
         Some(result)
     }
 

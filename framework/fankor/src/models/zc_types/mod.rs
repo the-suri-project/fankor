@@ -80,9 +80,27 @@ impl<'info, T: ZeroCopyType + BorshSerialize> ZC<'info, T> {
     ///
     /// This method can fail if `value` does not fit in the space allocated for it.
     pub fn try_write_value(&mut self, value: &T) -> FankorResult<()> {
-        let mut bytes = (*self.data).borrow_mut();
+        let bytes = (*self.data).borrow();
         let previous_size = T::byte_size(&bytes)?;
         let new_size = value.byte_size_from_instance();
+
+        drop(bytes);
+
+        unsafe { self.try_write_value_with_sizes(value, previous_size, new_size) }
+    }
+
+    /// Writes a value in the buffer.
+    ///
+    /// # Safety
+    ///
+    /// This method can fail if `value` does not fit in the space allocated for it or if any of the sizes are incorrect.
+    pub unsafe fn try_write_value_with_sizes(
+        &mut self,
+        value: &T,
+        previous_size: usize,
+        new_size: usize,
+    ) -> FankorResult<()> {
+        let mut bytes = (*self.data).borrow_mut();
 
         // Check to prevent overwriting next element.
         if new_size > previous_size {

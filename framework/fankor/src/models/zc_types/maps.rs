@@ -119,9 +119,10 @@ impl<'info, K: ZeroCopyType, T: ZeroCopyType> Iterator for Iter<'info, K, T> {
         let bytes = (*self.data.data).borrow();
         let bytes = &bytes[self.offset..];
 
-        self.offset += T::byte_size(bytes).expect("Deserialization failed in iterator");
-
+        self.offset += K::byte_size(bytes).expect("Key deserialization failed in map iterator");
+        self.offset += T::byte_size(bytes).expect("Value deserialization failed in map iterator");
         self.index += 1;
+
         Some(result)
     }
 
