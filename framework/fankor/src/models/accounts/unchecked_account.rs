@@ -1,10 +1,12 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models;
 use crate::models::{FankorContext, System};
-use crate::traits::{InstructionAccount, Program, CLOSED_ACCOUNT_DISCRIMINATOR};
+use crate::traits::{InstructionAccount, Program};
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
+use crate::utils::rent::make_rent_exempt;
 use solana_program::account_info::AccountInfo;
+use solana_program::clock::Epoch;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::sysvar::Sysvar;
@@ -61,6 +63,11 @@ impl<'info> UncheckedAccount<'info> {
     }
 
     #[inline(always)]
+    pub fn rent_epoch(&self) -> Epoch {
+        self.info.rent_epoch
+    }
+
+    #[inline(always)]
     pub fn info(&self) -> &'info AccountInfo<'info> {
         self.info
     }
@@ -86,45 +93,26 @@ impl<'info> UncheckedAccount<'info> {
         self.info.owner == self.context.program_id()
     }
 
-    /// Whether the account is closed or not, i.e. it matches all these constraints:
-    /// - it does not have lamports
-    /// - It is writable
-    /// - the discriminator is zeroed
-    ///
-    /// Otherwise it is considered open.
-    ///
-    /// Note: if the account contains less data than CLOSED_ACCOUNT_DISCRIMINATOR, all must
-    /// be zeroed out to be considered closed.
-    pub fn is_closed(&self) -> bool {
-        let info = self.info;
-        if info.lamports() > 0 {
-            return false;
-        }
-
-        if !info.is_writable {
-            return false;
-        }
-
-        let data = info.try_borrow_data().unwrap_or_else(|_| {
-            panic!(
-                "There's probably a deadlock reading account data of: {}",
-                info.key
-            )
-        });
-
-        data[0] == CLOSED_ACCOUNT_DISCRIMINATOR
+    /// Whether the account is uninitialized or not.
+    pub fn is_uninitialized(&self) -> bool {
+        self.context.is_account_uninitialized(self.info)
     }
 
     // METHODS ----------------------------------------------------------------
 
-    /// Closes the account and sends the lamports to the `sol_destination`.
-    pub fn close(self, sol_destination: &AccountInfo<'info>) -> FankorResult<()> {
-        close_account(self.info, self.context(), sol_destination)
+    /// Closes the account and sends the lamports to the `destination_account`.
+    pub fn close(self, destination_account: &AccountInfo<'info>) -> FankorResult<()> {
+        close_account(self.info, self.context(), destination_account)
     }
 
     /// Reallocates the account to the given `size`. If a `payer` is provided,
     /// fankor will add funds to the account to make it rent-exempt.
-    pub fn realloc(
+    ///
+    /// # Safety
+    ///
+    /// This method does not check the new account data is valid. It is the caller's
+    /// responsibility to ensure the new data is valid.
+    pub unsafe fn realloc(
         &self,
         size: usize,
         zero_bytes: bool,
@@ -157,7 +145,7 @@ impl<'info> UncheckedAccount<'info> {
             .into());
         }
 
-        if self.context.is_account_closed(self.info) {
+        if self.context.is_account_uninitialized(self.info) {
             return Err(FankorErrorCode::AlreadyClosedAccount {
                 address: *self.address(),
                 action: "reallocate",
@@ -170,6 +158,53 @@ impl<'info> UncheckedAccount<'info> {
             self.info,
             size,
             zero_bytes,
+            payer,
+        )
+    }
+
+    /// Makes the account rent-exempt by adding or removing funds from/to `payer`
+    /// if necessary.
+    pub fn make_rent_exempt(&self, payer: &'info AccountInfo<'info>) -> FankorResult<()> {
+        let program = match self.context.get_account_from_address(System::address()) {
+            Some(v) => v,
+            None => {
+                return Err(FankorErrorCode::MissingProgram {
+                    address: *System::address(),
+                    name: System::name(),
+                }
+                .into());
+            }
+        };
+
+        if !self.is_owned_by_program() {
+            return Err(FankorErrorCode::AccountNotOwnedByProgram {
+                address: *self.address(),
+                action: "make rent-exempt",
+            }
+            .into());
+        }
+
+        if !self.is_writable() {
+            return Err(FankorErrorCode::ReadonlyAccountModification {
+                address: *self.address(),
+                action: "make rent-exempt",
+            }
+            .into());
+        }
+
+        if self.context.is_account_uninitialized(self.info) {
+            return Err(FankorErrorCode::AlreadyClosedAccount {
+                address: *self.address(),
+                action: "make rent-exempt",
+            }
+            .into());
+        }
+
+        let new_size = self.info.data_len();
+        make_rent_exempt(
+            &models::Program::new(self.context, program)?,
+            self.info,
+            new_size,
             payer,
         )
     }

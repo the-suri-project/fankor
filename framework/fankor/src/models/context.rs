@@ -6,7 +6,7 @@ use std::rc::Rc;
 
 #[derive(Clone)]
 pub struct FankorContext<'info> {
-    /// The accounts that need to be writen in the end.
+    /// The current program id.
     program_id: &'info Pubkey,
 
     /// The list of all accounts passed to the instruction.
@@ -17,12 +17,8 @@ pub struct FankorContext<'info> {
 }
 
 struct FankorContextInnerMut<'info> {
-    // A `u64` is used as bit flag to know which account is already closed.
-    closed_accounts: u64,
-
     // End actions to perform at the end of the instruction.
-    // The key is u8 because the maximum transaction size forbids to send
-    // to the instruction more than `u8::MAX` accounts.
+    // The key is u8 because the maximum number of accounts per transaction is 256.
     exit_actions: BTreeMap<u8, FankorContextExitAction<'info>>,
 }
 
@@ -33,7 +29,8 @@ pub enum FankorContextExitAction<'info> {
     /// twice an account.
     Ignore,
 
-    /// Reallocates the account to contain all the data.
+    /// Reallocates the account to contain all the data and optionally makes
+    /// the account rent-exempt.
     Realloc {
         zero_bytes: bool,
         payer: Option<&'info AccountInfo<'info>>,
@@ -41,7 +38,7 @@ pub enum FankorContextExitAction<'info> {
 
     /// Closes the account.
     Close {
-        sol_destination: &'info AccountInfo<'info>,
+        destination_account: &'info AccountInfo<'info>,
     },
 }
 
@@ -61,7 +58,6 @@ impl<'info> FankorContext<'info> {
             program_id,
             accounts,
             inner: Rc::new(RefCell::new(FankorContextInnerMut {
-                closed_accounts: 0,
                 exit_actions: Default::default(),
             })),
         }
@@ -79,36 +75,26 @@ impl<'info> FankorContext<'info> {
 
     // METHODS ----------------------------------------------------------------
 
+    /// Gets the corresponding account info for the given account key.
     pub fn get_account_from_address(&self, address: &Pubkey) -> Option<&AccountInfo<'info>> {
         self.accounts.iter().find(|account| account.key == address)
     }
 
     pub(crate) fn get_index_for_account(&self, account: &AccountInfo<'info>) -> u8 {
-        for (i, acc) in self.accounts.iter().enumerate() {
-            if acc.key == account.key {
-                return i as u8;
-            }
-        }
-
-        panic!("Undefined account")
+        self.accounts
+            .iter()
+            .position(|a| a.key == account.key)
+            .expect("Undefined account") as u8
     }
 
-    pub(crate) fn is_account_closed(&self, account: &AccountInfo<'info>) -> bool {
-        let index = self.get_index_for_account(account);
-        let inner = (*self.inner).borrow_mut();
-
-        (inner.closed_accounts & (1u64 << index as u64)) != 0
-    }
-
-    pub(crate) fn set_closed_account(&self, account: &AccountInfo<'info>, closed: bool) {
-        let index = self.get_index_for_account(account);
-        let mut inner = (*self.inner).borrow_mut();
-
-        if closed {
-            inner.closed_accounts |= 1u64 << index as u64;
-        } else {
-            inner.closed_accounts &= !(1u64 << index as u64);
-        }
+    /// Whether the account is uninitialized or not, i.e. it matches all these constraints:
+    /// - it does not have lamports
+    /// - its data is empty
+    /// - its owner is the system program
+    pub fn is_account_uninitialized(&self, account: &AccountInfo<'info>) -> bool {
+        account.lamports() == 0
+            && account.data_is_empty()
+            && account.owner == &solana_program::system_program::ID
     }
 
     pub(crate) fn get_exit_action(

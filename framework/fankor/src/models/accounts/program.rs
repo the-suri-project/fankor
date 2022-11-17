@@ -2,6 +2,7 @@ use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
 use crate::traits::InstructionAccount;
 use solana_program::account_info::AccountInfo;
+use solana_program::clock::Epoch;
 use solana_program::pubkey::Pubkey;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -70,6 +71,11 @@ impl<'info, T: crate::traits::Program> Program<'info, T> {
     #[inline(always)]
     pub fn balance(&self) -> u64 {
         self.info().lamports()
+    }
+
+    #[inline(always)]
+    pub fn rent_epoch(&self) -> Epoch {
+        self.info.rent_epoch
     }
 
     #[inline(always)]

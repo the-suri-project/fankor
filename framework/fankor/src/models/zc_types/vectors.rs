@@ -42,7 +42,7 @@ impl<'info, T: ZeroCopyType> ZC<'info, FnkVec<T>> {
 
     /// The length of the vector.
     pub fn len(&self) -> FankorResult<usize> {
-        let bytes = (*self.data).borrow();
+        let bytes = (*self.info.data).borrow();
         let mut bytes = &bytes[self.offset..];
         let len = FnkUInt::deserialize(&mut bytes)?;
 
@@ -58,7 +58,7 @@ impl<'info, T: ZeroCopyType> ZC<'info, FnkVec<T>> {
 
     /// Gets the element at the specified position.
     pub fn get_zc_index(&self, index: usize) -> FankorResult<Option<ZC<'info, T>>> {
-        let bytes = (*self.data).borrow();
+        let bytes = (*self.info.data).borrow();
         let mut bytes = &bytes[self.offset..];
         let initial_size = bytes.len();
 
@@ -72,7 +72,7 @@ impl<'info, T: ZeroCopyType> ZC<'info, FnkVec<T>> {
         for i in 0..len.0 {
             if i == index {
                 return Ok(Some(ZC {
-                    data: self.data.clone(),
+                    info: self.info,
                     offset: self.offset + initial_size - bytes.len(),
                     _phantom: std::marker::PhantomData,
                 }));
@@ -138,12 +138,12 @@ impl<'info, T: ZeroCopyType> Iterator for Iter<'info, T> {
         }
 
         let result = ZC {
-            data: self.data.data.clone(),
+            info: self.data.info,
             offset: self.offset,
             _phantom: std::marker::PhantomData,
         };
 
-        let bytes = (*self.data.data).borrow();
+        let bytes = (*self.data.info.data).borrow();
         let bytes = &bytes[self.offset..];
 
         self.offset += T::byte_size(bytes).expect("Deserialization failed in vector iterator");

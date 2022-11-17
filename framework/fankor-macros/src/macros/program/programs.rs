@@ -604,7 +604,7 @@ fn type_from_fn_output(arg: &ReturnType) -> Result<Option<Type>> {
                             },
                             _ => Err(Error::new(
                                 last_arg.span(),
-                                "The FankorResult's generic must be a type",
+                                "FankorResult's generic must be a type",
                             )),
                         }
                     }

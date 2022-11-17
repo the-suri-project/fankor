@@ -32,7 +32,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
     };
 
-    // Read the Fankor.toml file.
     let program = Program::from(item)?;
     let name = &program.name;
     let name_str = name.to_string();

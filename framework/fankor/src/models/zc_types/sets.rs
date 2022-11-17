@@ -42,7 +42,7 @@ impl<'info, T: ZeroCopyType> ZC<'info, FnkSet<T>> {
 
     /// The length of the vector.
     pub fn len(&self) -> FankorResult<usize> {
-        let bytes = (*self.data).borrow();
+        let bytes = (*self.info.data).borrow();
         let mut bytes = &bytes[self.offset..];
         let len = FnkUInt::deserialize(&mut bytes)?;
 
@@ -107,12 +107,12 @@ impl<'info, T: ZeroCopyType> Iterator for Iter<'info, T> {
         }
 
         let result = ZC {
-            data: self.data.data.clone(),
+            info: self.data.info,
             offset: self.offset,
             _phantom: std::marker::PhantomData,
         };
 
-        let bytes = (*self.data.data).borrow();
+        let bytes = (*self.data.info.data).borrow();
         let bytes = &bytes[self.offset..];
 
         self.offset += T::byte_size(bytes).expect("Deserialization failed in set iterator");

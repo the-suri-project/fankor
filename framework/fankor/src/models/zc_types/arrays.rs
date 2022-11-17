@@ -46,14 +46,14 @@ impl<'info, T: ZeroCopyType, const N: usize> ZC<'info, [T; N]> {
             return Ok(None);
         }
 
-        let bytes = (*self.data).borrow();
+        let bytes = (*self.info.data).borrow();
         let mut bytes = &bytes[self.offset..];
         let mut size = 0;
 
         for i in 0..N {
             if i == index {
                 return Ok(Some(ZC {
-                    data: self.data.clone(),
+                    info: self.info,
                     offset: self.offset + size,
                     _phantom: std::marker::PhantomData,
                 }));
@@ -115,12 +115,12 @@ impl<'info, T: ZeroCopyType, const N: usize> Iterator for Iter<'info, T, N> {
         }
 
         let result = ZC {
-            data: self.data.data.clone(),
+            info: self.data.info,
             offset: self.offset,
             _phantom: std::marker::PhantomData,
         };
 
-        let bytes = (*self.data.data).borrow();
+        let bytes = (*self.data.info.data).borrow();
         let bytes = &bytes[self.offset..];
 
         self.offset += T::byte_size(bytes).expect("Deserialization failed in array iterator");

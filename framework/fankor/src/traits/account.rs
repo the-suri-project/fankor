@@ -2,9 +2,6 @@ use crate::errors::FankorResult;
 use solana_program::pubkey::Pubkey;
 use std::io::Write;
 
-/// The value of the discriminator for a closed/uninitialized account.
-pub const CLOSED_ACCOUNT_DISCRIMINATOR: u8 = 0;
-
 pub trait Account:
     borsh::BorshSerialize + borsh::BorshDeserialize + AccountSerialize + AccountDeserialize
 {

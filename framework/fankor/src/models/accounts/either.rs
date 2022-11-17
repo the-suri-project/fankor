@@ -7,7 +7,13 @@ use std::fmt;
 use std::fmt::{Debug, Formatter};
 
 /// Tries to deserialize `L` first and then `R` if `L` fails.
-/// This is only useful to have a fallback for some type.
+///
+/// This is useful to have a fallback for some type, for example, it can be used for maybe
+/// uninitialized accounts: `Either<Account<'info, T>, UninitializedAccount<'info, T>>`.
+/// For this case you can use the `MaybeUninitializedAccount` type alias.
+///
+/// Note that `L` and `R` must be disjoint types, otherwise the deserialization will
+/// always return `L`.
 pub enum Either<L, R> {
     Left(L),
     Right(R),
@@ -15,6 +21,14 @@ pub enum Either<L, R> {
 
 impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> Either<L, R> {
     // GETTERS -----------------------------------------------------------------
+
+    pub fn is_left(&self) -> bool {
+        matches!(self, Either::Left(_))
+    }
+
+    pub fn is_right(&self) -> bool {
+        matches!(self, Either::Right(_))
+    }
 
     pub fn left(&self) -> Option<&L> {
         match self {
@@ -69,7 +83,7 @@ impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> Instruct
 
     #[inline]
     fn min_accounts() -> usize {
-        L::min_accounts().max(R::min_accounts())
+        L::min_accounts().min(R::min_accounts())
     }
 
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>

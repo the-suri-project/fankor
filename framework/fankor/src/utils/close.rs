@@ -1,13 +1,13 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
-use crate::traits::CLOSED_ACCOUNT_DISCRIMINATOR;
 use solana_program::account_info::AccountInfo;
+use solana_program::system_program;
 
-/// Closes the `account` and sends the lamports to the `sol_destination`.
+/// Closes the `account` and sends the lamports to the `destination_account`.
 pub(crate) fn close_account<'info>(
     info: &AccountInfo<'info>,
     context: &FankorContext<'info>,
-    sol_destination: &AccountInfo<'info>,
+    destination_account: &AccountInfo<'info>,
 ) -> FankorResult<()> {
     if info.key != context.program_id() {
         return Err(FankorErrorCode::AccountNotOwnedByProgram {
@@ -25,19 +25,17 @@ pub(crate) fn close_account<'info>(
         .into());
     }
 
-    // Transfer tokens from the account to the sol_destination.
-    **sol_destination.lamports.borrow_mut() = sol_destination
+    // Transfer lamports from the account to the destination.
+    **destination_account.lamports.borrow_mut() = destination_account
         .lamports()
         .checked_add(info.lamports())
         .unwrap();
     **info.lamports.borrow_mut() = 0;
 
-    // Mark the account discriminator as closed.
-    let mut data = info.try_borrow_mut_data()?;
-    let dst: &mut [u8] = &mut data;
-    dst[0] = CLOSED_ACCOUNT_DISCRIMINATOR;
+    // Close the account.
+    info.assign(&system_program::ID);
+    info.realloc(0, false)?;
 
-    context.set_closed_account(info, true);
     context.remove_exit_action(info);
 
     Ok(())

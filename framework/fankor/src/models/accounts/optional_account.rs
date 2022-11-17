@@ -6,7 +6,11 @@ use solana_program::pubkey::Pubkey;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 
-/// Deserializes `T` only if the account is not the default one.
+/// Deserializes `T` only if the account is not the default one, i.e. 1111...1111.
+///
+/// This differs from `Option<T>` in that it if T does not deserialize, it does not consume
+/// the account while `OptionalAccount<T>` always consumes an account, i.e. there must be a
+/// deserializable account or the default one (1111...1111).
 pub enum OptionalAccount<'info, T: crate::traits::Account> {
     Missing,
     Account(Account<'info, T>),
@@ -17,6 +21,10 @@ impl<'info, T: crate::traits::Account> OptionalAccount<'info, T> {
 
     pub fn is_missing(&self) -> bool {
         matches!(self, OptionalAccount::Missing)
+    }
+
+    pub fn is_account(&self) -> bool {
+        !self.is_missing()
     }
 
     pub fn account(&self) -> Option<&Account<'info, T>> {
