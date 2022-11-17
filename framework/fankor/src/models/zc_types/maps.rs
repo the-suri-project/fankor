@@ -41,7 +41,7 @@ impl<K: ZeroCopyType, T: ZeroCopyType> ZeroCopyType for FnkMap<K, T> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-impl<'info, K: ZeroCopyType, T: ZeroCopyType> ZC<'info, FnkMap<K, T>> {
+impl<'info, 'a, K: ZeroCopyType, T: ZeroCopyType> ZC<'info, 'a, FnkMap<K, T>> {
     // GETTERS ----------------------------------------------------------------
 
     /// The length of the vector.
@@ -59,9 +59,9 @@ impl<'info, K: ZeroCopyType, T: ZeroCopyType> ZC<'info, FnkMap<K, T>> {
     }
 }
 
-impl<'info, K: ZeroCopyType, T: ZeroCopyType> IntoIterator for ZC<'info, FnkMap<K, T>> {
-    type Item = ZC<'info, (K, T)>;
-    type IntoIter = Iter<'info, K, T>;
+impl<'info, 'a, K: ZeroCopyType, T: ZeroCopyType> IntoIterator for ZC<'info, 'a, FnkMap<K, T>> {
+    type Item = ZC<'info, 'a, (K, T)>;
+    type IntoIter = Iter<'info, 'a, K, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         Iter {
@@ -75,9 +75,11 @@ impl<'info, K: ZeroCopyType, T: ZeroCopyType> IntoIterator for ZC<'info, FnkMap<
     }
 }
 
-impl<'a, 'info, K: ZeroCopyType, T: ZeroCopyType> IntoIterator for &'a ZC<'info, FnkMap<K, T>> {
-    type Item = ZC<'info, (K, T)>;
-    type IntoIter = Iter<'info, K, T>;
+impl<'r, 'info, 'a, K: ZeroCopyType, T: ZeroCopyType> IntoIterator
+    for &'r ZC<'info, 'a, FnkMap<K, T>>
+{
+    type Item = ZC<'info, 'a, (K, T)>;
+    type IntoIter = Iter<'info, 'a, K, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         Iter {
@@ -95,15 +97,15 @@ impl<'a, 'info, K: ZeroCopyType, T: ZeroCopyType> IntoIterator for &'a ZC<'info,
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-pub struct Iter<'info, K: ZeroCopyType, T: ZeroCopyType> {
-    data: ZC<'info, FnkMap<K, T>>,
+pub struct Iter<'info, 'a, K: ZeroCopyType, T: ZeroCopyType> {
+    data: ZC<'info, 'a, FnkMap<K, T>>,
     len: usize,
     index: usize,
     offset: usize,
 }
 
-impl<'info, K: ZeroCopyType, T: ZeroCopyType> Iterator for Iter<'info, K, T> {
-    type Item = ZC<'info, (K, T)>;
+impl<'info, 'a, K: ZeroCopyType, T: ZeroCopyType> Iterator for Iter<'info, 'a, K, T> {
+    type Item = ZC<'info, 'a, (K, T)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index >= self.len {
@@ -113,7 +115,7 @@ impl<'info, K: ZeroCopyType, T: ZeroCopyType> Iterator for Iter<'info, K, T> {
         let result = ZC {
             info: self.data.info,
             offset: self.offset,
-            _phantom: std::marker::PhantomData,
+            _data: std::marker::PhantomData,
         };
 
         let bytes = (*self.data.info.data).borrow();
@@ -133,4 +135,4 @@ impl<'info, K: ZeroCopyType, T: ZeroCopyType> Iterator for Iter<'info, K, T> {
     }
 }
 
-impl<'info, K: ZeroCopyType, T: ZeroCopyType> ExactSizeIterator for Iter<'info, K, T> {}
+impl<'info, 'a, K: ZeroCopyType, T: ZeroCopyType> ExactSizeIterator for Iter<'info, 'a, K, T> {}

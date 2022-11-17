@@ -1,6 +1,6 @@
 use crate::errors::{Error, FankorErrorCode, FankorResult};
 use crate::models;
-use crate::models::{FankorContext, FankorContextExitAction, System, ZC};
+use crate::models::{FankorContext, FankorContextExitAction, System, ZCMut, ZC};
 use crate::traits::{InstructionAccount, Program};
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
@@ -109,11 +109,20 @@ impl<'info, T: crate::traits::Account> ZCAccount<'info, T> {
     }
 
     #[inline(always)]
-    pub fn data(&self) -> ZC<'info, T> {
+    pub fn data<'a>(&'a self) -> ZC<'info, 'a, T> {
         ZC {
             info: self.info,
             offset: 0,
-            _phantom: PhantomData,
+            _data: PhantomData,
+        }
+    }
+
+    #[inline(always)]
+    pub fn data_mut<'a>(&'a mut self) -> ZCMut<'info, 'a, T> {
+        ZCMut {
+            info: self.info,
+            offset: 0,
+            _data: PhantomData,
         }
     }
 

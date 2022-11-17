@@ -23,20 +23,14 @@ pub trait ZeroCopyType: Sized {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-/// A wrapper around a `T` that implements `ZeroCopyType` to make it zero-copy.
-///
-/// # Safety
-///
-/// This type is would be always safe to use if `offset` is zero, otherwise it
-/// is unsafe to use between CPI calls due to the content could have been
-/// modified.
-pub struct ZC<'info, T> {
+/// A readonly wrapper around a `T` that implements `ZeroCopyType`.
+pub struct ZC<'info, 'a, T> {
     pub(crate) info: &'info AccountInfo<'info>,
     pub(crate) offset: usize,
-    pub(crate) _phantom: std::marker::PhantomData<T>,
+    pub(crate) _data: std::marker::PhantomData<(T, &'a ())>,
 }
 
-impl<'info, T: ZeroCopyType> ZC<'info, T> {
+impl<'info, 'a, T: ZeroCopyType> ZC<'info, 'a, T> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Creates a new ZC from a slice of bytes.
@@ -47,7 +41,7 @@ impl<'info, T: ZeroCopyType> ZC<'info, T> {
         Self {
             info,
             offset,
-            _phantom: std::marker::PhantomData,
+            _data: std::marker::PhantomData,
         }
     }
 
@@ -62,7 +56,7 @@ impl<'info, T: ZeroCopyType> ZC<'info, T> {
     }
 }
 
-impl<'info, T: ZeroCopyType + BorshDeserialize> ZC<'info, T> {
+impl<'info, 'a, T: ZeroCopyType + BorshDeserialize> ZC<'info, 'a, T> {
     // METHODS ----------------------------------------------------------------
 
     /// Gets the actual value of the type.
@@ -77,7 +71,69 @@ impl<'info, T: ZeroCopyType + BorshDeserialize> ZC<'info, T> {
     }
 }
 
-impl<'info, T: ZeroCopyType + BorshSerialize> ZC<'info, T> {
+impl<'info, 'a, T> Clone for ZC<'info, 'a, T> {
+    fn clone(&self) -> Self {
+        ZC {
+            info: self.info,
+            offset: self.offset,
+            _data: std::marker::PhantomData,
+        }
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/// A mutable wrapper around a `T` that implements `ZeroCopyType`.
+pub struct ZCMut<'info, 'a, T> {
+    pub(crate) info: &'info AccountInfo<'info>,
+    pub(crate) offset: usize,
+    pub(crate) _data: std::marker::PhantomData<(T, &'a mut ())>,
+}
+
+impl<'info, 'a, T: ZeroCopyType> ZCMut<'info, 'a, T> {
+    // CONSTRUCTORS -----------------------------------------------------------
+
+    /// Creates a new ZC from a slice of bytes.
+    ///
+    /// # Safety
+    /// This method is unsafe because it does not check the offset.
+    pub unsafe fn new(info: &'info AccountInfo<'info>, offset: usize) -> Self {
+        Self {
+            info,
+            offset,
+            _data: std::marker::PhantomData,
+        }
+    }
+
+    // GETTERS ----------------------------------------------------------------
+
+    /// Returns the size of the type in bytes.
+    /// Note: validates the type without deserializing it.
+    pub fn byte_size(&self) -> FankorResult<usize> {
+        let bytes = (*self.info.data).borrow();
+        let bytes = &bytes[self.offset..];
+        T::byte_size(bytes)
+    }
+}
+
+impl<'info, 'a, T: ZeroCopyType + BorshDeserialize> ZCMut<'info, 'a, T> {
+    // METHODS ----------------------------------------------------------------
+
+    /// Gets the actual value of the type.
+    ///
+    /// # Safety
+    ///
+    /// This method can fail if `bytes` cannot be deserialized into the type.
+    pub fn try_get_value(&self) -> FankorResult<T> {
+        let bytes = (*self.info.data).borrow();
+        let mut bytes = &bytes[self.offset..];
+        Ok(T::deserialize(&mut bytes)?)
+    }
+}
+
+impl<'info, 'a, T: ZeroCopyType + BorshSerialize> ZCMut<'info, 'a, T> {
     // METHODS ----------------------------------------------------------------
 
     /// Writes a value in the buffer occupying at most the same space as the
@@ -85,10 +141,7 @@ impl<'info, T: ZeroCopyType + BorshSerialize> ZC<'info, T> {
     ///
     /// # Safety
     ///
-    /// This method expands or shrinks the buffer, so any ZC pointing to the
-    /// buffer in a forward position will be invalidated.
-    ///
-    /// It can also fail if `value` does not fit in the buffer.
+    /// This method can fail if `value` does not fit in the buffer.
     pub fn try_write_value(&mut self, value: &T) -> FankorResult<()> {
         let bytes = (*self.info.data).borrow();
         let previous_size = T::byte_size(&bytes)?;
@@ -104,10 +157,7 @@ impl<'info, T: ZeroCopyType + BorshSerialize> ZC<'info, T> {
     ///
     /// # Safety
     ///
-    /// This method expands or shrinks the buffer, so any ZC pointing to the
-    /// buffer in a forward position will be invalidated.
-    ///
-    /// It can also fail if `value` does not fit in the buffer or if any
+    /// This method can fail if `value` does not fit in the buffer or if any
     /// of the sizes are incorrect.
     pub unsafe fn try_write_value_with_sizes(
         &mut self,
@@ -154,15 +204,5 @@ impl<'info, T: ZeroCopyType + BorshSerialize> ZC<'info, T> {
         }
 
         Ok(())
-    }
-}
-
-impl<'info, T> Clone for ZC<'info, T> {
-    fn clone(&self) -> Self {
-        ZC {
-            info: self.info,
-            offset: self.offset,
-            _phantom: std::marker::PhantomData,
-        }
     }
 }
