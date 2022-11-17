@@ -15,16 +15,18 @@ pub const ERROR_CODE_OFFSET: u32 = 6000;
 
 /// Error codes that can be returned by internal framework code.
 ///
-/// - 1000..2000 - Program
-/// - 2000..3000 - Accounts
-/// - 3000..4000 - Accounts
-/// - 5500       - custom program error without code
+/// - 1000..1500 - Program
+/// - 1500..2000 - Accounts
+/// - 2000..2500 - CPI
+/// - 2500..3000 - ZeroCopy
 ///
 /// The starting point for user-defined errors is defined
 /// by the [ERROR_CODE_OFFSET](crate::error::ERROR_CODE_OFFSET).
 #[error_code(offset = 0)]
 pub enum FankorErrorCode {
-    // Program
+    // ------------------------------------------------------------------------
+    // Program ----------------------------------------------------------------
+    // ------------------------------------------------------------------------
     /// The id of the program does not match the one defined in the code
     #[msg("The id of the program does not match the one defined in the code")]
     #[code(1000)]
@@ -42,10 +44,20 @@ pub enum FankorErrorCode {
     #[msg("The instruction contains more accounts than required")]
     UnusedAccounts,
 
-    // Accounts
+    /// The program must be provided in the account list
+    #[msg(
+        "The program {} ({}) must be provided in the account list",
+        name,
+        address
+    )]
+    MissingProgram { address: Pubkey, name: &'static str },
+
+    // ------------------------------------------------------------------------
+    // Accounts ---------------------------------------------------------------
+    // ------------------------------------------------------------------------
     /// No 8 byte discriminator was found on the account
     #[msg("No 8 byte discriminator was found on the account: {}", account)]
-    #[code(2000)]
+    #[code(1500)]
     AccountDiscriminatorNotFound { account: String },
 
     /// The account discriminator did not match what was expected
@@ -246,9 +258,12 @@ pub enum FankorErrorCode {
         account: &'static str,
     },
 
-    // CPI
+    // ------------------------------------------------------------------------
+    // CPI --------------------------------------------------------------------
+    // ------------------------------------------------------------------------
     /// The intermediate buffer is empty
     #[msg("The intermediate buffer is empty")]
+    #[code(2000)]
     EmptyIntermediateBuffer,
 
     /// The result of the intermediate buffer is expected to belong to one program but it belongs to another program instead
@@ -259,13 +274,20 @@ pub enum FankorErrorCode {
     )]
     IntermediateBufferIncorrectProgramId { actual: Pubkey, expected: Pubkey },
 
-    /// The result of the intermediate buffer is expected to belong to one program but it belongs to another program instead
+    // ------------------------------------------------------------------------
+    // Zero Copy --------------------------------------------------------------
+    // ------------------------------------------------------------------------
+    /// Cannot deserialize the zero copy type
+    #[msg("Cannot deserialize the zero copy type: '{}'", type_name)]
+    #[code(2500)]
+    ZeroCopyCannotDeserialize { type_name: &'static str },
+
+    /// There are not enough bytes to serialize the zero copy type
     #[msg(
-        "To call a CPI of the {} program ({}) you need to provide it in the account list",
-        name,
-        address
+        "There are not enough bytes to serialize the zero copy type: '{}'",
+        type_name
     )]
-    MissingProgram { address: Pubkey, name: &'static str },
+    ZeroCopyNotEnoughSizeToSerialize { type_name: &'static str },
 }
 
 // ----------------------------------------------------------------------------
