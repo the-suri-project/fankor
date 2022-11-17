@@ -63,6 +63,7 @@ impl<T> From<FnkSet<T>> for BTreeSet<T> {
 
 impl<T: BorshSerialize> BorshSerialize for FnkSet<T> {
     fn serialize<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        // Note: this method does not sort the set to save compute cycles.
         let length = FnkUInt::from(self.0.len() as u64);
 
         length.serialize(writer)?;

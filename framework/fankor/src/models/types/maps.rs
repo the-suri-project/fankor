@@ -63,6 +63,7 @@ impl<K, T> From<FnkMap<K, T>> for BTreeMap<K, T> {
 
 impl<K: BorshSerialize, T: BorshSerialize> BorshSerialize for FnkMap<K, T> {
     fn serialize<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        // Note: this method does not sort the map to save compute cycles.
         let length = FnkUInt::from(self.0.len() as u64);
 
         length.serialize(writer)?;
