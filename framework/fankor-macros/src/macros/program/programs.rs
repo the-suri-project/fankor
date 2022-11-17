@@ -355,7 +355,7 @@ impl Program {
                         if last_deprecated && discriminant.is_none() {
                             return Err(Error::new(
                                 item.span(),
-                                format!("The next method after a deprecated one must have the #[discriminant] attribute"),
+                                "The next method after a deprecated one must have the #[discriminant] attribute",
                             ));
                         }
 
@@ -372,7 +372,7 @@ impl Program {
                     if u8_index == 0 {
                         return Err(Error::new(
                             item.span(),
-                            "Zero discriminant is reserved for uninitialized accounts, please provide another one".to_string(),
+                            "Zero discriminant is reserved for uninitialized accounts, please provide another one",
                         ));
                     }
 
@@ -486,7 +486,7 @@ impl Program {
                         if last_deprecated && discriminant.is_none() {
                             return Err(Error::new(
                                 item.span(),
-                                format!("The next method after a deprecated one must have the #[discriminant] attribute"),
+                                "The next method after a deprecated one must have the #[discriminant] attribute",
                             ));
                         }
 
@@ -534,9 +534,7 @@ impl Program {
                         if discriminant.is_some() {
                             return Err(Error::new(
                                 item.span(),
-                                format!(
-                                    "The fallback method cannot have the #[discriminant] attribute"
-                                ),
+                                "The fallback method cannot have the #[discriminant] attribute",
                             ));
                         }
                     } else {

@@ -48,7 +48,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             if last_deprecated && result.discriminant.is_none() {
                 return Err(Error::new(
                     result.name.span(),
-                    format!("The next error after a deprecated one must have the #[discriminant] attribute"),
+                    "The next error after a deprecated one must have the #[discriminant] attribute",
                 ));
             }
 

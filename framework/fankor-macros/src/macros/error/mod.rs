@@ -1,5 +1,5 @@
 use quote::{format_ident, quote};
-use std::collections::{ HashSet};
+use std::collections::HashSet;
 use syn::spanned::Spanned;
 use syn::{AttributeArgs, Error, Fields, Item};
 
@@ -40,9 +40,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             if last_deprecated && result.code.is_none() {
                 return Err(Error::new(
                     result.name.span(),
-                    format!(
-                        "The next error after a deprecated one must have the #[code] attribute"
-                    ),
+                    "The next error after a deprecated one must have the #[code] attribute",
                 ));
             }
 
