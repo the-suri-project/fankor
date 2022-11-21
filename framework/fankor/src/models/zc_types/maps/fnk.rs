@@ -1,5 +1,6 @@
 use crate::errors::FankorResult;
-use crate::models::{ZeroCopyType, ZC};
+use crate::models::zc_types::vectors::{Iter, IterMut};
+use crate::models::{ZCMut, ZeroCopyType, ZC};
 use crate::prelude::{FnkMap, FnkUInt};
 use borsh::BorshDeserialize;
 
@@ -57,82 +58,69 @@ impl<'info, 'a, K: ZeroCopyType, T: ZeroCopyType> ZC<'info, 'a, FnkMap<K, T>> {
     pub fn is_empty(&self) -> FankorResult<bool> {
         Ok(self.len()? == 0)
     }
+
+    // METHODS ----------------------------------------------------------------
+
+    pub fn iter(&self) -> Iter<'info, 'a, (K, T)> {
+        Iter {
+            info: self.info,
+            offset: self.offset,
+            len: self
+                .len()
+                .expect("Failed to get length of zc-vector in iterator"),
+            index: 0,
+            _data: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'info, 'a, K: ZeroCopyType, T: ZeroCopyType> ZCMut<'info, 'a, FnkMap<K, T>> {
+    // METHODS ----------------------------------------------------------------
+
+    pub fn iter_mut(&mut self) -> IterMut<'info, 'a, (K, T)> {
+        IterMut {
+            info: self.info,
+            offset: self.offset,
+            len: self
+                .to_ref()
+                .len()
+                .expect("Failed to get length of zc-vector in iterator"),
+            index: 0,
+            _data: std::marker::PhantomData,
+        }
+    }
 }
 
 impl<'info, 'a, K: ZeroCopyType, T: ZeroCopyType> IntoIterator for ZC<'info, 'a, FnkMap<K, T>> {
     type Item = ZC<'info, 'a, (K, T)>;
-    type IntoIter = Iter<'info, 'a, K, T>;
+    type IntoIter = Iter<'info, 'a, (K, T)>;
 
     fn into_iter(self) -> Self::IntoIter {
         Iter {
+            info: self.info,
             offset: self.offset,
             len: self
                 .len()
                 .expect("Failed to get length of zc-vector in iterator"),
-            data: self,
             index: 0,
-        }
-    }
-}
-
-impl<'r, 'info, 'a, K: ZeroCopyType, T: ZeroCopyType> IntoIterator
-    for &'r ZC<'info, 'a, FnkMap<K, T>>
-{
-    type Item = ZC<'info, 'a, (K, T)>;
-    type IntoIter = Iter<'info, 'a, K, T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        Iter {
-            offset: self.offset,
-            data: self.clone(),
-            len: self
-                .len()
-                .expect("Failed to get length of zc-vector in iterator"),
-            index: 0,
-        }
-    }
-}
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-pub struct Iter<'info, 'a, K: ZeroCopyType, T: ZeroCopyType> {
-    data: ZC<'info, 'a, FnkMap<K, T>>,
-    len: usize,
-    index: usize,
-    offset: usize,
-}
-
-impl<'info, 'a, K: ZeroCopyType, T: ZeroCopyType> Iterator for Iter<'info, 'a, K, T> {
-    type Item = ZC<'info, 'a, (K, T)>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.len {
-            return None;
-        }
-
-        let result = ZC {
-            info: self.data.info,
-            offset: self.offset,
             _data: std::marker::PhantomData,
-        };
-
-        let bytes = (*self.data.info.data).borrow();
-        let bytes = &bytes[self.offset..];
-
-        self.offset += K::byte_size(bytes).expect("Key deserialization failed in map iterator");
-        self.offset += T::byte_size(bytes).expect("Value deserialization failed in map iterator");
-        self.index += 1;
-
-        Some(result)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.len - self.index;
-
-        (size, Some(size))
+        }
     }
 }
 
-impl<'info, 'a, K: ZeroCopyType, T: ZeroCopyType> ExactSizeIterator for Iter<'info, 'a, K, T> {}
+impl<'info, 'a, K: ZeroCopyType, T: ZeroCopyType> IntoIterator for ZCMut<'info, 'a, FnkMap<K, T>> {
+    type Item = ZCMut<'info, 'a, (K, T)>;
+    type IntoIter = IterMut<'info, 'a, (K, T)>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IterMut {
+            info: self.info,
+            offset: self.offset,
+            len: self
+                .len()
+                .expect("Failed to get length of zc-vector in iterator"),
+            index: 0,
+            _data: std::marker::PhantomData,
+        }
+    }
+}

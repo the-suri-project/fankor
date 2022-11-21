@@ -1,8 +1,8 @@
 use crate::errors::FankorResult;
-use crate::models::{ZeroCopyType, ZC};
-use borsh::BorshDeserialize;
+use crate::models::zc_types::vectors::{Iter, IterMut};
+use crate::models::{ZCMut, ZeroCopyType, ZC};
 
-impl<T: ZeroCopyType + BorshDeserialize, const N: usize> ZeroCopyType for [T; N] {
+impl<T: ZeroCopyType, const N: usize> ZeroCopyType for [T; N] {
     fn byte_size_from_instance(&self) -> usize {
         let mut size = 0;
 
@@ -33,9 +33,13 @@ impl<'info, 'a, T: ZeroCopyType, const N: usize> ZC<'info, 'a, [T; N]> {
     // GETTERS ----------------------------------------------------------------
 
     /// The length of the array.
-    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         N
+    }
+
+    /// Whether the array is empty or not.
+    pub fn is_empty(&self) -> bool {
+        N == 0
     }
 
     // METHODS ----------------------------------------------------------------
@@ -47,7 +51,7 @@ impl<'info, 'a, T: ZeroCopyType, const N: usize> ZC<'info, 'a, [T; N]> {
         }
 
         let bytes = (*self.info.data).borrow();
-        let mut bytes = &bytes[self.offset..];
+        let bytes = &bytes[self.offset..];
         let mut size = 0;
 
         for i in 0..N {
@@ -59,81 +63,88 @@ impl<'info, 'a, T: ZeroCopyType, const N: usize> ZC<'info, 'a, [T; N]> {
                 }));
             }
 
-            bytes = &bytes[size..];
-            size += T::byte_size(bytes)?;
+            size += T::byte_size(&bytes[size..])?;
         }
 
         Ok(None)
+    }
+
+    pub fn iter(&self) -> Iter<'info, 'a, T> {
+        Iter {
+            info: self.info,
+            offset: self.offset,
+            len: N,
+            index: 0,
+            _data: std::marker::PhantomData,
+        }
+    }
+}
+
+impl<'info, 'a, T: ZeroCopyType, const N: usize> ZCMut<'info, 'a, [T; N]> {
+    // METHODS ----------------------------------------------------------------
+
+    /// Gets the element at the specified position.
+    pub fn get_mut_zc_index(&mut self, index: usize) -> FankorResult<Option<ZCMut<'info, 'a, T>>> {
+        if index >= N {
+            return Ok(None);
+        }
+
+        let bytes = (*self.info.data).borrow();
+        let bytes = &bytes[self.offset..];
+        let mut size = 0;
+
+        for i in 0..N {
+            if i == index {
+                return Ok(Some(ZCMut {
+                    info: self.info,
+                    offset: self.offset + size,
+                    _data: std::marker::PhantomData,
+                }));
+            }
+
+            size += T::byte_size(&bytes[size..])?;
+        }
+
+        Ok(None)
+    }
+
+    pub fn iter_mut(&mut self) -> IterMut<'info, 'a, T> {
+        IterMut {
+            info: self.info,
+            offset: self.offset,
+            len: N,
+            index: 0,
+            _data: std::marker::PhantomData,
+        }
     }
 }
 
 impl<'info, 'a, T: ZeroCopyType, const N: usize> IntoIterator for ZC<'info, 'a, [T; N]> {
     type Item = ZC<'info, 'a, T>;
-    type IntoIter = Iter<'info, 'a, T, N>;
+    type IntoIter = Iter<'info, 'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         Iter {
+            info: self.info,
             offset: self.offset,
-            len: self.len(),
-            data: self,
+            len: N,
             index: 0,
-        }
-    }
-}
-
-impl<'r, 'info, 'a, T: ZeroCopyType, const N: usize> IntoIterator for &'r ZC<'info, 'a, [T; N]> {
-    type Item = ZC<'info, 'a, T>;
-    type IntoIter = Iter<'info, 'a, T, N>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        Iter {
-            offset: self.offset,
-            data: self.clone(),
-            len: self.len(),
-            index: 0,
-        }
-    }
-}
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-pub struct Iter<'info, 'a, T: ZeroCopyType, const N: usize> {
-    data: ZC<'info, 'a, [T; N]>,
-    len: usize,
-    index: usize,
-    offset: usize,
-}
-
-impl<'info, 'a, T: ZeroCopyType, const N: usize> Iterator for Iter<'info, 'a, T, N> {
-    type Item = ZC<'info, 'a, T>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index >= self.len {
-            return None;
-        }
-
-        let result = ZC {
-            info: self.data.info,
-            offset: self.offset,
             _data: std::marker::PhantomData,
-        };
-
-        let bytes = (*self.data.info.data).borrow();
-        let bytes = &bytes[self.offset..];
-
-        self.offset += T::byte_size(bytes).expect("Deserialization failed in array iterator");
-        self.index += 1;
-
-        Some(result)
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = self.len - self.index;
-
-        (size, Some(size))
+        }
     }
 }
 
-impl<'info, 'a, T: ZeroCopyType, const N: usize> ExactSizeIterator for Iter<'info, 'a, T, N> {}
+impl<'info, 'a, T: ZeroCopyType, const N: usize> IntoIterator for ZCMut<'info, 'a, [T; N]> {
+    type Item = ZCMut<'info, 'a, T>;
+    type IntoIter = IterMut<'info, 'a, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        IterMut {
+            info: self.info,
+            offset: self.offset,
+            len: N,
+            index: 0,
+            _data: std::marker::PhantomData,
+        }
+    }
+}

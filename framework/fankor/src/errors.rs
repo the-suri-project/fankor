@@ -282,12 +282,12 @@ pub enum FankorErrorCode {
     #[code(2500)]
     ZeroCopyCannotDeserialize { type_name: &'static str },
 
-    /// There are not enough bytes to serialize the zero copy type
+    /// Invalid enum discriminator while deserializing the zero copy type
     #[msg(
-        "There are not enough bytes to serialize the zero copy type: '{}'",
+        "Invalid enum discriminator while deserializing the zero copy type: '{}'",
         type_name
     )]
-    ZeroCopyNotEnoughSizeToSerialize { type_name: &'static str },
+    ZeroCopyInvalidEnumDiscriminator { type_name: &'static str },
 }
 
 // ----------------------------------------------------------------------------

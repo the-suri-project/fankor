@@ -5,10 +5,14 @@ use std::cmp::Ordering;
 use std::io::Cursor;
 
 pub mod arrays;
-pub mod maps;
+// pub mod maps;
+pub mod bool;
 pub mod numbers;
+pub mod options;
+pub mod pubkey;
 pub mod sets;
 pub mod strings;
+pub mod tuples;
 pub mod vectors;
 
 pub trait ZeroCopyType: Sized {
@@ -24,7 +28,7 @@ pub trait ZeroCopyType: Sized {
 // ----------------------------------------------------------------------------
 
 /// A readonly wrapper around a `T` that implements `ZeroCopyType`.
-pub struct ZC<'info, 'a, T> {
+pub struct ZC<'info, 'a, T: ZeroCopyType> {
     pub(crate) info: &'info AccountInfo<'info>,
     pub(crate) offset: usize,
     pub(crate) _data: std::marker::PhantomData<(T, &'a ())>,
@@ -71,7 +75,7 @@ impl<'info, 'a, T: ZeroCopyType + BorshDeserialize> ZC<'info, 'a, T> {
     }
 }
 
-impl<'info, 'a, T> Clone for ZC<'info, 'a, T> {
+impl<'info, 'a, T: ZeroCopyType> Clone for ZC<'info, 'a, T> {
     fn clone(&self) -> Self {
         ZC {
             info: self.info,
@@ -86,7 +90,7 @@ impl<'info, 'a, T> Clone for ZC<'info, 'a, T> {
 // ----------------------------------------------------------------------------
 
 /// A mutable wrapper around a `T` that implements `ZeroCopyType`.
-pub struct ZCMut<'info, 'a, T> {
+pub struct ZCMut<'info, 'a, T: ZeroCopyType> {
     pub(crate) info: &'info AccountInfo<'info>,
     pub(crate) offset: usize,
     pub(crate) _data: std::marker::PhantomData<(T, &'a mut ())>,
@@ -115,6 +119,15 @@ impl<'info, 'a, T: ZeroCopyType> ZCMut<'info, 'a, T> {
         let bytes = (*self.info.data).borrow();
         let bytes = &bytes[self.offset..];
         T::byte_size(bytes)
+    }
+
+    /// Returns the reference to the data as a readonly reference.
+    pub fn to_ref(&self) -> ZC<'info, 'a, T> {
+        ZC {
+            info: self.info,
+            offset: self.offset,
+            _data: std::marker::PhantomData,
+        }
     }
 }
 
