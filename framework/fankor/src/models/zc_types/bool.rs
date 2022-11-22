@@ -1,19 +1,34 @@
-use crate::errors::FankorResult;
-use crate::models::ZeroCopyType;
-use std::io::ErrorKind;
+use crate::errors::{FankorErrorCode, FankorResult};
+use crate::models::{CopyType, ZeroCopyType};
+use solana_program::account_info::AccountInfo;
 
-impl ZeroCopyType for bool {
-    fn byte_size_from_instance(&self) -> usize {
-        1
+impl<'info> ZeroCopyType<'info> for bool {
+    fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
+        let bytes = info
+            .try_borrow_data()
+            .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock { type_name: "bool" })?;
+        let bytes = &bytes[offset..];
+
+        if bytes.is_empty() {
+            return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: "bool" }.into());
+        }
+
+        Ok((bytes[0] != 0, Some(1)))
     }
 
-    fn byte_size(bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
         if bytes.is_empty() {
-            return Err(
-                std::io::Error::new(ErrorKind::InvalidInput, "Unexpected length of input").into(),
-            );
+            return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: "bool" }.into());
         }
 
         Ok(1)
+    }
+}
+
+impl<'info> CopyType<'info> for bool {
+    type ZeroCopyType = bool;
+
+    fn byte_size_from_instance(&self) -> usize {
+        1
     }
 }

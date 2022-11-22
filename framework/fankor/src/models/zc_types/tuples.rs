@@ -1,210 +1,148 @@
-use crate::errors::FankorResult;
-use crate::models::{ZCMut, ZeroCopyType, ZC};
-use std::marker::PhantomData;
+use crate::errors::{FankorErrorCode, FankorResult};
+use crate::models::{CopyType, ZeroCopyType};
+use solana_program::account_info::AccountInfo;
+use std::any::type_name;
 
-impl<T0: ZeroCopyType, T1: ZeroCopyType> ZeroCopyType for (T0, T1) {
-    fn byte_size_from_instance(&self) -> usize {
-        let mut size = 0;
-        size += self.0.byte_size_from_instance();
-        size += self.1.byte_size_from_instance();
-        size
+impl<'info> ZeroCopyType<'info> for () {
+    fn new(
+        _info: &'info AccountInfo<'info>,
+        _offset: usize,
+    ) -> FankorResult<(Self, Option<usize>)> {
+        Ok(((), Some(0)))
     }
 
-    fn byte_size(bytes: &[u8]) -> FankorResult<usize> {
-        let mut size = 0;
+    fn read_byte_size_from_bytes(_bytes: &[u8]) -> FankorResult<usize> {
+        Ok(0)
+    }
+}
 
-        size += T0::byte_size(&bytes[size..])?;
-        size += T1::byte_size(&bytes[size..])?;
+impl<'info> CopyType<'info> for () {
+    type ZeroCopyType = ();
+
+    fn byte_size_from_instance(&self) -> usize {
+        0
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+impl<'info, T0: ZeroCopyType<'info>, T1: ZeroCopyType<'info>> ZeroCopyType<'info> for (T0, T1) {
+    fn new(
+        info: &'info AccountInfo<'info>,
+        mut offset: usize,
+    ) -> FankorResult<(Self, Option<usize>)> {
+        let original_offset = offset;
+        let (t0, size) = T0::new(info, offset)?;
+
+        if let Some(size) = size {
+            offset += size
+        } else {
+            let bytes =
+                info.try_borrow_data()
+                    .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
+                        type_name: type_name::<Self>(),
+                    })?;
+            let bytes = &bytes[offset..];
+            offset += T0::read_byte_size_from_bytes(bytes)?
+        }
+
+        let (t1, size) = T1::new(info, offset)?;
+
+        if let Some(size) = size {
+            offset += size
+        } else {
+            let bytes = info.try_borrow_data().unwrap();
+            let bytes = &bytes[offset..];
+            offset += T1::read_byte_size_from_bytes(bytes)?
+        }
+
+        Ok(((t0, t1), Some(offset - original_offset)))
+    }
+
+    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+        let mut size = T0::read_byte_size_from_bytes(bytes)?;
+        size += T1::read_byte_size_from_bytes(&bytes[size..])?;
 
         Ok(size)
     }
 }
 
-impl<'info, 'a, T0: ZeroCopyType, T1: ZeroCopyType> ZC<'info, 'a, (T0, T1)> {
-    // GETTERS ----------------------------------------------------------------
+impl<'info, T0: CopyType<'info>, T1: CopyType<'info>> CopyType<'info> for (T0, T1) {
+    type ZeroCopyType = (T0::ZeroCopyType, T1::ZeroCopyType);
 
-    pub fn to_ref_0(&self) -> FankorResult<ZC<'info, 'a, T0>> {
-        Ok(ZC {
-            info: self.info,
-            offset: self.offset,
-            _data: PhantomData,
-        })
-    }
-
-    pub fn to_ref_1(&self) -> FankorResult<ZC<'info, 'a, T1>> {
-        let bytes = self.info.data.borrow();
-        let bytes = &bytes[self.offset..];
-        let size = T0::byte_size(bytes)?;
-
-        Ok(ZC {
-            info: self.info,
-            offset: self.offset + size,
-            _data: PhantomData,
-        })
-    }
-
-    /// Gets the ZC of the inner values as a regular tuple.
-    pub fn to_tuple(&self) -> FankorResult<(ZC<'info, 'a, T0>, ZC<'info, 'a, T1>)> {
-        let bytes = self.info.data.borrow();
-        let bytes = &bytes[self.offset..];
-
-        let t0 = ZC {
-            info: self.info,
-            offset: self.offset,
-            _data: PhantomData,
-        };
-
-        let size = T0::byte_size(bytes)?;
-        let t1 = ZC {
-            info: self.info,
-            offset: self.offset + size,
-            _data: PhantomData,
-        };
-
-        Ok((t0, t1))
-    }
-}
-
-impl<'info, 'a, T0: ZeroCopyType, T1: ZeroCopyType> ZCMut<'info, 'a, (T0, T1)> {
-    // GETTERS ----------------------------------------------------------------
-
-    pub fn to_mut_0(&mut self) -> FankorResult<ZCMut<'info, 'a, T0>> {
-        Ok(ZCMut {
-            info: self.info,
-            offset: self.offset,
-            _data: PhantomData,
-        })
-    }
-
-    pub fn to_mut_1(&mut self) -> FankorResult<ZCMut<'info, 'a, T1>> {
-        let bytes = self.info.data.borrow();
-        let bytes = &bytes[self.offset..];
-        let size = T0::byte_size(bytes)?;
-
-        Ok(ZCMut {
-            info: self.info,
-            offset: self.offset + size,
-            _data: PhantomData,
-        })
-    }
-}
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-
-impl<T0: ZeroCopyType, T1: ZeroCopyType, T2: ZeroCopyType> ZeroCopyType for (T0, T1, T2) {
     fn byte_size_from_instance(&self) -> usize {
-        let mut size = 0;
-        size += self.0.byte_size_from_instance();
-        size += self.1.byte_size_from_instance();
-        size += self.2.byte_size_from_instance();
-        size
+        self.0.byte_size_from_instance() + self.1.byte_size_from_instance()
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+impl<'info, T0: ZeroCopyType<'info>, T1: ZeroCopyType<'info>, T2: ZeroCopyType<'info>>
+    ZeroCopyType<'info> for (T0, T1, T2)
+{
+    fn new(
+        info: &'info AccountInfo<'info>,
+        mut offset: usize,
+    ) -> FankorResult<(Self, Option<usize>)> {
+        let original_offset = offset;
+        let (t0, size) = T0::new(info, offset)?;
+
+        if let Some(size) = size {
+            offset += size
+        } else {
+            let bytes =
+                info.try_borrow_data()
+                    .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
+                        type_name: type_name::<Self>(),
+                    })?;
+            let bytes = &bytes[offset..];
+            offset += T0::read_byte_size_from_bytes(bytes)?
+        }
+
+        let (t1, size) = T1::new(info, offset)?;
+
+        if let Some(size) = size {
+            offset += size
+        } else {
+            let bytes = info.try_borrow_data().unwrap();
+            let bytes = &bytes[offset..];
+            offset += T1::read_byte_size_from_bytes(bytes)?
+        }
+
+        let (t2, size) = T2::new(info, offset)?;
+
+        if let Some(size) = size {
+            offset += size
+        } else {
+            let bytes = info.try_borrow_data().unwrap();
+            let bytes = &bytes[offset..];
+            offset += T2::read_byte_size_from_bytes(bytes)?
+        }
+
+        Ok(((t0, t1, t2), Some(offset - original_offset)))
     }
 
-    fn byte_size(bytes: &[u8]) -> FankorResult<usize> {
-        let mut size = 0;
-
-        size += T0::byte_size(&bytes[size..])?;
-        size += T1::byte_size(&bytes[size..])?;
-        size += T2::byte_size(&bytes[size..])?;
+    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+        let mut size = T0::read_byte_size_from_bytes(bytes)?;
+        size += T1::read_byte_size_from_bytes(&bytes[size..])?;
+        size += T2::read_byte_size_from_bytes(&bytes[size..])?;
 
         Ok(size)
     }
 }
 
-impl<'info, 'a, T0: ZeroCopyType, T1: ZeroCopyType, T2: ZeroCopyType> ZC<'info, 'a, (T0, T1, T2)> {
-    // GETTERS ----------------------------------------------------------------
+impl<'info, T0: CopyType<'info>, T1: CopyType<'info>, T2: CopyType<'info>> CopyType<'info>
+    for (T0, T1, T2)
+{
+    type ZeroCopyType = (T0::ZeroCopyType, T1::ZeroCopyType, T2::ZeroCopyType);
 
-    pub fn to_ref_0(&self) -> FankorResult<ZC<'info, 'a, T0>> {
-        Ok(ZC {
-            info: self.info,
-            offset: self.offset,
-            _data: PhantomData,
-        })
-    }
-
-    pub fn to_ref_1(&self) -> FankorResult<ZC<'info, 'a, T1>> {
-        let bytes = self.info.data.borrow();
-        let bytes = &bytes[self.offset..];
-        let size = T0::byte_size(bytes)?;
-
-        Ok(ZC {
-            info: self.info,
-            offset: self.offset + size,
-            _data: PhantomData,
-        })
-    }
-
-    pub fn to_ref_2(&self) -> FankorResult<ZC<'info, 'a, T2>> {
-        let bytes = self.info.data.borrow();
-        let bytes = &bytes[self.offset..];
-        let mut size = T0::byte_size(bytes)?;
-        size += T1::byte_size(&bytes[size..])?;
-
-        Ok(ZC {
-            info: self.info,
-            offset: self.offset + size,
-            _data: PhantomData,
-        })
-    }
-
-    /// Gets the ZC of the inner values as a regular tuple.
-    pub fn to_tuple(&self) -> FankorResult<(ZC<'info, 'a, T0>, ZC<'info, 'a, T1>)> {
-        let bytes = self.info.data.borrow();
-        let bytes = &bytes[self.offset..];
-
-        let t0 = ZC {
-            info: self.info,
-            offset: self.offset,
-            _data: PhantomData,
-        };
-
-        let size = T0::byte_size(bytes)?;
-        let t1 = ZC {
-            info: self.info,
-            offset: self.offset + size,
-            _data: PhantomData,
-        };
-
-        Ok((t0, t1))
-    }
-}
-
-impl<'info, 'a, T0: ZeroCopyType, T1: ZeroCopyType, T2: ZeroCopyType> ZCMut<'info, 'a, (T0, T1, T2)> {
-    // GETTERS ----------------------------------------------------------------
-
-    pub fn to_mut_0(&mut self) -> FankorResult<ZCMut<'info, 'a, T0>> {
-        Ok(ZCMut {
-            info: self.info,
-            offset: self.offset,
-            _data: PhantomData,
-        })
-    }
-
-    pub fn to_mut_1(&mut self) -> FankorResult<ZCMut<'info, 'a, T1>> {
-        let bytes = self.info.data.borrow();
-        let bytes = &bytes[self.offset..];
-        let size = T0::byte_size(bytes)?;
-
-        Ok(ZCMut {
-            info: self.info,
-            offset: self.offset + size,
-            _data: PhantomData,
-        })
-    }
-
-    pub fn to_mut_2(&mut self) -> FankorResult<ZCMut<'info, 'a, T1>> {
-        let bytes = self.info.data.borrow();
-        let bytes = &bytes[self.offset..];
-        let mut size = T0::byte_size(bytes)?;
-        size+= T1::byte_size(&bytes[size..])?;
-
-        Ok(ZCMut {
-            info: self.info,
-            offset: self.offset + size,
-            _data: PhantomData,
-        })
+    fn byte_size_from_instance(&self) -> usize {
+        self.0.byte_size_from_instance()
+            + self.1.byte_size_from_instance()
+            + self.2.byte_size_from_instance()
     }
 }

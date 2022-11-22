@@ -1,40 +1,51 @@
+pub mod bool;
+pub mod maps;
+pub mod numbers;
+pub mod options;
+pub mod pubkeys;
+pub mod sets;
+pub mod strings;
+pub mod tuples;
+pub mod vec;
+
 use crate::errors::FankorResult;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use std::cmp::Ordering;
 use std::io::Cursor;
 
-pub mod arrays;
-// pub mod maps;
-pub mod bool;
-pub mod numbers;
-pub mod options;
-pub mod pubkey;
-pub mod sets;
-pub mod strings;
-pub mod tuples;
-pub mod vectors;
+pub trait ZeroCopyType<'info>: Sized {
+    // CONSTRUCTORS -----------------------------------------------------------
 
-pub trait ZeroCopyType: Sized {
+    fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)>;
+
+    // STATIC METHODS ---------------------------------------------------------
+
+    /// Returns the size of the type in bytes.
+    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize>;
+}
+
+pub trait CopyType<'info>: Sized {
+    type ZeroCopyType: ZeroCopyType<'info>;
+
+    // METHODS ----------------------------------------------------------------
+
     /// Returns the size of the type in bytes from an instance.
     fn byte_size_from_instance(&self) -> usize;
-
-    /// Returns the size of the type in bytes.
-    fn byte_size(bytes: &[u8]) -> FankorResult<usize>;
 }
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-/// A readonly wrapper around a `T` that implements `ZeroCopyType`.
-pub struct ZC<'info, 'a, T: ZeroCopyType> {
+/// A wrapper around a `T` that implements `ZeroCopyType`.
+pub struct Zc<'info, T: CopyType<'info>> {
     pub(crate) info: &'info AccountInfo<'info>,
     pub(crate) offset: usize,
-    pub(crate) _data: std::marker::PhantomData<(T, &'a ())>,
+    pub(crate) _data: std::marker::PhantomData<T>,
 }
 
-impl<'info, 'a, T: ZeroCopyType> ZC<'info, 'a, T> {
+impl<'info, T: CopyType<'info>> Zc<'info, T> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Creates a new ZC from a slice of bytes.
@@ -56,11 +67,11 @@ impl<'info, 'a, T: ZeroCopyType> ZC<'info, 'a, T> {
     pub fn byte_size(&self) -> FankorResult<usize> {
         let bytes = (*self.info.data).borrow();
         let bytes = &bytes[self.offset..];
-        T::byte_size(bytes)
+        T::ZeroCopyType::read_byte_size_from_bytes(bytes)
     }
 }
 
-impl<'info, 'a, T: ZeroCopyType + BorshDeserialize> ZC<'info, 'a, T> {
+impl<'info, T: CopyType<'info> + BorshDeserialize> Zc<'info, T> {
     // METHODS ----------------------------------------------------------------
 
     /// Gets the actual value of the type.
@@ -75,78 +86,7 @@ impl<'info, 'a, T: ZeroCopyType + BorshDeserialize> ZC<'info, 'a, T> {
     }
 }
 
-impl<'info, 'a, T: ZeroCopyType> Clone for ZC<'info, 'a, T> {
-    fn clone(&self) -> Self {
-        ZC {
-            info: self.info,
-            offset: self.offset,
-            _data: std::marker::PhantomData,
-        }
-    }
-}
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-/// A mutable wrapper around a `T` that implements `ZeroCopyType`.
-pub struct ZCMut<'info, 'a, T: ZeroCopyType> {
-    pub(crate) info: &'info AccountInfo<'info>,
-    pub(crate) offset: usize,
-    pub(crate) _data: std::marker::PhantomData<(T, &'a mut ())>,
-}
-
-impl<'info, 'a, T: ZeroCopyType> ZCMut<'info, 'a, T> {
-    // CONSTRUCTORS -----------------------------------------------------------
-
-    /// Creates a new ZC from a slice of bytes.
-    ///
-    /// # Safety
-    /// This method is unsafe because it does not check the offset.
-    pub unsafe fn new(info: &'info AccountInfo<'info>, offset: usize) -> Self {
-        Self {
-            info,
-            offset,
-            _data: std::marker::PhantomData,
-        }
-    }
-
-    // GETTERS ----------------------------------------------------------------
-
-    /// Returns the size of the type in bytes.
-    /// Note: validates the type without deserializing it.
-    pub fn byte_size(&self) -> FankorResult<usize> {
-        let bytes = (*self.info.data).borrow();
-        let bytes = &bytes[self.offset..];
-        T::byte_size(bytes)
-    }
-
-    /// Returns the reference to the data as a readonly reference.
-    pub fn to_ref(&self) -> ZC<'info, 'a, T> {
-        ZC {
-            info: self.info,
-            offset: self.offset,
-            _data: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<'info, 'a, T: ZeroCopyType + BorshDeserialize> ZCMut<'info, 'a, T> {
-    // METHODS ----------------------------------------------------------------
-
-    /// Gets the actual value of the type.
-    ///
-    /// # Safety
-    ///
-    /// This method can fail if `bytes` cannot be deserialized into the type.
-    pub fn try_get_value(&self) -> FankorResult<T> {
-        let bytes = (*self.info.data).borrow();
-        let mut bytes = &bytes[self.offset..];
-        Ok(T::deserialize(&mut bytes)?)
-    }
-}
-
-impl<'info, 'a, T: ZeroCopyType + BorshSerialize> ZCMut<'info, 'a, T> {
+impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
     // METHODS ----------------------------------------------------------------
 
     /// Writes a value in the buffer occupying at most the same space as the
@@ -155,14 +95,17 @@ impl<'info, 'a, T: ZeroCopyType + BorshSerialize> ZCMut<'info, 'a, T> {
     /// # Safety
     ///
     /// This method can fail if `value` does not fit in the buffer.
-    pub fn try_write_value(&mut self, value: &T) -> FankorResult<()> {
+    ///
+    /// MAKE SURE THAT THIS IS THE ONLY REFERENCE TO THE SAME ACCOUNT, OTHERWISE
+    /// YOU WILL OVERWRITE DATA.
+    pub unsafe fn try_write_value(&self, value: &T) -> FankorResult<()> {
         let bytes = (*self.info.data).borrow();
-        let previous_size = T::byte_size(&bytes)?;
+        let previous_size = T::ZeroCopyType::read_byte_size_from_bytes(&bytes)?;
         let new_size = value.byte_size_from_instance();
 
         drop(bytes);
 
-        unsafe { self.try_write_value_with_sizes(value, previous_size, new_size) }
+        self.try_write_value_with_sizes(value, previous_size, new_size)
     }
 
     /// Writes a value in the buffer occupying at most the same space as the
@@ -172,8 +115,11 @@ impl<'info, 'a, T: ZeroCopyType + BorshSerialize> ZCMut<'info, 'a, T> {
     ///
     /// This method can fail if `value` does not fit in the buffer or if any
     /// of the sizes are incorrect.
+    ///
+    /// MAKE SURE THAT THIS IS THE ONLY REFERENCE TO THE SAME ACCOUNT, OTHERWISE
+    /// YOU WILL OVERWRITE DATA.
     pub unsafe fn try_write_value_with_sizes(
-        &mut self,
+        &self,
         value: &T,
         previous_size: usize,
         new_size: usize,
@@ -185,7 +131,7 @@ impl<'info, 'a, T: ZeroCopyType + BorshSerialize> ZCMut<'info, 'a, T> {
                 // Serialize
                 let bytes = &mut original_bytes[self.offset..];
                 let mut cursor = Cursor::new(bytes);
-                T::serialize(value, &mut cursor)?;
+                value.serialize(&mut cursor)?;
 
                 // Shift bytes
                 let diff = previous_size - new_size;
@@ -199,7 +145,7 @@ impl<'info, 'a, T: ZeroCopyType + BorshSerialize> ZCMut<'info, 'a, T> {
                 // Serialize
                 let bytes = &mut original_bytes[self.offset..];
                 let mut cursor = Cursor::new(bytes);
-                T::serialize(value, &mut cursor)?;
+                value.serialize(&mut cursor)?;
             }
             Ordering::Greater => {
                 // Reallocate the buffer
@@ -212,10 +158,20 @@ impl<'info, 'a, T: ZeroCopyType + BorshSerialize> ZCMut<'info, 'a, T> {
                 // Serialize
                 let bytes = &mut original_bytes[self.offset..];
                 let mut cursor = Cursor::new(bytes);
-                T::serialize(value, &mut cursor)?;
+                value.serialize(&mut cursor)?;
             }
         }
 
         Ok(())
+    }
+}
+
+impl<'info, T: CopyType<'info>> Clone for Zc<'info, T> {
+    fn clone(&self) -> Self {
+        Zc {
+            info: self.info,
+            offset: self.offset,
+            _data: std::marker::PhantomData,
+        }
     }
 }

@@ -1,5 +1,5 @@
 macro_rules! impl_account {
-    ($name: ident, $ty: ty, $owner: expr, $unsafe_deser_method: ident, $safe_deser_method: ident, [ZC: $size: expr], [$($derived: tt),*] $(,)?) => {
+    ($name: ident, $ty: ty, $owner: expr, $unsafe_deser_method: ident, $safe_deser_method: ident, [$($derived: tt),*] $(,)?) => {
         #[derive(Debug,  Clone, PartialEq)]
         #[derive($($derived),*)]
         pub struct $name($ty);
@@ -49,80 +49,7 @@ macro_rules! impl_account {
                 &self.0
             }
         }
-
-        impl ZeroCopyType for $name {
-            fn byte_size_from_instance(&self) -> usize {
-                $size
-            }
-
-            fn byte_size(bytes: &[u8]) -> FankorResult<usize> {
-                let size = $size;
-
-                if bytes.len() < size {
-                    return Err(FankorErrorCode::ZeroCopyCannotDeserialize {
-                        type_name: type_name::<Self>(),
-                    }
-                        .into());
-                }
-
-                Ok(size)
-            }
-        }
-    };
-}
-
-macro_rules! impl_zero_copy_account {
-    ($name: path, $($ty_name: ident: $ty: ty),* $(,)?) => {
-        impl<'info, 'a> ZC<'info, 'a, $name> {
-            impl_zero_copy_account!(method [$($ty_name: $ty),*]);
-        }
-    };
-
-    (method [$first_ty_name: ident: $first_ty: ty, $($ty_name: ident: $ty: ty),*] $($reversed_ty_name: ident: $reversed_ty: ty),* $(,)?) => {
-        impl_zero_copy_account!(method [$($ty_name: $ty),*] $first_ty_name: $first_ty, $($reversed_ty_name: $reversed_ty),*);
-    };
-
-    (method [$first_ty_name: ident: $first_ty: ty] $($reversed_ty_name: ident: $reversed_ty: ty),* $(,)?) => {
-        impl_zero_copy_account!(method [] $first_ty_name: $first_ty, $($reversed_ty_name: $reversed_ty),*);
-    };
-
-    (method [] $last_ty_name: ident: $last_ty: ty, $($ty_name: ident: $ty: ty),+) => {
-        pub fn $last_ty_name(&self) -> FankorResult<ZC<'info, 'a, $last_ty>> {
-            let bytes = (*self.info.data).borrow();
-            let bytes = &bytes[self.offset..];
-            let mut size = 0;
-
-            impl_zero_copy_account!(aux size, bytes, [$($ty),*]);
-
-            Ok(ZC {
-                info: self.info,
-                offset: self.offset + size,
-                _data: PhantomData,
-            })
-        }
-
-        impl_zero_copy_account!(method [] $($ty_name: $ty),*);
-    };
-
-    (method [] $last_ty_name: ident: $last_ty: ty) => {
-        pub fn $last_ty_name(&self) -> FankorResult<ZC<'info, 'a, $last_ty>> {
-            Ok(ZC {
-                info: self.info,
-                offset: self.offset,
-                _data: PhantomData,
-            })
-        }
-    };
-
-    (aux $size: ident, $bytes: ident, [$first_ty: ty, $($ty: ty),*] $($reversed_ty: ty),* $(,)?) => {
-        impl_zero_copy_account!(aux $size, $bytes, [$($ty),*] $first_ty, $($reversed_ty),*);
-    };
-
-    (aux $size: ident, $bytes: ident, [$first_ty: ty] $($reversed_ty: ty),* $(,)?) => {
-        $size += <$first_ty>::byte_size(&$bytes[$size..])?;
-        $($size += <$reversed_ty>::byte_size(&$bytes[$size..])?;)*
     };
 }
 
 pub(crate) use impl_account;
-pub(crate) use impl_zero_copy_account;

@@ -1,24 +1,30 @@
 use crate::errors::FankorResult;
-use crate::models::zc_types::vectors::{Iter, IterMut};
-use crate::models::{ZCMut, ZeroCopyType, ZC};
+use crate::models::zc_types::vec::Iter;
+use crate::models::{CopyType, Zc, ZeroCopyType};
 use crate::prelude::{FnkSet, FnkUInt};
 use borsh::BorshDeserialize;
+use solana_program::account_info::AccountInfo;
+use std::marker::PhantomData;
 
-impl<T: ZeroCopyType> ZeroCopyType for FnkSet<T> {
-    fn byte_size_from_instance(&self) -> usize {
-        let mut size = 0;
+pub struct ZcFnkSet<'info, T: CopyType<'info>> {
+    info: &'info AccountInfo<'info>,
+    offset: usize,
+    _data: PhantomData<T>,
+}
 
-        let len = FnkUInt::from(self.len() as u64);
-        size += len.byte_size_from_instance();
-
-        for v in &self.0 {
-            size += v.byte_size_from_instance();
-        }
-
-        size
+impl<'info, T: CopyType<'info>> ZeroCopyType<'info> for ZcFnkSet<'info, T> {
+    fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
+        Ok((
+            ZcFnkSet {
+                info,
+                offset,
+                _data: PhantomData,
+            },
+            None,
+        ))
     }
 
-    fn byte_size(mut bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size_from_bytes(mut bytes: &[u8]) -> FankorResult<usize> {
         let mut size = 0;
 
         let bytes2 = &mut bytes;
@@ -26,24 +32,40 @@ impl<T: ZeroCopyType> ZeroCopyType for FnkSet<T> {
         size += len.0 as usize;
 
         for _ in 0..len.0 {
-            bytes = &bytes[size..];
-            size += T::byte_size(bytes)?;
+            size += T::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
         }
 
         Ok(size)
     }
 }
 
-impl<'info, 'a, T: ZeroCopyType> ZC<'info, 'a, FnkSet<T>> {
+impl<'info, T: CopyType<'info> + Ord> CopyType<'info> for FnkSet<T> {
+    type ZeroCopyType = ZcFnkSet<'info, T>;
+
+    fn byte_size_from_instance(&self) -> usize {
+        let mut size = 0;
+
+        let len = FnkUInt::from(self.len() as u64);
+        size += len.byte_size_from_instance();
+
+        for i in &self.0 {
+            size += i.byte_size_from_instance();
+        }
+
+        size
+    }
+}
+
+impl<'info, T: CopyType<'info>> ZcFnkSet<'info, T> {
     // GETTERS ----------------------------------------------------------------
 
     /// The length of the vector.
     pub fn len(&self) -> FankorResult<usize> {
         let bytes = (*self.info.data).borrow();
         let mut bytes = &bytes[self.offset..];
-        let len = FnkUInt::deserialize(&mut bytes)?;
+        let len = u32::deserialize(&mut bytes)?;
 
-        Ok(len.0 as usize)
+        Ok(len as usize)
     }
 
     /// Whether the vector is empty or not
@@ -53,67 +75,28 @@ impl<'info, 'a, T: ZeroCopyType> ZC<'info, 'a, FnkSet<T>> {
 
     // METHODS ----------------------------------------------------------------
 
-    pub fn iter(&self) -> Iter<'info, 'a, T> {
+    pub fn iter(&self) -> Iter<'info, T> {
+        let bytes = (*self.info.data).borrow();
+        let mut bytes = &bytes[self.offset..];
+        let original_len = bytes.len();
+        let len =
+            FnkUInt::deserialize(&mut bytes).expect("Failed to get length of ZcFnkSet in iterator");
+
         Iter {
             info: self.info,
-            offset: self.offset,
-            len: self
-                .len()
-                .expect("Failed to get length of zc-vector in iterator"),
+            offset: self.offset + (original_len - bytes.len()),
+            len: len.0 as usize,
             index: 0,
-            _data: std::marker::PhantomData,
+            _data: PhantomData,
         }
     }
 }
 
-impl<'info, 'a, T: ZeroCopyType> ZCMut<'info, 'a, FnkSet<T>> {
-    // METHODS ----------------------------------------------------------------
-
-    pub fn iter_mut(&mut self) -> IterMut<'info, 'a, T> {
-        IterMut {
-            info: self.info,
-            offset: self.offset,
-            len: self
-                .to_ref()
-                .len()
-                .expect("Failed to get length of zc-vector in iterator"),
-            index: 0,
-            _data: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<'info, 'a, T: ZeroCopyType> IntoIterator for ZC<'info, 'a, FnkSet<T>> {
-    type Item = ZC<'info, 'a, T>;
-    type IntoIter = Iter<'info, 'a, T>;
+impl<'info, T: CopyType<'info>> IntoIterator for ZcFnkSet<'info, T> {
+    type Item = Zc<'info, T>;
+    type IntoIter = Iter<'info, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        Iter {
-            info: self.info,
-            offset: self.offset,
-            len: self
-                .len()
-                .expect("Failed to get length of zc-vector in iterator"),
-            index: 0,
-            _data: std::marker::PhantomData,
-        }
-    }
-}
-
-impl<'info, 'a, T: ZeroCopyType> IntoIterator for ZCMut<'info, 'a, FnkSet<T>> {
-    type Item = ZCMut<'info, 'a, T>;
-    type IntoIter = IterMut<'info, 'a, T>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        IterMut {
-            info: self.info,
-            offset: self.offset,
-            len: self
-                .to_ref()
-                .len()
-                .expect("Failed to get length of zc-vector in iterator"),
-            index: 0,
-            _data: std::marker::PhantomData,
-        }
+        self.iter()
     }
 }

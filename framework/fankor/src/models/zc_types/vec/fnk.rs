@@ -1,23 +1,21 @@
 use crate::errors::FankorResult;
 use crate::models::zc_types::vec::Iter;
 use crate::models::{CopyType, Zc, ZeroCopyType};
-use crate::prelude::{FnkMap, FnkUInt};
+use crate::prelude::{FnkUInt, FnkVec};
 use borsh::BorshDeserialize;
 use solana_program::account_info::AccountInfo;
 use std::marker::PhantomData;
 
-pub struct ZcFnkMap<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> {
+pub struct ZcFnkVec<'info, T: CopyType<'info>> {
     info: &'info AccountInfo<'info>,
     offset: usize,
-    _data: PhantomData<(K, V)>,
+    _data: PhantomData<T>,
 }
 
-impl<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> ZeroCopyType<'info>
-    for ZcFnkMap<'info, K, V>
-{
+impl<'info, T: CopyType<'info>> ZeroCopyType<'info> for ZcFnkVec<'info, T> {
     fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
         Ok((
-            ZcFnkMap {
+            ZcFnkVec {
                 info,
                 offset,
                 _data: PhantomData,
@@ -34,16 +32,15 @@ impl<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> ZeroCopyType<'info>
         size += len.0 as usize;
 
         for _ in 0..len.0 {
-            size += K::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
-            size += V::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+            size += T::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
         }
 
         Ok(size)
     }
 }
 
-impl<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> CopyType<'info> for FnkMap<K, V> {
-    type ZeroCopyType = ZcFnkMap<'info, K, V>;
+impl<'info, T: CopyType<'info>> CopyType<'info> for FnkVec<T> {
+    type ZeroCopyType = ZcFnkVec<'info, T>;
 
     fn byte_size_from_instance(&self) -> usize {
         let mut size = 0;
@@ -51,16 +48,15 @@ impl<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> CopyType<'info> for Fn
         let len = FnkUInt::from(self.len() as u64);
         size += len.byte_size_from_instance();
 
-        for (k, v) in &self.0 {
-            size += k.byte_size_from_instance();
-            size += v.byte_size_from_instance();
+        for i in &self.0 {
+            size += i.byte_size_from_instance();
         }
 
         size
     }
 }
 
-impl<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> ZcFnkMap<'info, K, V> {
+impl<'info, T: CopyType<'info>> ZcFnkVec<'info, T> {
     // GETTERS ----------------------------------------------------------------
 
     /// The length of the vector.
@@ -79,12 +75,41 @@ impl<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> ZcFnkMap<'info, K, V> 
 
     // METHODS ----------------------------------------------------------------
 
-    pub fn iter(&self) -> Iter<'info, (K, V)> {
+    /// Gets the element at the specified position.
+    pub fn get_zc_index(&self, index: usize) -> FankorResult<Option<Zc<'info, T>>> {
+        let bytes = (*self.info.data).borrow();
+        let mut bytes = &bytes[self.offset..];
+        let initial_size = bytes.len();
+
+        let len = FnkUInt::deserialize(&mut bytes)?;
+
+        let index = index as u64;
+        if index as u64 >= len.0 {
+            return Ok(None);
+        }
+
+        for i in 0..len.0 {
+            if i == index {
+                return Ok(Some(Zc {
+                    info: self.info,
+                    offset: self.offset + initial_size - bytes.len(),
+                    _data: PhantomData,
+                }));
+            }
+
+            let size = T::ZeroCopyType::read_byte_size_from_bytes(bytes)?;
+            bytes = &bytes[size..];
+        }
+
+        Ok(None)
+    }
+
+    pub fn iter(&self) -> Iter<'info, T> {
         let bytes = (*self.info.data).borrow();
         let mut bytes = &bytes[self.offset..];
         let original_len = bytes.len();
         let len =
-            FnkUInt::deserialize(&mut bytes).expect("Failed to get length of ZcFnkMap in iterator");
+            FnkUInt::deserialize(&mut bytes).expect("Failed to get length of ZcFnkVec in iterator");
 
         Iter {
             info: self.info,
@@ -96,9 +121,9 @@ impl<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> ZcFnkMap<'info, K, V> 
     }
 }
 
-impl<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> IntoIterator for ZcFnkMap<'info, K, V> {
-    type Item = Zc<'info, (K, V)>;
-    type IntoIter = Iter<'info, (K, V)>;
+impl<'info, T: CopyType<'info>> IntoIterator for ZcFnkVec<'info, T> {
+    type Item = Zc<'info, T>;
+    type IntoIter = Iter<'info, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

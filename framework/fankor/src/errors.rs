@@ -282,12 +282,20 @@ pub enum FankorErrorCode {
     #[code(2500)]
     ZeroCopyCannotDeserialize { type_name: &'static str },
 
+    /// Not enough length to deserialize the zero copy type
+    #[msg("Not enough length to deserialize the zero copy type: '{}'", type_name)]
+    ZeroCopyNotEnoughLength { type_name: &'static str },
+
     /// Invalid enum discriminator while deserializing the zero copy type
     #[msg(
         "Invalid enum discriminator while deserializing the zero copy type: '{}'",
         type_name
     )]
     ZeroCopyInvalidEnumDiscriminator { type_name: &'static str },
+
+    /// Possible deadlock trying to access a zero copy type
+    #[msg("Possible deadlock trying to access a zero copy type: '{}'", type_name)]
+    ZeroCopyPossibleDeadlock { type_name: &'static str },
 }
 
 // ----------------------------------------------------------------------------

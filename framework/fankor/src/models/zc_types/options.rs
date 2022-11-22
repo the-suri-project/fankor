@@ -1,21 +1,43 @@
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{ZCMut, ZeroCopyType, ZC};
+use crate::models::{CopyType, ZeroCopyType};
+use solana_program::account_info::AccountInfo;
 use solana_program::program_option::COption;
 use std::any::type_name;
-use std::marker::PhantomData;
 use std::mem::size_of;
 
-impl<T: ZeroCopyType> ZeroCopyType for Option<T> {
-    fn byte_size_from_instance(&self) -> usize {
-        match self {
-            None => 1,
-            Some(v) => 1 + v.byte_size_from_instance(),
-        }
+impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for Option<T> {
+    fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
+        let flag = {
+            let bytes =
+                info.try_borrow_data()
+                    .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
+                        type_name: type_name::<Self>(),
+                    })?;
+            let bytes = &bytes[offset..];
+
+            if bytes.is_empty() {
+                return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
+                    type_name: type_name::<Self>(),
+                }
+                .into());
+            }
+
+            bytes[0] != 0
+        };
+
+        let result = if flag {
+            let (result, size) = T::new(info, offset + 1)?;
+            (Some(result), size.map(|size| size + 1))
+        } else {
+            (None, Some(1))
+        };
+
+        Ok(result)
     }
 
-    fn byte_size(mut bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
         if bytes.is_empty() {
-            return Err(FankorErrorCode::ZeroCopyCannotDeserialize {
+            return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: type_name::<Self>(),
             }
             .into());
@@ -25,109 +47,65 @@ impl<T: ZeroCopyType> ZeroCopyType for Option<T> {
         let flag = bytes[0];
 
         if flag != 0 {
-            bytes = &bytes[1..];
-            size += T::byte_size(bytes)?;
+            size += T::read_byte_size_from_bytes(&bytes[1..])?;
         }
 
         Ok(size)
     }
 }
 
-impl<'info, 'a, T: ZeroCopyType> ZC<'info, 'a, Option<T>> {
-    // GETTERS ----------------------------------------------------------------
+impl<'info, T: CopyType<'info>> CopyType<'info> for Option<T> {
+    type ZeroCopyType = Option<T::ZeroCopyType>;
 
-    pub fn is_some(&self) -> FankorResult<bool> {
-        let bytes = self.info.data.borrow();
-        let bytes = &bytes[self.offset..];
-
-        if bytes.is_empty() {
-            return Err(FankorErrorCode::ZeroCopyCannotDeserialize {
-                type_name: type_name::<Self>(),
-            }
-            .into());
-        }
-
-        let flag = bytes[0];
-        Ok(flag != 0)
-    }
-
-    pub fn is_none(&self) -> FankorResult<bool> {
-        Ok(!self.is_some()?)
-    }
-
-    // METHODS ----------------------------------------------------------------
-
-    /// Gets the ZC of the inner value as a regular option.
-    pub fn to_option(&self) -> FankorResult<Option<ZC<'info, 'a, T>>> {
-        let bytes = self.info.data.borrow();
-        let bytes = &bytes[self.offset..];
-
-        if bytes.is_empty() {
-            return Err(FankorErrorCode::ZeroCopyCannotDeserialize {
-                type_name: type_name::<Self>(),
-            }
-            .into());
-        }
-
-        let flag = bytes[0];
-
-        if flag == 0 {
-            Ok(None)
-        } else {
-            Ok(Some(ZC {
-                info: self.info,
-                offset: self.offset + 1,
-                _data: PhantomData,
-            }))
-        }
-    }
-}
-
-impl<'info, 'a, T: ZeroCopyType> ZCMut<'info, 'a, Option<T>> {
-    // METHODS ----------------------------------------------------------------
-
-    /// Gets the ZCMut of the inner value as a regular option.
-    pub fn to_option_mut(&mut self) -> FankorResult<Option<ZCMut<'info, 'a, T>>> {
-        let bytes = self.info.data.borrow();
-        let bytes = &bytes[self.offset..];
-
-        if bytes.is_empty() {
-            return Err(FankorErrorCode::ZeroCopyCannotDeserialize {
-                type_name: type_name::<Self>(),
-            }
-            .into());
-        }
-
-        let flag = bytes[0];
-
-        if flag == 0 {
-            Ok(None)
-        } else {
-            Ok(Some(ZCMut {
-                info: self.info,
-                offset: self.offset + 1,
-                _data: PhantomData,
-            }))
-        }
-    }
-}
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-impl<T: ZeroCopyType> ZeroCopyType for COption<T> {
     fn byte_size_from_instance(&self) -> usize {
         match self {
-            COption::None => size_of::<u32>(),
-            COption::Some(v) => size_of::<u32>() + v.byte_size_from_instance(),
+            None => 1,
+            Some(v) => 1 + v.byte_size_from_instance(),
         }
     }
+}
 
-    fn byte_size(bytes: &[u8]) -> FankorResult<usize> {
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for COption<T> {
+    fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
+        let size = size_of::<u32>();
+        let flag = {
+            let bytes =
+                info.try_borrow_data()
+                    .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
+                        type_name: type_name::<Self>(),
+                    })?;
+            let bytes = &bytes[offset..];
+
+            if bytes.len() < size {
+                return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
+                    type_name: type_name::<Self>(),
+                }
+                .into());
+            }
+
+            let flag = u32::from_le_bytes(bytes[..size].try_into().unwrap());
+            flag != 0
+        };
+
+        let result = if flag {
+            let (result, s) = T::new(info, offset + size)?;
+            (COption::Some(result), s.map(|s| s + size))
+        } else {
+            (COption::None, Some(size))
+        };
+
+        Ok(result)
+    }
+
+    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
         let mut size = size_of::<u32>();
+
         if bytes.len() < size {
-            return Err(FankorErrorCode::ZeroCopyCannotDeserialize {
+            return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: type_name::<Self>(),
             }
             .into());
@@ -136,91 +114,20 @@ impl<T: ZeroCopyType> ZeroCopyType for COption<T> {
         let flag = u32::from_le_bytes(bytes[..size].try_into().unwrap());
 
         if flag != 0 {
-            size += T::byte_size(&bytes[size..])?;
+            size += T::read_byte_size_from_bytes(&bytes[size..])?;
         }
 
         Ok(size)
     }
 }
 
-impl<'info, 'a, T: ZeroCopyType> ZC<'info, 'a, COption<T>> {
-    // GETTERS ----------------------------------------------------------------
+impl<'info, T: CopyType<'info>> CopyType<'info> for COption<T> {
+    type ZeroCopyType = Option<T::ZeroCopyType>;
 
-    pub fn is_some(&self) -> FankorResult<bool> {
-        let bytes = self.info.data.borrow();
-        let bytes = &bytes[self.offset..];
-
-        let size = size_of::<u32>();
-        if bytes.len() < size {
-            return Err(FankorErrorCode::ZeroCopyCannotDeserialize {
-                type_name: type_name::<Self>(),
-            }
-            .into());
-        }
-
-        let flag = u32::from_le_bytes(bytes[..size].try_into().unwrap());
-        Ok(flag != 0)
-    }
-
-    pub fn is_none(&self) -> FankorResult<bool> {
-        Ok(!self.is_some()?)
-    }
-
-    // METHODS ----------------------------------------------------------------
-
-    /// Gets the ZC of the inner value as a regular option.
-    pub fn to_option(&self) -> FankorResult<COption<ZC<'info, 'a, T>>> {
-        let bytes = self.info.data.borrow();
-        let bytes = &bytes[self.offset..];
-
-        let size = size_of::<u32>();
-        if bytes.len() < size {
-            return Err(FankorErrorCode::ZeroCopyCannotDeserialize {
-                type_name: type_name::<Self>(),
-            }
-            .into());
-        }
-
-        let flag = u32::from_le_bytes(bytes[..size].try_into().unwrap());
-
-        if flag == 0 {
-            Ok(COption::None)
-        } else {
-            Ok(COption::Some(ZC {
-                info: self.info,
-                offset: self.offset + size,
-                _data: PhantomData,
-            }))
-        }
-    }
-}
-
-impl<'info, 'a, T: ZeroCopyType> ZCMut<'info, 'a, COption<T>> {
-    // METHODS ----------------------------------------------------------------
-
-    /// Gets the ZCMut of the inner value as a regular option.
-    pub fn to_option_mut(&mut self) -> FankorResult<COption<ZCMut<'info, 'a, T>>> {
-        let bytes = self.info.data.borrow();
-        let bytes = &bytes[self.offset..];
-
-        let size = size_of::<u32>();
-        if bytes.len() < size {
-            return Err(FankorErrorCode::ZeroCopyCannotDeserialize {
-                type_name: type_name::<Self>(),
-            }
-            .into());
-        }
-
-        let flag = u32::from_le_bytes(bytes[..size].try_into().unwrap());
-
-        if flag == 0 {
-            Ok(COption::None)
-        } else {
-            Ok(COption::Some(ZCMut {
-                info: self.info,
-                offset: self.offset + size,
-                _data: PhantomData,
-            }))
+    fn byte_size_from_instance(&self) -> usize {
+        match self {
+            COption::None => size_of::<u32>(),
+            COption::Some(v) => size_of::<u32>() + v.byte_size_from_instance(),
         }
     }
 }
