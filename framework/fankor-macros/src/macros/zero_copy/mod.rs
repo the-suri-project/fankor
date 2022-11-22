@@ -27,6 +27,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             });
 
             let zc_name = format_ident!("Zc{}", name);
+            let zc_name_refs = format_ident!("Zc{}Refs", name);
             let mut zc_generics = generics.clone();
             zc_generics.params.insert(0, syn::parse_quote! { 'info });
 
@@ -80,6 +81,44 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 res
             });
 
+            let zc_name_refs_fields = item.fields.iter().map(|field| {
+                let field_name = field.ident.as_ref().unwrap();
+                let field_ty = &field.ty;
+
+                quote! {
+                    pub #field_name: Zc<'info, #field_ty>,
+                }
+            });
+
+            let to_refs_method = item.fields.iter().enumerate().map(|(i, field)| {
+                let field_name = field.ident.as_ref().unwrap();
+                let field_ty = &field.ty;
+
+                if i + 1 == item.fields.len() {
+                    quote! {
+                        let #field_name = unsafe { Zc::new(self.info, self.offset + size) };
+                    }
+                } else {
+                    quote! {
+                        let #field_name = {
+                            let zc = unsafe { Zc::new(self.info, self.offset + size) };
+
+                            size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+
+                            zc
+                        };
+                    }
+                }
+            });
+
+            let to_refs_method_names = item.fields.iter().map(|field| {
+                let field_name = field.ident.as_ref().unwrap();
+
+                quote! {
+                    #field_name
+                }
+            });
+
             quote! {
                 #[automatically_derived]
                 impl #zc_generic_params CopyType<'info> for #name #generics {
@@ -96,6 +135,10 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 pub struct #zc_name<'info> {
                     info: &'info AccountInfo<'info>,
                     offset: usize,
+                }
+
+                pub struct #zc_name_refs #zc_generic_params {
+                    #(#zc_name_refs_fields)*
                 }
 
                 #[automatically_derived]
@@ -121,6 +164,21 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 impl #zc_generic_params #zc_name #zc_generics {
                     #(#zc_field_methods)*
                     #(#zc_unsafe_field_methods)*
+
+                    pub fn to_refs(&self) -> FankorResult<#zc_name_refs #zc_generics> {
+                        let bytes = self.info.try_borrow_data()
+                            .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
+                                type_name: stringify!(Self),
+                            })?;
+                        let bytes = &bytes[self.offset..];
+                        let mut size = 0;
+
+                        #(#to_refs_method)*
+
+                        Ok(#zc_name_refs {
+                            #(#to_refs_method_names),*
+                        })
+                    }
                 }
             }
         }
