@@ -10,7 +10,7 @@ impl<'info> ZeroCopyType<'info> for FnkInt {
         let bytes =
             info.try_borrow_data()
                 .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
-                    type_name: stringify!($ty),
+                    type_name: std::any::type_name::<Self>(),
                 })?;
         let mut bytes = &bytes[offset..];
         let initial_size = bytes.len();
@@ -79,7 +79,7 @@ impl<'info> ZeroCopyType<'info> for FnkUInt {
         let bytes =
             info.try_borrow_data()
                 .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
-                    type_name: stringify!($ty),
+                    type_name: std::any::type_name::<Self>(),
                 })?;
         let mut bytes = &bytes[offset..];
         let initial_size = bytes.len();

@@ -16,7 +16,7 @@ macro_rules! impl_type {
             ) -> FankorResult<(Self, Option<usize>)> {
                 let bytes = info.try_borrow_data().map_err(|_| {
                     FankorErrorCode::ZeroCopyPossibleDeadlock {
-                        type_name: stringify!($ty),
+                        type_name: std::any::type_name::<$ty>(),
                     }
                 })?;
                 let bytes = &bytes[offset..];
@@ -24,7 +24,7 @@ macro_rules! impl_type {
 
                 if bytes.len() < size {
                     return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
-                        type_name: stringify!($ty),
+                        type_name: std::any::type_name::<$ty>(),
                     }
                     .into());
                 }
@@ -39,7 +39,7 @@ macro_rules! impl_type {
 
                 if bytes.len() < size {
                     return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
-                        type_name: stringify!($ty),
+                        type_name: std::any::type_name::<$ty>(),
                     }
                     .into());
                 }

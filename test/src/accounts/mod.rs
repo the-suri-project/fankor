@@ -11,4 +11,5 @@ pub enum ProgramAccount {
     StructAccountData,
     ZeroCopyStructAccountData,
     EnumAccountData,
+    ZeroCopyEnumAccountData,
 }

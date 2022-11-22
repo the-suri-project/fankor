@@ -1,6 +1,6 @@
 use quote::{format_ident, quote};
 use syn::spanned::Spanned;
-use syn::{Error, Field, Item};
+use syn::{Error, Field, Fields, Item};
 
 use fankor_syn::Result;
 
@@ -50,7 +50,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     pub fn #field_name(&self) -> FankorResult<Zc<'info, #field_ty>> {
                         let bytes = self.info.try_borrow_data()
                             .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
-                                type_name: stringify!(Self),
+                                type_name: std::any::type_name::<Self>(),
                             })?;
                         let bytes = &bytes[self.offset..];
                         let mut size = 0;
@@ -168,7 +168,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     pub fn to_refs(&self) -> FankorResult<#zc_name_refs #zc_generics> {
                         let bytes = self.info.try_borrow_data()
                             .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
-                                type_name: stringify!(Self),
+                                type_name: std::any::type_name::<Self>(),
                             })?;
                         let bytes = &bytes[self.offset..];
                         let mut size = 0;
@@ -182,7 +182,293 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 }
             }
         }
-        Item::Enum(_item) => todo!(),
+        Item::Enum(item) => {
+            let name = &item.ident;
+            let generics = &item.generics;
+
+            let byte_size_from_instance_method = item.variants.iter().map(|variant| {
+                let variant_name = &variant.ident;
+
+                match &variant.fields {
+                    Fields::Named(fields) => {
+                        let mut field_names = Vec::with_capacity(fields.named.len());
+                        let fields = fields
+                            .named
+                            .iter()
+                            .map(|field| {
+                                let field_name = field.ident.as_ref().unwrap();
+
+                                field_names.push(quote! {
+                                    #field_name
+                                });
+
+                                quote! {
+                                    size += #field_name.byte_size_from_instance();
+                                }
+                            })
+                            .collect::<Vec<_>>();
+
+                        quote! {
+                            #name::#variant_name { #(#field_names),* } => {
+                                #(#fields)*
+                            }
+                        }
+                    }
+                    Fields::Unnamed(fields) => {
+                        let mut field_names = Vec::with_capacity(fields.unnamed.len());
+                        let fields = fields
+                            .unnamed
+                            .iter()
+                            .enumerate()
+                            .map(|(i, _)| {
+                                let field_name = format_ident!("v{}", i);
+
+                                field_names.push(quote! {
+                                    #field_name
+                                });
+
+                                quote! {
+                                    size += #field_name.byte_size_from_instance();
+                                }
+                            })
+                            .collect::<Vec<_>>();
+
+                        quote! {
+                            #name::#variant_name(#(#field_names),*) => {
+                                #(#fields)*
+                            }
+                        }
+                    }
+                    Fields::Unit => {
+                        quote! {
+                            #name::#variant_name => {}
+                        }
+                    }
+                }
+            });
+
+            let zc_name = format_ident!("Zc{}", name);
+            let mut zc_generics = generics.clone();
+            zc_generics.params.insert(0, syn::parse_quote! { 'info });
+
+            let zc_generic_params = &zc_generics.params;
+            let zc_generic_params = if zc_generic_params.is_empty() {
+                quote! {}
+            } else {
+                quote! { < #zc_generic_params > }
+            };
+
+            let zc_name_variants = item.variants.iter().map(|variant| {
+                let variant_name = &variant.ident;
+
+                match &variant.fields {
+                    Fields::Named(fields) => {
+                        let fields = fields.named.iter().map(|field| {
+                            let field_name = field.ident.as_ref().unwrap();
+                            let field_ty = &field.ty;
+
+                            quote! {
+                                #field_name: Zc<'info, #field_ty>
+                            }
+                        });
+
+                        quote! {
+                            #variant_name { #(#fields),* }
+                        }
+                    }
+                    Fields::Unnamed(fields) => {
+                        let fields = fields.unnamed.iter().map(|field| {
+                            let field_ty = &field.ty;
+
+                            quote! {
+                                Zc<'info, #field_ty>
+                            }
+                        });
+
+                        quote! {
+                            #variant_name(#(#fields),*)
+                        }
+                    }
+                    Fields::Unit => {
+                        quote! {
+                            #variant_name
+                        }
+                    }
+                }
+            });
+
+            let new_method =
+                item.variants
+                    .iter()
+                    .enumerate()
+                    .map(|(i_variant, variant)| {
+                        let variant_name = &variant.ident;
+                        let i_variant = i_variant as u8;
+
+                        match &variant.fields {
+                            Fields::Named(fields) => {
+                                let mut field_names = Vec::with_capacity(fields.named.len());
+                                let fields = fields.named.iter().map(|field| {
+                                    let field_name = field.ident.as_ref().unwrap();
+                                    let field_ty = &field.ty;
+
+                                    field_names.push(quote! {
+                                        #field_name
+                                    });
+
+                                    quote! {
+                                        let #field_name = unsafe { Zc::new(info, offset) };
+                                        size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+                                    }
+                                });
+
+                                quote! {
+                                    #i_variant => {
+                                        #(#fields)*
+
+                                        #zc_name::#variant_name{#(#field_names),*}
+                                    }
+                                }
+                            }
+                            Fields::Unnamed(fields) => {
+                                let mut field_names = Vec::with_capacity(fields.unnamed.len());
+                                let fields = fields.unnamed.iter().enumerate().map(|(i, field)| {
+                                    let field_name = format_ident!("v{}", i);
+                                    let field_ty = &field.ty;
+
+                                    field_names.push(quote! {
+                                        #field_name
+                                    });
+
+                                    quote! {
+                                        let #field_name = unsafe { Zc::new(info, offset) };
+                                        size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+                                    }
+                                });
+
+                                quote! {
+                                    #i_variant => {
+                                        #(#fields)*
+
+                                        #zc_name::#variant_name(#(#field_names),*)
+                                    }
+                                }
+                            }
+                            Fields::Unit => {
+                                quote! {
+                                    #i_variant => #zc_name::#variant_name
+                                }
+                            }
+                        }
+                    });
+
+            let read_byte_size_from_bytes_method =
+                item.variants
+                    .iter()
+                    .enumerate()
+                    .map(|(i_variant, variant)| {
+                        let i_variant = i_variant as u8;
+
+                        match &variant.fields {
+                            Fields::Named(fields) => {
+                                let fields = fields.named.iter().map(|field| {
+                                    let field_ty = &field.ty;
+
+                                    quote! {
+                                        size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+                                    }
+                                });
+
+                                quote! {
+                                    #i_variant => {
+                                        #(#fields)*
+                                    }
+                                }
+                            }
+                            Fields::Unnamed(fields) => {
+                                let fields = fields.unnamed.iter().map(|field| {
+                                    let field_ty = &field.ty;
+
+                                    quote! {
+                                        size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+                                    }
+                                });
+
+                                quote! {
+                                    #i_variant => {
+                                        #(#fields)*
+                                    }
+                                }
+                            }
+                            Fields::Unit => {
+                                quote! {
+                                    #i_variant => {}
+                                }
+                            }
+                        }
+                    });
+
+            quote! {
+                #[automatically_derived]
+                impl #zc_generic_params CopyType<'info> for #name #generics {
+                    type ZeroCopyType = #zc_name<'info>;
+
+                    fn byte_size_from_instance(&self) -> usize {
+                        let mut size = 1;
+
+                        match self {
+                            #(#byte_size_from_instance_method),*
+                        }
+
+                        size
+                    }
+                }
+
+                pub enum #zc_name #zc_generic_params {
+                    #(#zc_name_variants),*
+                }
+
+                #[automatically_derived]
+                impl #zc_generic_params ZeroCopyType<'info> for #zc_name #zc_generics {
+                    fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
+                        let bytes = info
+                            .try_borrow_data()
+                            .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock { type_name: std::any::type_name::<Self>() })?;
+                        let bytes = &bytes[offset..];
+
+                        if bytes.is_empty() {
+                            return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
+                        }
+
+                        let mut size = 1;
+                        let flag = bytes[0];
+
+                        let result = match flag {
+                            #(#new_method),*
+                            _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminator { type_name: std::any::type_name::<Self>() }.into()),
+                        };
+
+                        Ok((result, Some(size)))
+                    }
+
+                    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+                        if bytes.is_empty() {
+                            return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
+                        }
+
+                        let mut size = 1;
+                        let flag = bytes[0];
+
+                        match flag {
+                            #(#read_byte_size_from_bytes_method),*
+                            _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminator { type_name: std::any::type_name::<Self>() }.into()),
+                        }
+
+                        Ok(size)
+                    }
+                }
+            }
+        }
         _ => {
             return Err(Error::new(
                 input.span(),
