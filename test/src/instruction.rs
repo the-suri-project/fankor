@@ -1,4 +1,4 @@
-use crate::accounts::{EnumAccountData, StructAccountData};
+use crate::accounts::{EnumAccountData, StructAccountData, ZeroCopyStructAccountData};
 use fankor::prelude::*;
 
 #[derive(InstructionAccounts)]
@@ -21,6 +21,8 @@ pub struct InstructionStructAccounts<'info> {
     pub optional_account: OptionalAccount<'info, StructAccountData>,
 
     pub unchecked_account: UncheckedAccount<'info>,
+
+    pub zero_copy_account: ZcAccount<'info, ZeroCopyStructAccountData>,
 
     #[account(address = &crate::ID)]
     pub program: Program<'info, System>,

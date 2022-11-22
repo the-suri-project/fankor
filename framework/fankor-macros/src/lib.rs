@@ -52,6 +52,21 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
+/// Implements the trait Account for the given struct.
+#[proc_macro_derive(FankorZeroCopy)]
+pub fn zero_copy(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as Item);
+
+    match macros::zero_copy::processor(input) {
+        Ok(v) => v,
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
 /// This macro marks defines a new account implementing the traits:
 /// - `Accounts`
 /// - `FankorSerialize`

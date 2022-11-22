@@ -62,6 +62,14 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
 
     // GETTERS ----------------------------------------------------------------
 
+    pub fn info(&self) -> &'info AccountInfo<'info> {
+        self.info
+    }
+
+    pub fn offset(&self) -> usize {
+        self.offset
+    }
+
     /// Returns the size of the type in bytes.
     /// Note: validates the type without deserializing it.
     pub fn byte_size(&self) -> FankorResult<usize> {

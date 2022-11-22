@@ -17,20 +17,20 @@ use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
 /// An initialized account deserialized in Zero Copy mode.
-pub struct ZCAccount<'info, T: crate::traits::Account + CopyType<'info>> {
+pub struct ZcAccount<'info, T: crate::traits::Account + CopyType<'info>> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,
     _data: PhantomData<T>,
 }
 
-impl<'info, T: crate::traits::Account + CopyType<'info>> ZCAccount<'info, T> {
+impl<'info, T: crate::traits::Account + CopyType<'info>> ZcAccount<'info, T> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Creates a new account with the given data.
     pub fn new(
         context: &'info FankorContext<'info>,
         info: &'info AccountInfo<'info>,
-    ) -> FankorResult<ZCAccount<'info, T>> {
+    ) -> FankorResult<ZcAccount<'info, T>> {
         if info.owner == &system_program::ID && info.lamports() == 0 {
             return Err(FankorErrorCode::AccountNotInitialized { address: *info.key }.into());
         }
@@ -49,7 +49,7 @@ impl<'info, T: crate::traits::Account + CopyType<'info>> ZCAccount<'info, T> {
             return Err(FankorErrorCode::NewFromClosedAccount { address: *info.key }.into());
         }
 
-        Ok(ZCAccount {
+        Ok(ZcAccount {
             context,
             info,
             _data: PhantomData,
@@ -59,8 +59,8 @@ impl<'info, T: crate::traits::Account + CopyType<'info>> ZCAccount<'info, T> {
     pub(crate) fn new_without_checks(
         context: &'info FankorContext<'info>,
         info: &'info AccountInfo<'info>,
-    ) -> ZCAccount<'info, T> {
-        ZCAccount {
+    ) -> ZcAccount<'info, T> {
+        ZcAccount {
             context,
             info,
             _data: PhantomData,
@@ -345,7 +345,7 @@ impl<'info, T: crate::traits::Account + CopyType<'info>> ZCAccount<'info, T> {
 }
 
 impl<'info, T: crate::traits::Account + CopyType<'info>> InstructionAccount<'info>
-    for ZCAccount<'info, T>
+    for ZcAccount<'info, T>
 {
     type CPI = AccountInfo<'info>;
     type LPI = Pubkey;
@@ -385,21 +385,21 @@ impl<'info, T: crate::traits::Account + CopyType<'info>> InstructionAccount<'inf
             .into());
         }
 
-        let result = ZCAccount::new_without_checks(context, info);
+        let result = ZcAccount::new_without_checks(context, info);
 
         *accounts = &accounts[1..];
         Ok(result)
     }
 }
 
-impl<'info, T: crate::traits::Account + CopyType<'info>> Debug for ZCAccount<'info, T> {
+impl<'info, T: crate::traits::Account + CopyType<'info>> Debug for ZcAccount<'info, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Account").field("info", &self.info).finish()
     }
 }
 
 /// Execute the last actions over the account.
-impl<'info, T: crate::traits::Account + CopyType<'info>> Drop for ZCAccount<'info, T> {
+impl<'info, T: crate::traits::Account + CopyType<'info>> Drop for ZcAccount<'info, T> {
     fn drop(&mut self) {
         if let Err(e) = drop_aux(self) {
             crate::macros::panic_error!(e);
@@ -408,7 +408,7 @@ impl<'info, T: crate::traits::Account + CopyType<'info>> Drop for ZCAccount<'inf
 }
 
 fn drop_aux<'info, T: crate::traits::Account + CopyType<'info>>(
-    account: &mut ZCAccount<'info, T>,
+    account: &mut ZcAccount<'info, T>,
 ) -> FankorResult<()> {
     // Ignore if not owned by program.
     if !account.is_owned_by_program() {
