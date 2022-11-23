@@ -19,7 +19,7 @@ bs58 = "0.4.0"
 lazy_static = { version = "1.4.0", optional = true }
 parking_lot = { version = "0.12.1", optional = true }
 sha2 = "0.10.6"
-solana-program = "1.14.7"
+solana-program = "1.14.8"
 spl-associated-token-account = { version = "1.1.1", optional = true, features = ["no-entrypoint"] }
 spl-token = { version = "3.5.0", optional = true, features = ["no-entrypoint"] }
 mpl-token-metadata = { version = "1.4.3", optional = true, features = ["no-entrypoint"] }

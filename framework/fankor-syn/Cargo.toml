@@ -12,6 +12,6 @@ bs58 = "0.4.0"
 proc-macro2 = "1.0.47"
 quote = "1.0.21"
 serde = { version = "1.0.147", features = ["derive"] }
-solana-program = "1.14.7"
+solana-program = "1.14.8"
 syn = { version = "1.0.103", features = ["full"] }
 toml = "0.5.9"
