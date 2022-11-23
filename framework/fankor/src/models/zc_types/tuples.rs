@@ -28,121 +28,68 @@ impl<'info> CopyType<'info> for () {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-impl<'info, T0: ZeroCopyType<'info>, T1: ZeroCopyType<'info>> ZeroCopyType<'info> for (T0, T1) {
-    fn new(
-        info: &'info AccountInfo<'info>,
-        mut offset: usize,
-    ) -> FankorResult<(Self, Option<usize>)> {
-        let original_offset = offset;
-        let (t0, size) = T0::new(info, offset)?;
+macro_rules! impl_tuple {
+    ($($types: ident),* $(,)?) => {
+        #[allow(non_snake_case)]
+        impl<'info, $($types: ZeroCopyType<'info>),*> ZeroCopyType<'info> for ($($types),*) {
+            fn new(
+                info: &'info AccountInfo<'info>,
+                mut offset: usize,
+            ) -> FankorResult<(Self, Option<usize>)> {
+                let original_offset = offset;
 
-        if let Some(size) = size {
-            offset += size
-        } else {
-            let bytes =
-                info.try_borrow_data()
-                    .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
-                        type_name: type_name::<Self>(),
-                    })?;
-            let bytes = &bytes[offset..];
-            offset += T0::read_byte_size_from_bytes(bytes)?
+                $(
+                    let ($types, size) = $types::new(info, offset)?;
+
+                    if let Some(size) = size {
+                        offset += size
+                    } else {
+                        let bytes =
+                            info.try_borrow_data()
+                                .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
+                                    type_name: type_name::<Self>(),
+                                })?;
+                        let bytes = &bytes[offset..];
+                        offset += $types::read_byte_size_from_bytes(bytes)?
+                    }
+                )*
+
+                Ok((($($types),*), Some(offset - original_offset)))
+            }
+
+            fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+                let mut size = 0;
+
+                $(size += $types::read_byte_size_from_bytes(&bytes[size..])?;)*
+
+                Ok(size)
+            }
         }
 
-        let (t1, size) = T1::new(info, offset)?;
+        #[allow(non_snake_case)]
+        impl<'info, $($types: CopyType<'info>),*> CopyType<'info> for ($($types),*) {
+            type ZeroCopyType = ($($types::ZeroCopyType),*);
 
-        if let Some(size) = size {
-            offset += size
-        } else {
-            let bytes = info.try_borrow_data().unwrap();
-            let bytes = &bytes[offset..];
-            offset += T1::read_byte_size_from_bytes(bytes)?
+            fn byte_size_from_instance(&self) -> usize {
+                let mut size = 0;
+
+                let ($($types),*) = self;
+
+                $(size += $types.byte_size_from_instance();)*
+
+                size
+            }
         }
-
-        Ok(((t0, t1), Some(offset - original_offset)))
-    }
-
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
-        let mut size = T0::read_byte_size_from_bytes(bytes)?;
-        size += T1::read_byte_size_from_bytes(&bytes[size..])?;
-
-        Ok(size)
-    }
+    };
 }
 
-impl<'info, T0: CopyType<'info>, T1: CopyType<'info>> CopyType<'info> for (T0, T1) {
-    type ZeroCopyType = (T0::ZeroCopyType, T1::ZeroCopyType);
-
-    fn byte_size_from_instance(&self) -> usize {
-        self.0.byte_size_from_instance() + self.1.byte_size_from_instance()
-    }
-}
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
-impl<'info, T0: ZeroCopyType<'info>, T1: ZeroCopyType<'info>, T2: ZeroCopyType<'info>>
-    ZeroCopyType<'info> for (T0, T1, T2)
-{
-    fn new(
-        info: &'info AccountInfo<'info>,
-        mut offset: usize,
-    ) -> FankorResult<(Self, Option<usize>)> {
-        let original_offset = offset;
-        let (t0, size) = T0::new(info, offset)?;
-
-        if let Some(size) = size {
-            offset += size
-        } else {
-            let bytes =
-                info.try_borrow_data()
-                    .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
-                        type_name: type_name::<Self>(),
-                    })?;
-            let bytes = &bytes[offset..];
-            offset += T0::read_byte_size_from_bytes(bytes)?
-        }
-
-        let (t1, size) = T1::new(info, offset)?;
-
-        if let Some(size) = size {
-            offset += size
-        } else {
-            let bytes = info.try_borrow_data().unwrap();
-            let bytes = &bytes[offset..];
-            offset += T1::read_byte_size_from_bytes(bytes)?
-        }
-
-        let (t2, size) = T2::new(info, offset)?;
-
-        if let Some(size) = size {
-            offset += size
-        } else {
-            let bytes = info.try_borrow_data().unwrap();
-            let bytes = &bytes[offset..];
-            offset += T2::read_byte_size_from_bytes(bytes)?
-        }
-
-        Ok(((t0, t1, t2), Some(offset - original_offset)))
-    }
-
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
-        let mut size = T0::read_byte_size_from_bytes(bytes)?;
-        size += T1::read_byte_size_from_bytes(&bytes[size..])?;
-        size += T2::read_byte_size_from_bytes(&bytes[size..])?;
-
-        Ok(size)
-    }
-}
-
-impl<'info, T0: CopyType<'info>, T1: CopyType<'info>, T2: CopyType<'info>> CopyType<'info>
-    for (T0, T1, T2)
-{
-    type ZeroCopyType = (T0::ZeroCopyType, T1::ZeroCopyType, T2::ZeroCopyType);
-
-    fn byte_size_from_instance(&self) -> usize {
-        self.0.byte_size_from_instance()
-            + self.1.byte_size_from_instance()
-            + self.2.byte_size_from_instance()
-    }
-}
+impl_tuple!(T0, T1);
+impl_tuple!(T0, T1, T2);
+impl_tuple!(T0, T1, T2, T3);
+impl_tuple!(T0, T1, T2, T3, T4);
+impl_tuple!(T0, T1, T2, T3, T4, T5);
+impl_tuple!(T0, T1, T2, T3, T4, T5, T6);
+impl_tuple!(T0, T1, T2, T3, T4, T5, T6, T7);
+impl_tuple!(T0, T1, T2, T3, T4, T5, T6, T7, T8);
+impl_tuple!(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9);
+impl_tuple!(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10);
