@@ -1,5 +1,4 @@
 use convert_case::{Boundary, Case, Converter};
-use fankor_syn::expressions::unwrap_int_from_literal;
 use proc_macro2::Ident;
 use quote::{format_ident, quote};
 use std::collections::HashSet;
@@ -11,6 +10,7 @@ use syn::{
     ImplItem, ItemImpl, Lit, MetaList, NestedMeta, PathArguments, RangeLimits, ReturnType, Type,
 };
 
+use crate::utils::unwrap_int_from_literal;
 use crate::Result;
 
 pub struct Program {

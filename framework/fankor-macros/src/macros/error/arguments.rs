@@ -6,8 +6,7 @@ use syn::{
     ItemEnum, LitInt, Meta, NestedMeta, RangeLimits,
 };
 
-use fankor_syn::expressions::unwrap_int_from_literal;
-
+use crate::utils::unwrap_int_from_literal;
 use crate::Result;
 
 pub struct ErrorArguments {

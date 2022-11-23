@@ -14,7 +14,6 @@ proc-macro = true
 borsh-derive-internal = "0.9.3"
 bs58 = "0.4.0"
 convert_case = "0.6.0"
-proc-macro2 = "1.0.47"
+proc-macro2 = { version = "1.0.47", features = ["span-locations"] }
 quote = "1.0.21"
 syn = { version = "1.0.103", features = ["full"] }
-fankor-syn = { path = "../fankor-syn" }

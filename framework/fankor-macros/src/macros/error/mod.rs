@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use syn::spanned::Spanned;
 use syn::{AttributeArgs, Error, Fields, Item};
 
-use fankor_syn::Result;
+use crate::Result;
 
 use crate::macros::error::arguments::ErrorArguments;
 use crate::macros::error::variant::ErrorVariant;

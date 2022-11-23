@@ -1,5 +1,5 @@
+use crate::Result;
 use borsh_derive_internal::{enum_de, struct_de};
-use fankor_syn::Result;
 use proc_macro2::Span;
 use quote::quote;
 use syn::spanned::Spanned;

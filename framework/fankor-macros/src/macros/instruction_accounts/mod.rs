@@ -1,7 +1,7 @@
 use syn::spanned::Spanned;
 use syn::{Error, Item};
 
-use fankor_syn::Result;
+use crate::Result;
 
 use crate::macros::instruction_accounts::r#enum::process_enum;
 use crate::macros::instruction_accounts::r#struct::process_struct;

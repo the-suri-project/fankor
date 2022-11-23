@@ -2,7 +2,7 @@ use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{AttributeArgs, Error, Item};
 
-use fankor_syn::Result;
+use crate::Result;
 
 use crate::macros::program::programs::Program;
 use cpi::build_cpi;

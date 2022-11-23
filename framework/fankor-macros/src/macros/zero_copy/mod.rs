@@ -2,7 +2,7 @@ use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{Error, Field, Fields, Item};
 
-use fankor_syn::Result;
+use crate::Result;
 
 pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
     let result = match &input {

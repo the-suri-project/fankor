@@ -1,5 +1,5 @@
 use crate::macros::program::programs::Program;
-use fankor_syn::Result;
+use crate::Result;
 use proc_macro2::TokenStream;
 use quote::quote;
 

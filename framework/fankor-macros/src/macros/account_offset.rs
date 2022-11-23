@@ -4,7 +4,7 @@ use syn::spanned::Spanned;
 use syn::{Error, Fields, Item};
 
 use crate::macros::account_size::get_min_size_of;
-use fankor_syn::Result;
+use crate::Result;
 
 pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
     let case_converter = Converter::new()

@@ -5,7 +5,7 @@ use syn::spanned::Spanned;
 use syn::{AttributeArgs, Error, Item};
 
 use crate::macros::account::arguments::AccountArguments;
-use fankor_syn::Result;
+use crate::Result;
 
 pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenStream> {
     // Process arguments.

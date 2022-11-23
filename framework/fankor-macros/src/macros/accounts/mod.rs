@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use syn::spanned::Spanned;
 use syn::{AttributeArgs, Error, Item};
 
-use fankor_syn::Result;
+use crate::Result;
 
 use crate::macros::accounts::arguments::AccountsArguments;
 use crate::macros::accounts::variant::AccountVariant;

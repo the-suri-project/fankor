@@ -1,11 +1,10 @@
-extern crate core;
-
 use proc_macro::TokenStream;
 use syn::{parse_macro_input, AttributeArgs, Item, LitStr};
 
-use fankor_syn::Result;
-
 mod macros;
+mod utils;
+
+type Result<T> = std::result::Result<T, syn::Error>;
 
 /// This macro setups the entry point of the framework.
 #[proc_macro]

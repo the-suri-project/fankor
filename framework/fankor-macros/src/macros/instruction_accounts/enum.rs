@@ -1,7 +1,7 @@
 use quote::{format_ident, quote};
 use syn::ItemEnum;
 
-use fankor_syn::Result;
+use crate::Result;
 
 use crate::macros::instruction_accounts::field::{check_fields, Field, FieldKind};
 
