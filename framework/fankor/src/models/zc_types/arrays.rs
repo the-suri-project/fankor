@@ -1,6 +1,7 @@
 use crate::errors::FankorResult;
 use crate::models::zc_types::vec::Iter;
 use crate::models::{CopyType, Zc, ZeroCopyType};
+use crate::prelude::types::arrays::FnkArray;
 use solana_program::account_info::AccountInfo;
 use std::marker::PhantomData;
 
@@ -33,13 +34,13 @@ impl<'info, T: CopyType<'info>, const N: usize> ZeroCopyType<'info> for ZcFnkArr
     }
 }
 
-impl<'info, T: CopyType<'info>, const N: usize> CopyType<'info> for [T; N] {
+impl<'info, T: CopyType<'info>, const N: usize> CopyType<'info> for FnkArray<T, N> {
     type ZeroCopyType = ZcFnkArray<'info, T, N>;
 
     fn byte_size_from_instance(&self) -> usize {
         let mut size = 0;
 
-        for i in self {
+        for i in &self.0 {
             size += i.byte_size_from_instance();
         }
 
