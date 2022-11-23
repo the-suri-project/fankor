@@ -1,4 +1,4 @@
-use convert_case::{Case, Converter};
+use convert_case::{Boundary, Case, Converter};
 use quote::{format_ident, quote};
 use std::collections::HashSet;
 use syn::spanned::Spanned;
@@ -94,7 +94,9 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
             let case_converter = Converter::new()
                 .from_case(Case::Pascal)
-                .to_case(Case::Snake);
+                .to_case(Case::Snake)
+                .remove_boundary(Boundary::LowerDigit)
+                .remove_boundary(Boundary::UpperDigit);
 
             final_enum_variants.push(quote! {
                 #(#attributes)*
