@@ -444,7 +444,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         let flag = bytes[0];
 
                         let result = match flag {
-                            #(#new_method),*
+                            #(#new_method,)*
                             _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminator { type_name: std::any::type_name::<Self>() }.into()),
                         };
 
@@ -460,7 +460,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         let flag = bytes[0];
 
                         match flag {
-                            #(#read_byte_size_from_bytes_method),*
+                            #(#read_byte_size_from_bytes_method,)*
                             _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminator { type_name: std::any::type_name::<Self>() }.into()),
                         }
 
