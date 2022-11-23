@@ -97,3 +97,38 @@ impl<T: AccountSize, const N: usize> AccountSize for [T; N] {
         self.iter().map(|v| v.actual_account_size()).sum::<usize>()
     }
 }
+
+impl AccountSize for () {
+    #[inline(always)]
+    fn min_account_size() -> usize {
+        0
+    }
+}
+
+macro_rules! define_tuple_trait {
+    ($($types:ident),*) => {
+        impl< $($types : AccountSize),* > AccountSize for ($($types),*) {
+            #[inline]
+            fn min_account_size() -> usize {
+                let mut size = 0;
+
+                $(
+                    size += <$types>::min_account_size();
+                )*
+
+                size
+            }
+        }
+    };
+}
+
+define_tuple_trait!(T0, T1);
+define_tuple_trait!(T0, T1, T2);
+define_tuple_trait!(T0, T1, T2, T3);
+define_tuple_trait!(T0, T1, T2, T3, T4);
+define_tuple_trait!(T0, T1, T2, T3, T4, T5);
+define_tuple_trait!(T0, T1, T2, T3, T4, T5, T6);
+define_tuple_trait!(T0, T1, T2, T3, T4, T5, T6, T7);
+define_tuple_trait!(T0, T1, T2, T3, T4, T5, T6, T7, T8);
+define_tuple_trait!(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9);
+define_tuple_trait!(T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10);
