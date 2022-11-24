@@ -51,13 +51,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         .collect::<Result<Vec<_>>>()?;
 
     let visibility = enum_item.vis;
-    let generic_params = &enum_item.generics.params;
-    let generic_params = if generic_params.is_empty() {
-        quote! {}
-    } else {
-        quote! { < #generic_params > }
-    };
-    let generic_where_clause = &enum_item.generics.where_clause;
+    let (impl_generics, ty_generics, where_clause) = enum_item.generics.split_for_impl();
 
     // Generate code.
     let final_enum_variants = variants.iter().map(|v| {
@@ -201,12 +195,12 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[derive(::std::fmt::Debug, ::std::clone::Clone)]
         #[repr(u32)]
         #(#attrs)*
-        #visibility enum #name #generic_params #generic_where_clause {
+        #visibility enum #name #ty_generics #where_clause {
             #(#final_enum_variants,)*
         }
 
         #[automatically_derived]
-        impl #generic_params #name #generic_params #generic_where_clause {
+        impl #impl_generics #name #ty_generics #where_clause {
             pub fn name(&self) -> &'static str {
                 match self {
                     #(#name_fn_variants),*
@@ -225,7 +219,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
 
         #[automatically_derived]
-        impl #generic_params ::std::fmt::Display for #name #generic_params #generic_where_clause {
+        impl #impl_generics ::std::fmt::Display for #name #ty_generics #where_clause {
             fn fmt(&self, fmt: &mut ::std::fmt::Formatter<'_>) -> ::std::result::Result<(), ::std::fmt::Error> {
                 match self {
                     #(#display_fn_variants),*
@@ -234,8 +228,8 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
 
         #[automatically_derived]
-        impl #generic_params From<#name #generic_params> for fankor::errors::Error #generic_where_clause {
-            fn from(error_code: #name #generic_params) -> fankor::errors::Error {
+        impl #impl_generics From<#name #ty_generics> for fankor::errors::Error #where_clause {
+            fn from(error_code: #name #ty_generics) -> fankor::errors::Error {
                 fankor::errors::Error::from(fankor::errors::FankorError {
                     error_name: error_code.name().to_string(),
                     error_code_number: error_code.error_code(),

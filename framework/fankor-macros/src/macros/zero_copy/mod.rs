@@ -8,7 +8,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
     let result = match &input {
         Item::Struct(item) => {
             let name = &item.ident;
-            let generics = &item.generics;
+
+            let (_, ty_generics, where_clause) = item.generics.split_for_impl();
 
             let byte_size_from_instance_method = item.fields.iter().map(|field| {
                 let field_name = &field.ident;
@@ -28,15 +29,13 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             let zc_name = format_ident!("Zc{}", name);
             let zc_name_refs = format_ident!("Zc{}Refs", name);
-            let mut zc_generics = generics.clone();
-            zc_generics.params.insert(0, syn::parse_quote! { 'info });
+            let mut aux_zc_generics = item.generics.clone();
+            aux_zc_generics
+                .params
+                .insert(0, syn::parse_quote! { 'info });
 
-            let zc_generic_params = &zc_generics.params;
-            let zc_generic_params = if zc_generic_params.is_empty() {
-                quote! {}
-            } else {
-                quote! { < #zc_generic_params > }
-            };
+            let (zc_impl_generics, zc_ty_generics, zc_where_clause) =
+                aux_zc_generics.split_for_impl();
 
             let mut zc_field_methods_aux = Vec::with_capacity(item.fields.len());
             let mut zc_unsafe_field_methods = Vec::with_capacity(item.fields.len());
@@ -121,8 +120,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             quote! {
                 #[automatically_derived]
-                impl #zc_generic_params CopyType<'info> for #name #generics {
-                    type ZeroCopyType = #zc_name<'info>;
+                impl #zc_impl_generics CopyType<'info> for #name #ty_generics #where_clause {
+                    type ZeroCopyType = #zc_name #zc_ty_generics;
 
                     fn byte_size_from_instance(&self) -> usize {
                         let mut size = 0;
@@ -132,17 +131,17 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 }
 
                 // TODO process generics to add phantom data if needed
-                pub struct #zc_name<'info> {
+                pub struct #zc_name #zc_ty_generics #zc_where_clause {
                     info: &'info AccountInfo<'info>,
                     offset: usize,
                 }
 
-                pub struct #zc_name_refs #zc_generic_params {
+                pub struct #zc_name_refs #zc_ty_generics #zc_where_clause {
                     #(#zc_name_refs_fields)*
                 }
 
                 #[automatically_derived]
-                impl #zc_generic_params ZeroCopyType<'info> for #zc_name #zc_generics {
+                impl #zc_impl_generics ZeroCopyType<'info> for #zc_name #zc_ty_generics #zc_where_clause {
                     fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
                         Ok((
                             #zc_name {
@@ -161,11 +160,11 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 }
 
                 #[automatically_derived]
-                impl #zc_generic_params #zc_name #zc_generics {
+                impl #zc_impl_generics #zc_name #zc_ty_generics #zc_where_clause {
                     #(#zc_field_methods)*
                     #(#zc_unsafe_field_methods)*
 
-                    pub fn to_refs(&self) -> FankorResult<#zc_name_refs #zc_generics> {
+                    pub fn to_refs(&self) -> FankorResult<#zc_name_refs #zc_ty_generics> {
                         let bytes = self.info.try_borrow_data()
                             .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
                                 type_name: std::any::type_name::<Self>(),
@@ -184,7 +183,16 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
         }
         Item::Enum(item) => {
             let name = &item.ident;
-            let generics = &item.generics;
+
+            let (_, ty_generics, where_clause) = item.generics.split_for_impl();
+
+            let mut aux_zc_generics = item.generics.clone();
+            aux_zc_generics
+                .params
+                .insert(0, syn::parse_quote! { 'info });
+
+            let (zc_impl_generics, zc_ty_generics, zc_where_clause) =
+                aux_zc_generics.split_for_impl();
 
             let byte_size_from_instance_method = item.variants.iter().map(|variant| {
                 let variant_name = &variant.ident;
@@ -248,16 +256,6 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             });
 
             let zc_name = format_ident!("Zc{}", name);
-            let mut zc_generics = generics.clone();
-            zc_generics.params.insert(0, syn::parse_quote! { 'info });
-
-            let zc_generic_params = &zc_generics.params;
-            let zc_generic_params = if zc_generic_params.is_empty() {
-                quote! {}
-            } else {
-                quote! { < #zc_generic_params > }
-            };
-
             let zc_name_variants = item.variants.iter().map(|variant| {
                 let variant_name = &variant.ident;
 
@@ -408,63 +406,127 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         }
                     });
 
-            quote! {
-                #[automatically_derived]
-                impl #zc_generic_params CopyType<'info> for #name #generics {
-                    type ZeroCopyType = #zc_name<'info>;
+            let is_all_empty = item
+                .variants
+                .iter()
+                .map(|variant| matches!(&variant.fields, Fields::Unit))
+                .reduce(|a, b| a && b)
+                .unwrap_or(true);
 
-                    fn byte_size_from_instance(&self) -> usize {
-                        let mut size = 1;
+            if is_all_empty {
+                quote! {
+                    #[automatically_derived]
+                    impl #zc_impl_generics CopyType<'info> for #name #ty_generics #where_clause {
+                        type ZeroCopyType = #zc_name #ty_generics;
 
-                        match self {
-                            #(#byte_size_from_instance_method),*
+                        fn byte_size_from_instance(&self) -> usize {
+                            1
                         }
-
-                        size
-                    }
-                }
-
-                pub enum #zc_name #zc_generic_params {
-                    #(#zc_name_variants),*
-                }
-
-                #[automatically_derived]
-                impl #zc_generic_params ZeroCopyType<'info> for #zc_name #zc_generics {
-                    fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
-                        let bytes = info
-                            .try_borrow_data()
-                            .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock { type_name: std::any::type_name::<Self>() })?;
-                        let bytes = &bytes[offset..];
-
-                        if bytes.is_empty() {
-                            return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
-                        }
-
-                        let mut size = 1;
-                        let flag = bytes[0];
-
-                        let result = match flag {
-                            #(#new_method,)*
-                            _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminator { type_name: std::any::type_name::<Self>() }.into()),
-                        };
-
-                        Ok((result, Some(size)))
                     }
 
-                    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
-                        if bytes.is_empty() {
-                            return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
+                    pub enum #zc_name #ty_generics #where_clause {
+                        #(#zc_name_variants),*
+                    }
+
+                    #[automatically_derived]
+                    impl #zc_impl_generics ZeroCopyType<'info> for #zc_name #ty_generics #where_clause {
+                        fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
+                            let bytes = info
+                                .try_borrow_data()
+                                .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock { type_name: std::any::type_name::<Self>() })?;
+                            let bytes = &bytes[offset..];
+
+                            if bytes.is_empty() {
+                                return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
+                            }
+
+                            let mut size = 1;
+                            let flag = bytes[0];
+
+                            let result = match flag {
+                                #(#new_method,)*
+                                _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminator { type_name: std::any::type_name::<Self>() }.into()),
+                            };
+
+                            Ok((result, Some(size)))
                         }
 
-                        let mut size = 1;
-                        let flag = bytes[0];
+                        fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+                            if bytes.is_empty() {
+                                return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
+                            }
 
-                        match flag {
-                            #(#read_byte_size_from_bytes_method,)*
-                            _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminator { type_name: std::any::type_name::<Self>() }.into()),
+                            let mut size = 1;
+                            let flag = bytes[0];
+
+                            match flag {
+                                #(#read_byte_size_from_bytes_method,)*
+                                _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminator { type_name: std::any::type_name::<Self>() }.into()),
+                            }
+
+                            Ok(size)
+                        }
+                    }
+                }
+            } else {
+                quote! {
+                    #[automatically_derived]
+                    impl #zc_impl_generics CopyType<'info> for #name #ty_generics #where_clause {
+                        type ZeroCopyType = #zc_name #zc_ty_generics;
+
+                        fn byte_size_from_instance(&self) -> usize {
+                            let mut size = 1;
+
+                            match self {
+                                #(#byte_size_from_instance_method),*
+                            }
+
+                            size
+                        }
+                    }
+
+                    pub enum #zc_name #zc_ty_generics #zc_where_clause {
+                        #(#zc_name_variants),*
+                    }
+
+                    #[automatically_derived]
+                    impl #zc_impl_generics ZeroCopyType<'info> for #zc_name #zc_ty_generics #zc_where_clause {
+                        fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
+                            let bytes = info
+                                .try_borrow_data()
+                                .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock { type_name: std::any::type_name::<Self>() })?;
+                            let bytes = &bytes[offset..];
+
+                            if bytes.is_empty() {
+                                return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
+                            }
+
+                            let mut size = 1;
+                            let flag = bytes[0];
+
+                            let result = match flag {
+                                #(#new_method,)*
+                                _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminator { type_name: std::any::type_name::<Self>() }.into()),
+                            };
+
+                            Ok((result, Some(size)))
                         }
 
-                        Ok(size)
+                        fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+                            if bytes.is_empty() {
+                                return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
+                            }
+
+                            let mut size = 1;
+                            let flag = bytes[0];
+
+                            match flag {
+                                #(#read_byte_size_from_bytes_method,)*
+                                _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminator { type_name: std::any::type_name::<Self>() }.into()),
+                            }
+
+                            Ok(size)
+                        }
                     }
                 }
             }

@@ -10,13 +10,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
     let result = match &input {
         Item::Struct(item) => {
             let name = &item.ident;
-            let generic_where_clause = &item.generics.where_clause;
-            let generic_params = &item.generics.params;
-            let generic_params = if generic_params.is_empty() {
-                quote! {}
-            } else {
-                quote! { < #generic_params > }
-            };
+
+            let (impl_generics, ty_generics, where_clause) = item.generics.split_for_impl();
 
             let min_size_fields = item
                 .fields
@@ -38,7 +33,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             quote! {
                 #[automatically_derived]
-                 impl #generic_params ::fankor::traits::AccountSize for #name #generic_params #generic_where_clause {
+                 impl #impl_generics ::fankor::traits::AccountSize for #name #ty_generics #where_clause {
                     fn min_account_size() -> usize {
                         let mut min_size = 0;
 
@@ -59,13 +54,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
         }
         Item::Enum(item) => {
             let name = &item.ident;
-            let generic_where_clause = &item.generics.where_clause;
-            let generic_params = &item.generics.params;
-            let generic_params = if generic_params.is_empty() {
-                quote! {}
-            } else {
-                quote! { < #generic_params > }
-            };
+
+            let (impl_generics, ty_generics, where_clause) = item.generics.split_for_impl();
 
             let min_size_variants = item
                 .variants
@@ -145,7 +135,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             quote! {
                 #[automatically_derived]
-                impl #generic_params ::fankor::traits::AccountSize for #name #generic_params #generic_where_clause {
+                impl #impl_generics ::fankor::traits::AccountSize for #name #ty_generics #where_clause {
                     fn min_account_size() -> usize {
                         let mut min_size = 1;
 

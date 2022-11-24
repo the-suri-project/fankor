@@ -16,8 +16,9 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
         Item::Struct(item) => {
             let visibility = &item.vis;
             let name = &item.ident;
-            let generics = &item.generics.params;
             let fields_name = format_ident!("{}Fields", name);
+
+            let (_, ty_generics, _) = item.generics.split_for_impl();
 
             let fields = item
                 .fields
@@ -76,7 +77,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                          }
                      }
 
-                     pub fn actual_offset(&self, obj: &#name #generics) -> usize {
+                     pub fn actual_offset(&self, obj: &#name #ty_generics) -> usize {
                          let mut size = 0;
                          #(#actual_offsets)*
                          size
@@ -87,8 +88,9 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
         Item::Enum(item) => {
             let visibility = &item.vis;
             let name = &item.ident;
-            let generics = &item.generics.params;
             let fields_name = format_ident!("{}Fields", item.ident);
+
+            let (_, ty_generics, _) = item.generics.split_for_impl();
 
             let fields = item
                 .variants
@@ -285,7 +287,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         }
                     }
 
-                    pub fn actual_offset(&self, obj: &#name #generics) -> Option<usize> {
+                    pub fn actual_offset(&self, obj: &#name #ty_generics) -> Option<usize> {
                         match obj {
                             #(#actual_offsets)*
                         }

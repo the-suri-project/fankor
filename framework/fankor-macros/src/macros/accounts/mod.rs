@@ -59,13 +59,8 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         .collect::<Result<Vec<_>>>()?;
 
     let visibility = enum_item.vis;
-    let generic_params = &enum_item.generics.params;
-    let generic_params = if generic_params.is_empty() {
-        quote! {}
-    } else {
-        quote! { < #generic_params > }
-    };
-    let generic_where_clause = &enum_item.generics.where_clause;
+
+    let (impl_generics, ty_generics, where_clause) = enum_item.generics.split_for_impl();
 
     // Generate code.
     let mut u8_index = 1u8;
@@ -234,12 +229,12 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
     let result = quote! {
         #(#attrs)*
-        #visibility enum #name #generic_params #generic_where_clause {
+        #visibility enum #name #ty_generics #where_clause {
             #(#final_enum_variants,)*
         }
 
         #[automatically_derived]
-        impl #generic_params #name {
+        impl #impl_generics #name #ty_generics #where_clause {
             #(#unwrap_methods)*
 
             #(#as_ref_methods)*
@@ -261,7 +256,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
         #(#from_methods)*
 
-        impl #generic_params borsh::BorshSerialize for #name #generic_params #generic_where_clause {
+        impl #impl_generics borsh::BorshSerialize for #name #ty_generics #where_clause {
             fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
                 match self {
                     #(#serialize_entries)*
@@ -271,7 +266,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             }
         }
 
-        impl borsh::BorshDeserialize for #name #generic_params #generic_where_clause {
+        impl #impl_generics borsh::BorshDeserialize for #name #ty_generics #where_clause {
             fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
                 let discriminant = borsh::BorshDeserialize::deserialize(buf)?;
 
@@ -286,9 +281,9 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
 
         #[automatically_derived]
-        impl #generic_params ::fankor::traits::AccountSerialize for #name #generic_params #generic_where_clause {
+        impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
             fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
-                if writer.write_all(&[<#name #generic_params as ::fankor::traits::Account>::discriminator()]).is_err() {
+                if writer.write_all(&[<#name #ty_generics as ::fankor::traits::Account>::discriminator()]).is_err() {
                     return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
                         account: #name_str.to_string()
                     }.into());
@@ -304,7 +299,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
 
         #[automatically_derived]
-        impl #generic_params ::fankor::traits::AccountDeserialize for #name #generic_params #generic_where_clause {
+        impl #impl_generics ::fankor::traits::AccountDeserialize for #name #ty_generics #where_clause {
             fn try_deserialize(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
                 unsafe { Self::try_deserialize_unchecked(buf) }
             }
@@ -318,7 +313,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
 
         #[automatically_derived]
-        impl #generic_params ::fankor::traits::Account for #name #generic_params #generic_where_clause {
+        impl #impl_generics ::fankor::traits::Account for #name #ty_generics #where_clause {
             fn discriminator() -> u8 {
                 0
             }

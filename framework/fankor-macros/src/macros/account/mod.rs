@@ -23,25 +23,20 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
     };
 
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     let name_str = name.to_string();
     let accounts_name = &arguments.accounts_type_name;
     let account_discriminants_name = format_ident!("{}Discriminant", accounts_name);
-    let generic_where_clause = &generics.where_clause;
-    let generic_params = &generics.params;
-    let generic_params = if generic_params.is_empty() {
-        quote! {}
-    } else {
-        quote! { < #generic_params > }
-    };
 
     let result = quote! {
         #[derive(FankorSerialize, FankorDeserialize)]
         #item
 
         #[automatically_derived]
-        impl #generic_params ::fankor::traits::AccountSerialize for #name #generic_params #generic_where_clause {
+        impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
             fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
-                if writer.write_all(&[<#name #generic_params as ::fankor::traits::Account>::discriminator()]).is_err() {
+                if writer.write_all(&[<#name #ty_generics as ::fankor::traits::Account>::discriminator()]).is_err() {
                     return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
                         account: #name_str.to_string()
                     }.into());
@@ -57,7 +52,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
 
         #[automatically_derived]
-        impl #generic_params ::fankor::traits::AccountDeserialize for #name #generic_params #generic_where_clause {
+        impl #impl_generics ::fankor::traits::AccountDeserialize for #name #ty_generics #where_clause {
             fn try_deserialize(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
                 let account: #accounts_name = ::fankor::prelude::borsh::BorshDeserialize::deserialize(buf)
                     .map_err(|_| ::fankor::errors::FankorErrorCode::AccountDiscriminatorNotFound {
@@ -69,7 +64,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                     _ => return Err(
                         ::fankor::errors::FankorErrorCode::AccountDiscriminatorMismatch {
                             account: #name_str.to_string(),
-                            expected: <#name #generic_params as ::fankor::traits::Account>::discriminator(),
+                            expected: <#name #ty_generics as ::fankor::traits::Account>::discriminator(),
                             actual: account.discriminant_code()
                         }
                         .into(),
@@ -88,7 +83,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
 
         #[automatically_derived]
-        impl #generic_params ::fankor::traits::Account for #name #generic_params #generic_where_clause {
+        impl #impl_generics ::fankor::traits::Account for #name #ty_generics #where_clause {
              fn discriminator() -> u8 {
                 #account_discriminants_name::#name.code()
             }

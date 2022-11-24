@@ -19,3 +19,10 @@ pub enum ZeroCopyEnumAccountData {
     B(u32, u64),
     C { value1: u32, value2: String },
 }
+
+#[derive(FankorZeroCopy)]
+pub enum ZeroCopyEnumWithoutValues {
+    A,
+    B,
+    C,
+}
