@@ -1,5 +1,8 @@
+mod enums;
+
+use crate::macros::serialize::enums::enum_ser;
 use crate::Result;
-use borsh_derive_internal::{enum_de, struct_de};
+use borsh_derive_internal::struct_ser;
 use proc_macro2::Span;
 use quote::quote;
 use syn::spanned::Spanned;
@@ -13,12 +16,12 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
         Item::Struct(input) => {
             let initial_where_clause = input.generics.where_clause.clone();
 
-            (struct_de(&input, crate_name)?, initial_where_clause)
+            (struct_ser(&input, crate_name)?, initial_where_clause)
         }
         Item::Enum(input) => {
             let initial_where_clause = input.generics.where_clause.clone();
 
-            (enum_de(&input, crate_name)?, initial_where_clause)
+            (enum_ser(&input, crate_name)?, initial_where_clause)
         }
         _ => {
             return Err(Error::new(

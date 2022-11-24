@@ -22,7 +22,7 @@ pub fn setup(args: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 
 /// A custom implementation of BorshSerialize that fix an issue with the where clause.
-#[proc_macro_derive(FankorSerialize, attributes(borsh_skip))]
+#[proc_macro_derive(FankorSerialize, attributes(borsh_skip, discriminant))]
 pub fn serialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 
@@ -37,7 +37,7 @@ pub fn serialize(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 
 /// A custom implementation of BorshDeserialize that fix an issue with the where clause.
-#[proc_macro_derive(FankorDeserialize, attributes(borsh_skip, borsh_init))]
+#[proc_macro_derive(FankorDeserialize, attributes(borsh_skip, borsh_init, discriminant))]
 pub fn deserialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 
