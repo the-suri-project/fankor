@@ -414,22 +414,31 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 .unwrap_or(true);
 
             if is_all_empty {
+                let new_method = item
+                    .variants
+                    .iter()
+                    .enumerate()
+                    .map(|(i_variant, variant)| {
+                        let variant_name = &variant.ident;
+                        let i_variant = i_variant as u8;
+
+                        quote! {
+                            #i_variant => #name::#variant_name
+                        }
+                    });
+
                 quote! {
                     #[automatically_derived]
                     impl #zc_impl_generics CopyType<'info> for #name #ty_generics #where_clause {
-                        type ZeroCopyType = #zc_name #ty_generics;
+                        type ZeroCopyType = #name #ty_generics;
 
                         fn byte_size_from_instance(&self) -> usize {
                             1
                         }
                     }
 
-                    pub enum #zc_name #ty_generics #where_clause {
-                        #(#zc_name_variants),*
-                    }
-
                     #[automatically_derived]
-                    impl #zc_impl_generics ZeroCopyType<'info> for #zc_name #ty_generics #where_clause {
+                    impl #zc_impl_generics ZeroCopyType<'info> for #name #ty_generics #where_clause {
                         fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
                             let bytes = info
                                 .try_borrow_data()
