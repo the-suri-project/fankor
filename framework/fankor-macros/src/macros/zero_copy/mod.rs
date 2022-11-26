@@ -315,7 +315,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                     });
 
                                     quote! {
-                                        let #field_name = unsafe { Zc::new(info, offset) };
+                                        let #field_name = unsafe { Zc::new(info, __offset) };
                                         size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
                                     }
                                 });
@@ -339,7 +339,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                     });
 
                                     quote! {
-                                        let #field_name = unsafe { Zc::new(info, offset) };
+                                        let #field_name = unsafe { Zc::new(info, __offset) };
                                         size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
                                     }
                                 });
@@ -500,11 +500,11 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                     #[automatically_derived]
                     impl #zc_impl_generics ZeroCopyType<'info> for #zc_name #zc_ty_generics #zc_where_clause {
-                        fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
+                        fn new(info: &'info AccountInfo<'info>, __offset: usize) -> FankorResult<(Self, Option<usize>)> {
                             let bytes = info
                                 .try_borrow_data()
                                 .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock { type_name: std::any::type_name::<Self>() })?;
-                            let bytes = &bytes[offset..];
+                            let bytes = &bytes[__offset..];
 
                             if bytes.is_empty() {
                                 return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
