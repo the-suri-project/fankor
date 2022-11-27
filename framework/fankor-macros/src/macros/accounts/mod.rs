@@ -29,7 +29,11 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
     let name = enum_item.ident;
     let name_str = name.to_string();
-    let discriminant_name = format_ident!("{}Discriminant", name);
+    let discriminant_name = if let Some(accounts_type_name) = &arguments.accounts_type_name {
+        format_ident!("{}Discriminant", accounts_type_name)
+    } else {
+        format_ident!("{}Discriminant", name)
+    };
     let attrs = &arguments.attrs;
 
     assert!(
@@ -203,19 +207,36 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 #variant_name
             });
 
-            serialize_entries.push(quote! {
-                #name::#variant_name(v) => {
-                    borsh::BorshSerialize::serialize(&#u8_index, writer)?;
-                    borsh::BorshSerialize::serialize(v, writer)?;
-                }
-            });
+            if arguments.accounts_type_name.is_some() {
+                serialize_entries.push(quote! {
+                    #name::#variant_name(v) => {
+                        borsh::BorshSerialize::serialize(v, writer)?;
+                    }
+                });
+            }else {
+                serialize_entries.push(quote! {
+                    #name::#variant_name(v) => {
+                        borsh::BorshSerialize::serialize(&#u8_index, writer)?;
+                        borsh::BorshSerialize::serialize(v, writer)?;
+                    }
+                });
+            }
 
-            deserialize_entries.push(quote! {
-                #u8_index => {
-                    let v = borsh::BorshDeserialize::deserialize(buf)?;
-                    Ok(#name::#variant_name(v))
-                }
-            });
+            if arguments.accounts_type_name.is_some() {
+                deserialize_entries.push(quote! {
+                    x if x == #discriminant_name::#variant_name.code() => {
+                        let v = borsh::BorshDeserialize::deserialize(buf)?;
+                        Ok(#name::#variant_name(v))
+                    }
+                });
+            }else {
+                deserialize_entries.push(quote! {
+                    #u8_index => {
+                        let v = borsh::BorshDeserialize::deserialize(buf)?;
+                        Ok(#name::#variant_name(v))
+                    }
+                });
+            }
 
             let res = Ok(quote! {
                 #discriminant_name::#variant_name => #u8_index
@@ -227,111 +248,210 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         })
         .collect::<Result<Vec<_>>>()?;
 
-    let result = quote! {
-        #(#attrs)*
-        #visibility enum #name #ty_generics #where_clause {
-            #(#final_enum_variants,)*
-        }
+    let result = if arguments.accounts_type_name.is_some() {
+        quote! {
+            #(#attrs)*
+            #visibility enum #name #ty_generics #where_clause {
+                #(#final_enum_variants,)*
+            }
 
-        #[automatically_derived]
-        impl #impl_generics #name #ty_generics #where_clause {
-            #(#unwrap_methods)*
+            #[automatically_derived]
+            impl #impl_generics #name #ty_generics #where_clause {
+                #(#unwrap_methods)*
 
-            #(#as_ref_methods)*
+                #(#as_ref_methods)*
 
-            #(#as_mut_methods)*
+                #(#as_mut_methods)*
 
-            pub fn discriminant(&self) -> #discriminant_name {
-                match self {
-                    #(#discriminant_variants,)*
+                pub fn discriminant(&self) -> #discriminant_name {
+                    match self {
+                        #(#discriminant_variants,)*
+                    }
+                }
+
+                pub fn discriminant_code(&self) -> u8 {
+                    self.discriminant().code()
                 }
             }
 
-            pub fn discriminant_code(&self) -> u8 {
-                match self {
-                    #(#discriminant_code_variants,)*
+            #(#from_methods)*
+
+            impl #impl_generics borsh::BorshSerialize for #name #ty_generics #where_clause {
+                fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+                    borsh::BorshSerialize::serialize(&self.discriminant_code(), writer)?;
+
+                    match self {
+                        #(#serialize_entries)*
+                    }
+
+                    Ok(())
                 }
             }
-        }
 
-        #(#from_methods)*
+            impl #impl_generics borsh::BorshDeserialize for #name #ty_generics #where_clause {
+                fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
+                    let discriminant: u8 = borsh::BorshDeserialize::deserialize(buf)?;
 
-        impl #impl_generics borsh::BorshSerialize for #name #ty_generics #where_clause {
-            fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-                match self {
-                    #(#serialize_entries)*
-                }
-
-                Ok(())
-            }
-        }
-
-        impl #impl_generics borsh::BorshDeserialize for #name #ty_generics #where_clause {
-            fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
-                let discriminant = borsh::BorshDeserialize::deserialize(buf)?;
-
-                match discriminant {
-                    #(#deserialize_entries)*
-                    _ => Err(std::io::Error::new(
-                        std::io::ErrorKind::InvalidData,
-                        "Invalid discriminant value",
-                    )),
+                    match discriminant {
+                        #(#deserialize_entries)*
+                        _ => Err(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Invalid discriminant value",
+                        )),
+                    }
                 }
             }
-        }
 
-        #[automatically_derived]
-        impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
-            fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
-                if writer.write_all(&[<#name #ty_generics as ::fankor::traits::Account>::discriminator()]).is_err() {
-                    return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
+            #[automatically_derived]
+            impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
+                fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
+                    if writer.write_all(&[<#name #ty_generics as ::fankor::traits::Account>::discriminator()]).is_err() {
+                        return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
+                            account: #name_str.to_string()
+                        }.into());
+                    }
+
+                    if ::fankor::prelude::borsh::BorshSerialize::serialize(self, writer).is_err() {
+                        return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize {
+                            account: #name_str.to_string()
+                        }.into());
+                    }
+                    Ok(())
+                }
+            }
+
+            #[automatically_derived]
+            impl #impl_generics ::fankor::traits::AccountDeserialize for #name #ty_generics #where_clause {
+                fn try_deserialize(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
+                    unsafe { Self::try_deserialize_unchecked(buf) }
+                }
+
+                unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
+                    ::fankor::prelude::borsh::BorshDeserialize::deserialize(buf)
+                        .map_err(|_| ::fankor::errors::FankorErrorCode::AccountDidNotDeserialize {
                         account: #name_str.to_string()
-                    }.into());
+                    }.into())
+                }
+            }
+
+            #[automatically_derived]
+            impl #impl_generics ::fankor::traits::Account for #name #ty_generics #where_clause {
+                fn discriminator() -> u8 {
+                    0
                 }
 
-                if ::fankor::prelude::borsh::BorshSerialize::serialize(self, writer).is_err() {
-                    return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize {
+                fn owner() -> &'static Pubkey {
+                    &crate::ID
+                }
+            }
+        }
+    } else {
+        quote! {
+            #(#attrs)*
+            #visibility enum #name #ty_generics #where_clause {
+                #(#final_enum_variants,)*
+            }
+
+            #[automatically_derived]
+            impl #impl_generics #name #ty_generics #where_clause {
+                #(#unwrap_methods)*
+
+                #(#as_ref_methods)*
+
+                #(#as_mut_methods)*
+
+                pub fn discriminant(&self) -> #discriminant_name {
+                    match self {
+                        #(#discriminant_variants,)*
+                    }
+                }
+
+                pub fn discriminant_code(&self) -> u8 {
+                    match self {
+                        #(#discriminant_code_variants,)*
+                    }
+                }
+            }
+
+            #(#from_methods)*
+
+            impl #impl_generics borsh::BorshSerialize for #name #ty_generics #where_clause {
+                fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+                    match self {
+                        #(#serialize_entries)*
+                    }
+
+                    Ok(())
+                }
+            }
+
+            impl #impl_generics borsh::BorshDeserialize for #name #ty_generics #where_clause {
+                fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
+                    let discriminant = borsh::BorshDeserialize::deserialize(buf)?;
+
+                    match discriminant {
+                        #(#deserialize_entries)*
+                        _ => Err(std::io::Error::new(
+                            std::io::ErrorKind::InvalidData,
+                            "Invalid discriminant value",
+                        )),
+                    }
+                }
+            }
+
+            #[automatically_derived]
+            impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
+                fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
+                    if writer.write_all(&[<#name #ty_generics as ::fankor::traits::Account>::discriminator()]).is_err() {
+                        return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
+                            account: #name_str.to_string()
+                        }.into());
+                    }
+
+                    if ::fankor::prelude::borsh::BorshSerialize::serialize(self, writer).is_err() {
+                        return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize {
+                            account: #name_str.to_string()
+                        }.into());
+                    }
+                    Ok(())
+                }
+            }
+
+            #[automatically_derived]
+            impl #impl_generics ::fankor::traits::AccountDeserialize for #name #ty_generics #where_clause {
+                fn try_deserialize(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
+                    unsafe { Self::try_deserialize_unchecked(buf) }
+                }
+
+                unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
+                    ::fankor::prelude::borsh::BorshDeserialize::deserialize(buf)
+                        .map_err(|_| ::fankor::errors::FankorErrorCode::AccountDidNotDeserialize {
                         account: #name_str.to_string()
-                    }.into());
+                    }.into())
                 }
-                Ok(())
-            }
-        }
-
-        #[automatically_derived]
-        impl #impl_generics ::fankor::traits::AccountDeserialize for #name #ty_generics #where_clause {
-            fn try_deserialize(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
-                unsafe { Self::try_deserialize_unchecked(buf) }
             }
 
-            unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
-                ::fankor::prelude::borsh::BorshDeserialize::deserialize(buf)
-                    .map_err(|_| ::fankor::errors::FankorErrorCode::AccountDidNotDeserialize {
-                    account: #name_str.to_string()
-                }.into())
-            }
-        }
+            #[automatically_derived]
+            impl #impl_generics ::fankor::traits::Account for #name #ty_generics #where_clause {
+                fn discriminator() -> u8 {
+                    0
+                }
 
-        #[automatically_derived]
-        impl #impl_generics ::fankor::traits::Account for #name #ty_generics #where_clause {
-            fn discriminator() -> u8 {
-                0
+                fn owner() -> &'static Pubkey {
+                    &crate::ID
+                }
             }
 
-            fn owner() -> &'static Pubkey {
-                &crate::ID
+            #visibility enum #discriminant_name {
+                #(#final_enum_variant_discriminants,)*
             }
-        }
 
-        #visibility enum #discriminant_name {
-            #(#final_enum_variant_discriminants,)*
-        }
-
-        #[automatically_derived]
-        impl #discriminant_name {
-            pub fn code(&self) -> u8 {
-                match self {
-                    #(#code_variants,)*
+            #[automatically_derived]
+            impl #discriminant_name {
+                pub fn code(&self) -> u8 {
+                    match self {
+                        #(#code_variants,)*
+                    }
                 }
             }
         }

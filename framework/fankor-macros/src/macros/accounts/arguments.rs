@@ -1,8 +1,9 @@
+use proc_macro2::Ident;
 use std::ops::RangeInclusive;
 use syn::punctuated::Punctuated;
 use syn::{
     parse_macro_input, spanned::Spanned, AttributeArgs, Error, Expr, ExprParen, ExprTuple,
-    ItemEnum, RangeLimits,
+    ItemEnum, Meta, NestedMeta, RangeLimits,
 };
 
 use crate::utils::unwrap_int_from_literal;
@@ -11,6 +12,10 @@ use crate::Result;
 pub struct AccountsArguments {
     /// Discriminants that cannot be used in the account list.
     pub removed_discriminants: Vec<RangeInclusive<u8>>,
+
+    /// The main accounts type name. This helps to reuse the discriminants
+    /// of the main accounts enum.
+    pub accounts_type_name: Option<Ident>,
 
     /// List of attributes to apply to the enum.
     pub attrs: Vec<syn::Attribute>,
@@ -23,10 +28,36 @@ impl AccountsArguments {
     pub fn from(args: AttributeArgs, enum_item: &ItemEnum) -> Result<AccountsArguments> {
         let mut result = AccountsArguments {
             removed_discriminants: Vec::new(),
+            accounts_type_name: None,
             attrs: Vec::new(),
         };
 
-        assert!(args.is_empty(), "setup macro takes no arguments");
+        match args.len() {
+            0 => {}
+            1 => {
+                result.accounts_type_name = match &args[0] {
+                    NestedMeta::Meta(v) => match v {
+                        Meta::NameValue(v) => return Err(Error::new(v.span(), "Unknown argument")),
+                        Meta::List(v) => return Err(Error::new(v.span(), "Unknown argument")),
+                        Meta::Path(v) => match v.get_ident() {
+                            Some(v) => Some(v.clone()),
+                            None => {
+                                return Err(Error::new(v.span(), "Only simple types are supported"))
+                            }
+                        },
+                    },
+                    NestedMeta::Lit(v) => {
+                        return Err(Error::new(v.span(), "Unknown argument"));
+                    }
+                };
+            }
+            _ => {
+                return Err(Error::new(
+                    enum_item.span(),
+                    "Accounts macro expects only one argument, the accounts type name",
+                ))
+            }
+        }
 
         // Process attributes.
         for attr in &enum_item.attrs {
