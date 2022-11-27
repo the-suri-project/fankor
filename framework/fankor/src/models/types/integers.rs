@@ -365,7 +365,7 @@ impl BorshDeserialize for FnkInt {
             if first_byte & 0x40 != 0 {
                 if number == MIN_I64_ABS {
                     Ok(Self(i64::MIN))
-                } else if number >= i64::MAX as u64 {
+                } else if number > i64::MAX as u64 {
                     Err(std::io::Error::new(
                         ErrorKind::InvalidInput,
                         "Number underflow",
@@ -685,8 +685,10 @@ mod test {
             i16::MAX as i64,
             i32::MIN as i64,
             i32::MAX as i64,
-            i64::MIN as i64,
-            i64::MAX as i64,
+            i64::MIN,
+            i64::MIN / 2,
+            i64::MAX / 2,
+            i64::MAX,
             isize::MIN as i64,
             isize::MAX as i64,
         ] {

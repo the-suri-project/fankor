@@ -388,6 +388,7 @@ mod test {
             u16::MAX as u64,
             u32::MAX as u64,
             usize::MAX as u64,
+            u64::MAX / 2,
             u64::MAX,
         ] {
             let mut buffer = Vec::new();
