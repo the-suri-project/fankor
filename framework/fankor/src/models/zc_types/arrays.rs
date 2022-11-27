@@ -1,7 +1,7 @@
 use crate::errors::FankorResult;
 use crate::models::zc_types::vec::Iter;
 use crate::models::{CopyType, Zc, ZeroCopyType};
-use crate::prelude::types::arrays::FnkArray;
+use crate::prelude::FnkArray;
 use solana_program::account_info::AccountInfo;
 use std::marker::PhantomData;
 

@@ -1,12 +1,7 @@
 pub use crate::cpi;
 pub use crate::errors::*;
 pub use crate::macros::*;
-pub use crate::models::types::integers::FnkInt;
-pub use crate::models::types::maps::FnkMap;
-pub use crate::models::types::sets::FnkSet;
-pub use crate::models::types::strings::FnkString;
-pub use crate::models::types::unsigned::FnkUInt;
-pub use crate::models::types::vectors::FnkVec;
+pub use crate::models::types::*;
 pub use crate::models::*;
 pub use borsh;
 pub use bs58;

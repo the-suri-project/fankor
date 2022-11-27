@@ -9,6 +9,7 @@ pub mod strings;
 pub mod tuples;
 pub mod vec;
 pub mod boxed;
+pub mod ranges;
 
 use crate::errors::FankorResult;
 use borsh::{BorshDeserialize, BorshSerialize};
