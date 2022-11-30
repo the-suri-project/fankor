@@ -1,4 +1,5 @@
 use proc_macro2::Ident;
+use quote::{format_ident, ToTokens};
 use std::ops::RangeInclusive;
 use syn::punctuated::Punctuated;
 use syn::{
@@ -6,7 +7,7 @@ use syn::{
     ItemEnum, Meta, NestedMeta, RangeLimits,
 };
 
-use crate::utils::unwrap_int_from_literal;
+use crate::utils::{unwrap_int_from_literal, unwrap_string_from_literal};
 use crate::Result;
 
 pub struct AccountsArguments {
@@ -37,14 +38,19 @@ impl AccountsArguments {
             1 => {
                 result.accounts_type_name = match &args[0] {
                     NestedMeta::Meta(v) => match v {
-                        Meta::NameValue(v) => return Err(Error::new(v.span(), "Unknown argument")),
-                        Meta::List(v) => return Err(Error::new(v.span(), "Unknown argument")),
-                        Meta::Path(v) => match v.get_ident() {
-                            Some(v) => Some(v.clone()),
-                            None => {
-                                return Err(Error::new(v.span(), "Only simple types are supported"))
+                        Meta::NameValue(meta) => {
+                            if meta.path.is_ident("base") {
+                                let literal = unwrap_string_from_literal(meta.lit.clone())?;
+                                Some(format_ident!("{}", literal.value(), span = literal.span()))
+                            } else {
+                                return Err(Error::new(
+                                    meta.path.span(),
+                                    format!("Unknown attribute: {}", meta.path.to_token_stream()),
+                                ));
                             }
-                        },
+                        }
+                        Meta::List(v) => return Err(Error::new(v.span(), "Unknown argument")),
+                        Meta::Path(v) => return Err(Error::new(v.span(), "Unknown argument")),
                     },
                     NestedMeta::Lit(v) => {
                         return Err(Error::new(v.span(), "Unknown argument"));

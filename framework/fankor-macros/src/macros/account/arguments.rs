@@ -1,6 +1,9 @@
+use crate::utils::unwrap_string_from_literal;
 use crate::Result;
+use proc_macro2::Ident;
 use proc_macro2::Span;
-use syn::{spanned::Spanned, AttributeArgs, Error, Ident, Meta, NestedMeta};
+use quote::{format_ident, ToTokens};
+use syn::{spanned::Spanned, AttributeArgs, Error, Meta, NestedMeta};
 
 pub struct AccountArguments {
     /// The accounts type name.
@@ -28,12 +31,19 @@ impl AccountArguments {
 
         let accounts_type_name = match &args[0] {
             NestedMeta::Meta(v) => match v {
-                Meta::NameValue(v) => return Err(Error::new(v.span(), "Unknown argument")),
+                Meta::NameValue(meta) => {
+                    if meta.path.is_ident("base") {
+                        let lit = unwrap_string_from_literal(meta.lit.clone())?;
+                        format_ident!("{}", lit.value(), span = lit.span())
+                    } else {
+                        return Err(Error::new(
+                            meta.path.span(),
+                            format!("Unknown attribute: {}", meta.path.to_token_stream()),
+                        ));
+                    }
+                }
                 Meta::List(v) => return Err(Error::new(v.span(), "Unknown argument")),
-                Meta::Path(v) => match v.get_ident() {
-                    Some(v) => v.clone(),
-                    None => return Err(Error::new(v.span(), "Only simple types are supported")),
-                },
+                Meta::Path(v) => return Err(Error::new(v.span(), "Unknown argument")),
             },
             NestedMeta::Lit(v) => {
                 return Err(Error::new(v.span(), "Unknown argument"));

@@ -1,7 +1,7 @@
 use crate::accounts::{ProgramAccount, ProgramAccountDiscriminant};
 use fankor::prelude::*;
 
-#[account(ProgramAccount)]
+#[account(base = "ProgramAccount")]
 #[derive(AccountSize, AccountOffsets)]
 pub enum EnumAccountData {
     #[discriminant(5)]
@@ -12,7 +12,7 @@ pub enum EnumAccountData {
     C { value1: u32, value2: String },
 }
 
-#[account(ProgramAccount)]
+#[account(base = "ProgramAccount")]
 #[derive(AccountSize, AccountOffsets, FankorZeroCopy)]
 pub enum ZeroCopyEnumAccountData {
     A,
