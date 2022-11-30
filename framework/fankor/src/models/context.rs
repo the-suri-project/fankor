@@ -123,23 +123,29 @@ impl<'info> FankorContext<'info> {
         (*self.inner).borrow_mut().exit_actions.remove(&index);
     }
 
-    /// Checks whether there are duplicated accounts.
-    pub fn check_duplicated_accounts(&self) -> bool {
+    /// Checks whether there are duplicated mutable accounts.
+    pub fn check_duplicated_mutable_accounts(&self) -> FankorResult<()> {
         for i in 0..self.accounts.len() {
+            let i_account = &self.accounts[i];
+
+            if !i_account.is_writable {
+                continue;
+            }
+
             for j in i + 1..self.accounts.len() {
-                if std::ptr::eq(&self.accounts[i], &self.accounts[j]) {
-                    return true;
+                let j_account = &self.accounts[j];
+
+                if !j_account.is_writable {
+                    continue;
+                }
+
+                if std::ptr::eq(i_account, j_account) {
+                    return Err(FankorErrorCode::DuplicatedMutableAccounts {
+                        address: *i_account.key,
+                    }
+                    .into());
                 }
             }
-        }
-
-        false
-    }
-
-    /// Checks whether there are duplicated accounts.
-    pub fn error_on_duplicated_accounts(&self) -> FankorResult<()> {
-        if self.check_duplicated_accounts() {
-            return Err(FankorErrorCode::DuplicatedAccounts.into());
         }
 
         Ok(())

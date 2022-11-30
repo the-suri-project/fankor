@@ -15,7 +15,7 @@ pub const ERROR_CODE_OFFSET: u32 = 6000;
 
 /// Error codes that can be returned by internal framework code.
 ///
-/// - 1000..1500 - Program
+/// - 1000..1500 - General
 /// - 1500..2000 - Accounts
 /// - 2000..2500 - CPI
 /// - 2500..3000 - ZeroCopy
@@ -25,7 +25,7 @@ pub const ERROR_CODE_OFFSET: u32 = 6000;
 #[error_code(offset = 0)]
 pub enum FankorErrorCode {
     // ------------------------------------------------------------------------
-    // Program ----------------------------------------------------------------
+    // General ----------------------------------------------------------------
     // ------------------------------------------------------------------------
     /// The id of the program does not match the one defined in the code
     #[msg("The id of the program does not match the one defined in the code")]
@@ -55,10 +55,10 @@ pub enum FankorErrorCode {
     // ------------------------------------------------------------------------
     // Accounts ---------------------------------------------------------------
     // ------------------------------------------------------------------------
-    /// The instruction contains duplicated accounts.
-    #[msg("The instruction contains duplicated accounts")]
+    /// The instruction contains duplicated mutable accounts
+    #[msg("The instruction contains duplicated mutable accounts: {}", address)]
     #[code(1500)]
-    DuplicatedAccounts,
+    DuplicatedMutableAccounts { address: Pubkey },
 
     /// No 8 byte discriminant was found on the account
     #[msg("No 8 byte discriminant was found on the account: {}", account)]
