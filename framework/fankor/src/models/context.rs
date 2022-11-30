@@ -1,3 +1,4 @@
+use crate::errors::{FankorErrorCode, FankorResult};
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 use std::cell::RefCell;
@@ -120,5 +121,27 @@ impl<'info> FankorContext<'info> {
     pub(crate) fn remove_exit_action(&self, account: &AccountInfo<'info>) {
         let index = self.get_index_for_account(account);
         (*self.inner).borrow_mut().exit_actions.remove(&index);
+    }
+
+    /// Checks whether there are duplicated accounts.
+    pub fn check_duplicated_accounts(&self) -> bool {
+        for i in 0..self.accounts.len() {
+            for j in i + 1..self.accounts.len() {
+                if std::ptr::eq(&self.accounts[i], &self.accounts[j]) {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    /// Checks whether there are duplicated accounts.
+    pub fn error_on_duplicated_accounts(&self) -> FankorResult<()> {
+        if self.check_duplicated_accounts() {
+            return Err(FankorErrorCode::DuplicatedAccounts.into());
+        }
+
+        Ok(())
     }
 }

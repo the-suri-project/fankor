@@ -55,9 +55,13 @@ pub enum FankorErrorCode {
     // ------------------------------------------------------------------------
     // Accounts ---------------------------------------------------------------
     // ------------------------------------------------------------------------
+    /// The instruction contains duplicated accounts.
+    #[msg("The instruction contains duplicated accounts")]
+    #[code(1500)]
+    DuplicatedAccounts,
+
     /// No 8 byte discriminator was found on the account
     #[msg("No 8 byte discriminator was found on the account: {}", account)]
-    #[code(1500)]
     AccountDiscriminatorNotFound { account: String },
 
     /// The account discriminator did not match what was expected
