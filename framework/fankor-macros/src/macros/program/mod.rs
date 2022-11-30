@@ -232,6 +232,9 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 std::mem::transmute::<&::fankor::models::FankorContext, &'info ::fankor::models::FankorContext>(&context)
             };
 
+            // Initial checks.
+            context.check_duplicated_mutable_accounts()?;
+
             match sighash {
                 #(#dispatch_methods,)*
                 #dispatch_default
