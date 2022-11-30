@@ -88,7 +88,7 @@ impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> Instruct
 
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
-        F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
+        F: FnMut(&AccountInfo<'info>) -> FankorResult<()>,
     {
         match self {
             Either::Left(v) => v.verify_account_infos(f),

@@ -14,7 +14,7 @@ impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Box<T> {
 
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
-        F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
+        F: FnMut(&AccountInfo<'info>) -> FankorResult<()>,
     {
         T::verify_account_infos(self, f)
     }

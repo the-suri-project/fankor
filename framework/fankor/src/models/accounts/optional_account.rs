@@ -62,7 +62,7 @@ impl<'info, T: crate::traits::Account> InstructionAccount<'info> for OptionalAcc
 
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
-        F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
+        F: FnMut(&AccountInfo<'info>) -> FankorResult<()>,
     {
         match self {
             OptionalAccount::Missing => Ok(()),

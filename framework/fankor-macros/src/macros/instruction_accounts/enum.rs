@@ -222,7 +222,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
 
             let conditions = if !conditions.is_empty() {
                 quote! {
-                    v.verify_account_infos(&mut |context: &FankorContext<'info>, info: &AccountInfo<'info>| {
+                    v.verify_account_infos(&mut |info: &AccountInfo<'info>| {
                         #(#conditions)*
 
                         Ok(())
@@ -469,7 +469,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
 
             fn verify_account_infos<F>(&self, f: &mut F) -> ::fankor::errors::FankorResult<()>
             where
-                F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> ::fankor::errors::FankorResult<()>,
+                F: FnMut(&AccountInfo<'info>) -> ::fankor::errors::FankorResult<()>,
             {
                 match self {
                     #(#verify_fn_fields)*

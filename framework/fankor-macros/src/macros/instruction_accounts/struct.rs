@@ -238,7 +238,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
         if !conditions.is_empty() {
             quote! {
-                #name.verify_account_infos(&mut |context: &FankorContext<'info>, info: &AccountInfo<'info>| {
+                #name.verify_account_infos(&mut |info: &AccountInfo<'info>| {
                     #(#conditions)*
 
                     Ok(())
@@ -431,7 +431,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
             fn verify_account_infos<F>(&self, f: &mut F) -> ::fankor::errors::FankorResult<()>
             where
-                F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> ::fankor::errors::FankorResult<()>,
+                F: FnMut(&AccountInfo<'info>) -> ::fankor::errors::FankorResult<()>,
             {
                 #(#verify_fn_fields)*
                 Ok(())

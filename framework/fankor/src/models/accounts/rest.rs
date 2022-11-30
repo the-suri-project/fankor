@@ -56,10 +56,10 @@ impl<'info> InstructionAccount<'info> for Rest<'info> {
 
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
-        F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
+        F: FnMut(&AccountInfo<'info>) -> FankorResult<()>,
     {
         for v in self.accounts {
-            f(self.context, v)?;
+            f(v)?;
         }
 
         Ok(())

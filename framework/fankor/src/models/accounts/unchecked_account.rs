@@ -221,9 +221,9 @@ impl<'info> InstructionAccount<'info> for UncheckedAccount<'info> {
 
     fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
     where
-        F: FnMut(&FankorContext<'info>, &AccountInfo<'info>) -> FankorResult<()>,
+        F: FnMut(&AccountInfo<'info>) -> FankorResult<()>,
     {
-        f(self.context, self.info)
+        f(self.info)
     }
 
     #[inline(never)]
