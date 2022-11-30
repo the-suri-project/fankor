@@ -170,6 +170,14 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
             }});
         }
 
+        if let Some(pda) = &v.pda {
+            conditions.push(quote! {{
+                let seeds = #pda;
+
+                context.check_canonical_pda(info, &seeds)?;
+            }});
+        }
+
         let min = v.min.as_ref().map(|min| {
             quote! {{
                 let expected = #min;

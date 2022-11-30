@@ -2,6 +2,7 @@ use crate::accounts::{
     EnumAccountData, StructAccountData, ZeroCopyEnumAccountData, ZeroCopyStructAccountData,
 };
 use fankor::prelude::*;
+use fankor::traits::AccountSize;
 
 #[derive(InstructionAccounts)]
 #[instruction(args = "EnumAccountData")]
@@ -11,6 +12,7 @@ pub struct InstructionStructAccounts<'info> {
     #[account(executable)]
     #[account(rent_exempt)]
     #[account(signer)]
+    #[account(pda = [crate::ID.as_ref(), &self.account2.data().value1.to_le_bytes(), &args.actual_account_size().to_le_bytes()])]
     pub account1: Account<'info, StructAccountData>,
 
     #[account(writable = false)]

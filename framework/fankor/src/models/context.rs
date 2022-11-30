@@ -163,7 +163,7 @@ impl<'info> FankorContext<'info> {
     /// it will return an error because it won't compute the same bump seed.
     pub fn check_canonical_pda(
         &self,
-        account: AccountInfo<'info>,
+        account: &AccountInfo<'info>,
         seeds: &[&[u8]],
     ) -> FankorResult<()> {
         self.check_canonical_pda_with_program(account, seeds, self.program_id)
@@ -176,11 +176,11 @@ impl<'info> FankorContext<'info> {
     /// it will return an error because it won't compute the same bump seed.
     pub fn check_canonical_pda_with_program(
         &self,
-        account: AccountInfo<'info>,
+        account: &AccountInfo<'info>,
         seeds: &[&[u8]],
         program_id: &Pubkey,
     ) -> FankorResult<()> {
-        let index = self.get_index_for_account(&account);
+        let index = self.get_index_for_account(account);
         let saved_bump_seed = self.inner.borrow().bump_seeds.get(&index).cloned();
 
         match saved_bump_seed {
