@@ -32,7 +32,7 @@ pub fn enum_de(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2>
         let is_deprecated = is_deprecated(&variant.attrs);
         let discriminant = get_discriminant(&variant.attrs)?;
 
-        // Calculate the discriminator.
+        // Calculate the discriminant.
         if let Some(v) = discriminant {
             variant_idx = v;
         } else if is_last_deprecated {

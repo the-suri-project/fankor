@@ -40,8 +40,8 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let program_entry_name = format_ident!("__fankor_internal__program_{}_entry", name);
     let program_try_entry_name = format_ident!("__fankor_internal__program_{}_try_entry", name);
 
-    let discriminators = program.methods.iter().map(|v| {
-        let fn_name = format_ident!("{}_discriminator", v.name);
+    let discriminants = program.methods.iter().map(|v| {
+        let fn_name = format_ident!("{}_discriminant", v.name);
         let discriminant = &v.discriminant;
 
         quote! {
@@ -115,7 +115,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
     } else {
         quote! {
-            _ => Err(::fankor::errors::FankorErrorCode::InstructionDiscriminatorNotFound.into())
+            _ => Err(::fankor::errors::FankorErrorCode::InstructionDiscriminantNotFound.into())
         }
     };
 
@@ -163,7 +163,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
         #[automatically_derived]
         impl #name {
-            #(#discriminators)*
+            #(#discriminants)*
         }
 
         #[cfg(any(test))]
@@ -212,7 +212,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             }
 
             if data.is_empty() {
-                return Err(::fankor::errors::FankorErrorCode::InstructionDiscriminatorMissing.into());
+                return Err(::fankor::errors::FankorErrorCode::InstructionDiscriminantMissing.into());
             }
 
             // Process data.

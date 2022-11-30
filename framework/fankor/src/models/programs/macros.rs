@@ -5,7 +5,7 @@ macro_rules! impl_account {
         pub struct $name($ty);
 
         impl crate::traits::Account for $name {
-            fn discriminator() -> u8 {
+            fn discriminant() -> u8 {
                 0
             }
 

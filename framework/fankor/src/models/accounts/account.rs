@@ -423,7 +423,7 @@ impl<'info, T: crate::traits::Account + AccountSize> Account<'info, T> {
 
     // METHODS ----------------------------------------------------------------
 
-    /// Reallocates the account to the actual account `data` size plus the discriminator
+    /// Reallocates the account to the actual account `data` size plus the discriminant
     /// length. If a `payer` is provided, fankor will add funds to the account to make it
     /// rent-exempt.
     pub fn realloc_to_contain_data(
@@ -436,7 +436,7 @@ impl<'info, T: crate::traits::Account + AccountSize> Account<'info, T> {
 
     /// Makes the account rent-exempt by adding or removing funds from/to `payer`
     /// if necessary. The size to calculate the rent is the actual account `data` size
-    /// plus the discriminator.
+    /// plus the discriminant.
     pub fn make_rent_exempt_to_contain_data(
         &self,
         payer: &'info AccountInfo<'info>,

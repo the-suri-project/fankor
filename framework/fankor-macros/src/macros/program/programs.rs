@@ -362,7 +362,7 @@ impl Program {
                         last_deprecated = deprecated;
                     }
 
-                    // Calculate the discriminator.
+                    // Calculate the discriminant.
                     if let Some(v) = discriminant {
                         let new_value = v.base10_parse::<u8>()?;
 
@@ -493,7 +493,7 @@ impl Program {
                         last_deprecated = deprecated;
                     }
 
-                    // Calculate the discriminator.
+                    // Calculate the discriminant.
                     if let Some(v) = &discriminant {
                         let new_value = v.base10_parse::<u8>()?;
 

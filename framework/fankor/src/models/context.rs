@@ -23,8 +23,8 @@ struct FankorContextInnerMut<'info> {
     exit_actions: BTreeMap<u8, FankorContextExitAction<'info>>,
 }
 
-#[derive(Clone)]
 /// The action to perform at the end of the instruction for a specific account.
+#[derive(Clone)]
 pub enum FankorContextExitAction<'info> {
     /// Ignores the account and does nothing. This is useful to avoid writing
     /// twice an account.

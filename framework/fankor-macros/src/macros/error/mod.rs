@@ -126,7 +126,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 if attributes.contains_removed_code(u32_index) {
                     return Err(Error::new(
                         name.span(),
-                        format!("The discriminator '{}' is marked as removed", u32_index),
+                        format!("The discriminant '{}' is marked as removed", u32_index),
                     ));
                 }
 

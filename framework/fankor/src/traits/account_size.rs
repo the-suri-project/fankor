@@ -73,12 +73,12 @@ impl<T: AccountSize> AccountSize for Vec<T> {
 impl<T: AccountSize> AccountSize for Option<T> {
     #[inline(always)]
     fn min_account_size() -> usize {
-        size_of::<u8>() // Discriminator
+        size_of::<u8>() // Discriminant
     }
 
     #[inline]
     fn actual_account_size(&self) -> usize {
-        size_of::<u8>() // Discriminator
+        size_of::<u8>() // Discriminant
         + match self {
             Some(v) => v.actual_account_size(),
             None => 0

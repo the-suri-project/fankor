@@ -454,7 +454,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                             let result = match flag {
                                 #(#new_method,)*
-                                _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminator { type_name: std::any::type_name::<Self>() }.into()),
+                                _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminant { type_name: std::any::type_name::<Self>() }.into()),
                             };
 
                             Ok((result, Some(size)))
@@ -470,7 +470,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                             match flag {
                                 #(#read_byte_size_from_bytes_method,)*
-                                _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminator { type_name: std::any::type_name::<Self>() }.into()),
+                                _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminant { type_name: std::any::type_name::<Self>() }.into()),
                             }
 
                             Ok(size)
@@ -515,7 +515,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                             let result = match flag {
                                 #(#new_method,)*
-                                _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminator { type_name: std::any::type_name::<Self>() }.into()),
+                                _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminant { type_name: std::any::type_name::<Self>() }.into()),
                             };
 
                             Ok((result, Some(size)))
@@ -531,7 +531,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                             match flag {
                                 #(#read_byte_size_from_bytes_method,)*
-                                _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminator { type_name: std::any::type_name::<Self>() }.into()),
+                                _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminant { type_name: std::any::type_name::<Self>() }.into()),
                             }
 
                             Ok(size)

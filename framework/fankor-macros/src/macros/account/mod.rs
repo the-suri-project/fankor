@@ -36,7 +36,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[automatically_derived]
         impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
             fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
-                if writer.write_all(&[<#name #ty_generics as ::fankor::traits::Account>::discriminator()]).is_err() {
+                if writer.write_all(&[<#name #ty_generics as ::fankor::traits::Account>::discriminant()]).is_err() {
                     return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
                         account: #name_str.to_string()
                     }.into());
@@ -55,16 +55,16 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         impl #impl_generics ::fankor::traits::AccountDeserialize for #name #ty_generics #where_clause {
             fn try_deserialize(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
                 let account: #accounts_name = ::fankor::prelude::borsh::BorshDeserialize::deserialize(buf)
-                    .map_err(|_| ::fankor::errors::FankorErrorCode::AccountDiscriminatorNotFound {
+                    .map_err(|_| ::fankor::errors::FankorErrorCode::AccountDiscriminantNotFound {
                     account: #name_str.to_string()
                 })?;
 
                 let account = match account {
                     #accounts_name::#name(v) => v,
                     _ => return Err(
-                        ::fankor::errors::FankorErrorCode::AccountDiscriminatorMismatch {
+                        ::fankor::errors::FankorErrorCode::AccountDiscriminantMismatch {
                             account: #name_str.to_string(),
-                            expected: <#name #ty_generics as ::fankor::traits::Account>::discriminator(),
+                            expected: <#name #ty_generics as ::fankor::traits::Account>::discriminant(),
                             actual: account.discriminant_code()
                         }
                         .into(),
@@ -84,7 +84,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
         #[automatically_derived]
         impl #impl_generics ::fankor::traits::Account for #name #ty_generics #where_clause {
-             fn discriminator() -> u8 {
+             fn discriminant() -> u8 {
                 #account_discriminants_name::#name.code()
             }
 

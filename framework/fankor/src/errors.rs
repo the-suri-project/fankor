@@ -32,13 +32,13 @@ pub enum FankorErrorCode {
     #[code(1000)]
     DeclaredProgramIdMismatch,
 
-    /// The instruction discriminator is missing
-    #[msg("The instruction discriminator is missing")]
-    InstructionDiscriminatorMissing,
+    /// The instruction discriminant is missing
+    #[msg("The instruction discriminant is missing")]
+    InstructionDiscriminantMissing,
 
-    /// The instruction discriminator did not match any valid
-    #[msg("The instruction discriminator did not match any valid")]
-    InstructionDiscriminatorNotFound,
+    /// The instruction discriminant did not match any valid
+    #[msg("The instruction discriminant did not match any valid")]
+    InstructionDiscriminantNotFound,
 
     /// The instruction contains more accounts than required
     #[msg("The instruction contains more accounts than required")]
@@ -60,18 +60,18 @@ pub enum FankorErrorCode {
     #[code(1500)]
     DuplicatedAccounts,
 
-    /// No 8 byte discriminator was found on the account
-    #[msg("No 8 byte discriminator was found on the account: {}", account)]
-    AccountDiscriminatorNotFound { account: String },
+    /// No 8 byte discriminant was found on the account
+    #[msg("No 8 byte discriminant was found on the account: {}", account)]
+    AccountDiscriminantNotFound { account: String },
 
-    /// The account discriminator did not match what was expected
+    /// The account discriminant did not match what was expected
     #[msg(
-        "The account discriminator {} did not match what was expected {} of account {}",
+        "The account discriminant {} did not match what was expected {} of account {}",
         actual,
         expected,
         account
     )]
-    AccountDiscriminatorMismatch {
+    AccountDiscriminantMismatch {
         actual: u8,
         expected: u8,
         account: String,
@@ -290,12 +290,12 @@ pub enum FankorErrorCode {
     #[msg("Not enough length to deserialize the zero copy type: '{}'", type_name)]
     ZeroCopyNotEnoughLength { type_name: &'static str },
 
-    /// Invalid enum discriminator while deserializing the zero copy type
+    /// Invalid enum discriminant while deserializing the zero copy type
     #[msg(
-        "Invalid enum discriminator while deserializing the zero copy type: '{}'",
+        "Invalid enum discriminant while deserializing the zero copy type: '{}'",
         type_name
     )]
-    ZeroCopyInvalidEnumDiscriminator { type_name: &'static str },
+    ZeroCopyInvalidEnumDiscriminant { type_name: &'static str },
 
     /// Possible deadlock trying to access a zero copy type
     #[msg("Possible deadlock trying to access a zero copy type: '{}'", type_name)]

@@ -169,7 +169,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 }
             });
 
-            // Calculate the discriminator.
+            // Calculate the discriminant.
             if let Some(v) = discriminant {
                 let new_value = v.base10_parse::<u8>()?;
 
@@ -195,7 +195,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             if arguments.contains_removed_discriminant(u8_index) {
                 return Err(Error::new(
                     name.span(),
-                    format!("The discriminator '{}' is marked as removed", u8_index),
+                    format!("The discriminant '{}' is marked as removed", u8_index),
                 ));
             }
 
@@ -305,7 +305,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             #[automatically_derived]
             impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
                 fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
-                    if writer.write_all(&[<#name #ty_generics as ::fankor::traits::Account>::discriminator()]).is_err() {
+                    if writer.write_all(&[<#name #ty_generics as ::fankor::traits::Account>::discriminant()]).is_err() {
                         return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
                             account: #name_str.to_string()
                         }.into());
@@ -336,7 +336,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
             #[automatically_derived]
             impl #impl_generics ::fankor::traits::Account for #name #ty_generics #where_clause {
-                fn discriminator() -> u8 {
+                fn discriminant() -> u8 {
                     0
                 }
 
@@ -402,7 +402,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             #[automatically_derived]
             impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
                 fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
-                    if writer.write_all(&[<#name #ty_generics as ::fankor::traits::Account>::discriminator()]).is_err() {
+                    if writer.write_all(&[<#name #ty_generics as ::fankor::traits::Account>::discriminant()]).is_err() {
                         return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
                             account: #name_str.to_string()
                         }.into());
@@ -433,7 +433,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
             #[automatically_derived]
             impl #impl_generics ::fankor::traits::Account for #name #ty_generics #where_clause {
-                fn discriminator() -> u8 {
+                fn discriminant() -> u8 {
                     0
                 }
 
