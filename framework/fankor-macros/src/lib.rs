@@ -151,7 +151,7 @@ pub fn account_offsets(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 
 /// Derives the `InstructionAccount` trait for the given struct/enum.
-#[proc_macro_derive(InstructionAccounts, attributes(account))]
+#[proc_macro_derive(InstructionAccounts, attributes(account, instruction))]
 pub fn instruction_accounts(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 

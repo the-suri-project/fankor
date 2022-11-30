@@ -35,6 +35,7 @@ pub struct ProgramMethod {
     pub result_type: Option<Type>,
     pub discriminant: u8,
     pub deprecated: bool,
+    pub independent_validation: bool,
 }
 
 impl Program {
@@ -276,6 +277,7 @@ impl Program {
 
                     let mut discriminant = None;
                     let mut deprecated = false;
+                    let mut independent_validation = false;
                     let mut index = 0;
 
                     while index < item.attrs.len() {
@@ -346,6 +348,18 @@ impl Program {
 
                             deprecated = true;
                             index += 1;
+                        } else if attribute.path.is_ident("independent_validation") {
+                            let attribute = item.attrs.remove(index);
+                            let attribute_span = attribute.span();
+
+                            if independent_validation {
+                                return Err(Error::new(
+                                    attribute_span,
+                                    "The independent_validation attribute can only be used once",
+                                ));
+                            }
+
+                            independent_validation = true;
                         } else {
                             index += 1;
                         }
@@ -397,6 +411,7 @@ impl Program {
                         result_type,
                         discriminant: u8_index,
                         deprecated,
+                        independent_validation,
                     });
 
                     u8_index += 1;
@@ -408,6 +423,7 @@ impl Program {
 
                     let mut discriminant = None;
                     let mut deprecated = false;
+                    let mut independent_validation = false;
                     let mut index = 0;
                     while index < item.attrs.len() {
                         let attribute = &item.attrs[index];
@@ -477,6 +493,18 @@ impl Program {
 
                             deprecated = true;
                             index += 1;
+                        } else if attribute.path.is_ident("independent_validation") {
+                            let attribute = item.attrs.remove(index);
+                            let attribute_span = attribute.span();
+
+                            if independent_validation {
+                                return Err(Error::new(
+                                    attribute_span,
+                                    "The independent_validation attribute can only be used once",
+                                ));
+                            }
+
+                            independent_validation = true;
                         } else {
                             index += 1;
                         }
@@ -526,6 +554,7 @@ impl Program {
                         result_type,
                         discriminant: u8_index,
                         deprecated,
+                        independent_validation,
                     };
 
                     if is_fallback {

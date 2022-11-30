@@ -56,13 +56,39 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         let discriminant = &v.discriminant;
         let account_type = &v.account_type;
 
-        let accounts_tokens = quote! {
-            let mut ix_accounts = accounts;
-            let accounts = <#account_type as fankor::traits::InstructionAccount>::try_from(&context, &mut ix_accounts)?;
+        let (arguments_tokens,validation_call, method_call) = if let Some(argument_type) = &v.argument_type {
+            let arguments_tokens = quote! {
+                let mut ix_data = ix_data;
+                let arguments = <#argument_type as fankor::traits::AccountDeserialize>::try_deserialize(&mut ix_data)?;
+            };
 
-            if ix_accounts.len() != 0 {
-                return Err(::fankor::errors::FankorErrorCode::UnusedAccounts.into());
-            }
+            let validation_call = if v.independent_validation {
+                quote! {
+                    accounts.validate(&context)?;
+                }
+            }else {
+                quote! {
+                    accounts.validate(&context, &arguments)?;
+                }
+            };
+
+            let method_call = quote! {
+                #name::#fn_name(context.clone(), accounts, arguments)?
+            };
+
+            (arguments_tokens, validation_call, method_call)
+        } else {
+            let arguments_tokens = quote! {};
+
+            let validation_call = quote! {
+                accounts.validate(&context)?;
+            };
+
+            let method_call = quote! {
+                #name::#fn_name(context.clone(), accounts)?
+            };
+
+            (arguments_tokens, validation_call, method_call)
         };
 
         let result = if v.result_type.is_some() {
@@ -74,33 +100,26 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         };
 
         let instruction_msg = format!("Instruction: {}", v.pascal_name);
-        if let Some(argument_type) = &v.argument_type {
-            quote! {
-                #discriminant => {
-                    ::fankor::prelude::msg!(#instruction_msg);
 
-                    #accounts_tokens
+        quote! {
+            #discriminant => {
+                ::fankor::prelude::msg!(#instruction_msg);
 
-                    let mut ix_data = ix_data;
-                    let arguments = <#argument_type as fankor::traits::AccountDeserialize>::try_deserialize(&mut ix_data)?;
-                    let result = #name::#fn_name(context.clone(), accounts, arguments)?;
-                    #result
+                #arguments_tokens
 
-                    Ok(())
+                let mut ix_accounts = accounts;
+                let accounts = <#account_type as fankor::traits::InstructionAccount>::try_from(&context, &mut ix_accounts)?;
+
+                if ix_accounts.len() != 0 {
+                    return Err(::fankor::errors::FankorErrorCode::UnusedAccounts.into());
                 }
-            }
-        } else {
-            quote! {
-                #discriminant => {
-                    ::fankor::prelude::msg!(#instruction_msg);
 
-                    #accounts_tokens
+                #validation_call
 
-                    let result = #name::#fn_name(context.clone(), accounts)?;
-                    #result
+                let result = #method_call;
+                #result
 
-                    Ok(())
-                }
+                Ok(())
             }
         }
     });
@@ -119,39 +138,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
     };
 
-    let test_method = quote! {
-        #[allow(non_snake_case)]
-        #[automatically_derived]
-        fn new_program_test<'info>() -> ::solana_program_test::ProgramTest {
-            ::solana_program_test::ProgramTest::new(
-                #name_str,
-                crate::ID,
-                Some(
-                    |first_instruction_account: usize,
-                     invoke_context: &mut ::solana_program_test::InvokeContext| {
-                        ::solana_program_test::builtin_process_instruction(
-                            |program_id: &::fankor::prelude::Pubkey,
-                                accounts: &[::fankor::prelude::AccountInfo],
-                                data: &[u8]| {
-                                // Hacks to change the lifetime to 'info.
-                                let program_id = unsafe {
-                                    std::mem::transmute::<&::fankor::prelude::Pubkey, &'info ::fankor::prelude::Pubkey>(program_id)
-                                };
-                                let accounts = unsafe {
-                                    std::mem::transmute::<&[::fankor::prelude::AccountInfo], &'info [::fankor::prelude::AccountInfo<'info>]>(accounts)
-                                };
-
-                                #program_entry_name(program_id, accounts, data)
-                            },
-                            first_instruction_account,
-                            invoke_context,
-                        )
-                    },
-                )
-            )
-        }
-    };
-
     let cpi_mod = build_cpi(&program)?;
     let lpi_mod = build_lpi(&program)?;
 
@@ -164,12 +150,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[automatically_derived]
         impl #name {
             #(#discriminants)*
-        }
-
-        #[cfg(any(test))]
-        #[automatically_derived]
-        impl #name {
-            #test_method
         }
 
         #[automatically_derived]

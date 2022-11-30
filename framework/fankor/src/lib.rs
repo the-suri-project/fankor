@@ -5,5 +5,3 @@ pub mod models;
 pub mod prelude;
 pub mod traits;
 mod utils;
-
-pub use utils::deserialize::try_from_vec_accounts_with_bounds;

@@ -4,6 +4,7 @@ use crate::accounts::{
 use fankor::prelude::*;
 
 #[derive(InstructionAccounts)]
+#[instruction(args = "EnumAccountData")]
 pub struct InstructionStructAccounts<'info> {
     #[account(owner = &crate::ID)]
     #[account(writable)]
@@ -70,61 +71,20 @@ pub struct InstructionStructAccounts<'info> {
 // ----------------------------------------------------------------------------
 
 #[derive(InstructionAccounts)]
+pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
+    pub account: Account<'info, StructAccountData>,
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+#[derive(InstructionAccounts)]
+#[instruction(args = "EnumAccountData")]
 pub enum InstructionEnumAccounts<'info> {
-    #[account(owner = &crate::ID)]
-    #[account(writable)]
-    #[account(executable)]
-    #[account(rent_exempt)]
-    #[account(signer)]
-    Account1(Account<'info, StructAccountData>),
+    Struct1(InstructionStructAccounts<'info>),
 
-    #[account(writable = false)]
-    #[account(executable = false)]
-    #[account(rent_exempt = false)]
-    #[account(signer = false)]
-    Account2(Box<Account<'info, StructAccountData>>),
+    Struct2(Box<InstructionStructAccounts<'info>>),
 
-    // Do not use `Optional` in enums, it invalidates the next variants.
-    // Account3(Option<Account<'info, StructAccountData>>),
-    OptionalAccount(OptionalAccount<'info, StructAccountData>),
-
-    UncheckedAccount(UncheckedAccount<'info>),
-
-    #[account(address = &crate::ID)]
-    Program(Program<'info, System>),
-
-    List(Vec<Account<'info, StructAccountData>>),
-
-    #[account(min = 2)]
-    List2(Vec<Account<'info, StructAccountData>>),
-
-    #[account(min = 2)]
-    #[account(max = 5)]
-    List3(Vec<Account<'info, StructAccountData>>),
-
-    #[account(size = 15)]
-    List4(Vec<Account<'info, StructAccountData>>),
-
-    #[account(max = 15)]
-    #[account(min_accounts = 10)]
-    List5(Vec<Account<'info, StructAccountData>>),
-
-    Either(Either<Account<'info, StructAccountData>, Account<'info, EnumAccountData>>),
-
-    Uninitialized(UninitializedAccount<'info, StructAccountData>),
-
-    MaybeUninitialized(MaybeUninitializedAccount<'info, StructAccountData>),
-
-    #[account(writable)]
-    OtherStruct(Box<InstructionStructAccounts<'info>>),
-
-    #[account(writable)]
-    #[account(min_accounts = 10)]
-    OtherEnum(Box<InstructionEnumAccounts<'info>>),
-
-    // Must be placed in the last position.
-    #[account(min = 2)]
-    #[account(max = 5)]
-    #[account(writable)]
-    Rest(Rest<'info>),
+    OptionalAccount(Option<InstructionStructAccounts<'info>>),
 }

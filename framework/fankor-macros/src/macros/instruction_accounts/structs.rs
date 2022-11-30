@@ -3,18 +3,18 @@ use syn::ItemStruct;
 
 use crate::Result;
 
-use crate::macros::instruction_accounts::field::{check_fields, Field, FieldKind};
+use crate::macros::instruction_accounts::arguments::InstructionArguments;
+use crate::macros::instruction_accounts::field::{check_fields, Field};
 
 pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
+    let instruction_arguments = InstructionArguments::from(&item.attrs)?;
     let name = &item.ident;
     let vis = &item.vis;
-    let generic_params = &item.generics.params;
-    let generic_params = if generic_params.is_empty() {
-        quote! {}
-    } else {
-        quote! { < #generic_params > }
-    };
-    let generic_where_clause = &item.generics.where_clause;
+    let (impl_generics, ty_generics, where_clause) = item.generics.split_for_impl();
+    let ixn_args_type = instruction_arguments
+        .args
+        .map(|args| quote! { args: &#args })
+        .unwrap_or(quote! {});
 
     let verify_fn_fields = item.fields.iter().map(|v| {
         let name = v.ident.as_ref().unwrap();
@@ -30,26 +30,15 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         .collect::<Result<Vec<Field>>>()?;
     check_fields(&mapped_fields)?;
 
-    let zero = quote! {0};
-    let try_from_fn_deserialize = mapped_fields
-        .iter()
-        .map(|v| {
-            let name = &v.name;
-            let ty = &v.ty;
+    let try_from_fn_deserialize = mapped_fields.iter().map(|v| {
+        let name = &v.name;
+        let ty = &v.ty;
 
-            if v.kind.is_vec() && v.max.is_some() {
-                let min = v.min.as_ref().unwrap_or( &zero);
-                let max = v.max.as_ref().unwrap();
+        quote! {
+            let #name = <#ty as ::fankor::traits::InstructionAccount>::try_from(context, accounts)?;
+        }
+    });
 
-                quote!{
-                    let #name: #ty = ::fankor::try_from_vec_accounts_with_bounds(context, accounts, #min, #max)?;
-                }
-            } else{
-                quote!{
-                    let #name = <#ty as ::fankor::traits::InstructionAccount>::try_from(context, accounts)?;
-                }
-            }
-        });
     let try_from_fn_conditions = mapped_fields.iter().map(|v| {
         let name = &v.name;
         let name_str = name.to_string();
@@ -181,64 +170,39 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
             }});
         }
 
-        let (min, max) = if v.kind != FieldKind::Rest {
-            let min = if v.max.is_none() {
-                v.min.as_ref().map(|min| {
-                    quote! {{
-                        let expected = #min;
-                        let actual = #name.len();
+        let min = v.min.as_ref().map(|min| {
+            quote! {{
+                let expected = #min;
+                let actual = self.#name.len();
 
-                        if actual < expected {
-                            return Err(::fankor::errors::FankorErrorCode::AccountConstraintMinimumMismatch {
-                                actual,
-                                expected,
-                                account: #name_str,
-                            }.into());
-                        }
-                    }}
-                })
-            } else {
-                None
-            };
+                if actual < expected {
+                    return Err(::fankor::errors::FankorErrorCode::AccountConstraintMinimumMismatch {
+                        actual,
+                        expected,
+                        account: #name_str,
+                    }.into());
+                }
+            }}
+        });
 
-            (min, None)
-        } else {
-            let min = v.min.as_ref().map(|min| {
-                quote! {{
-                    let expected = #min;
-                    let actual = #name.len();
+        let max = v.max.as_ref().map(|max| {
+            quote! {{
+                let expected = #max;
+                let actual = self.#name.len();
 
-                    if actual < expected {
-                        return Err(::fankor::errors::FankorErrorCode::AccountConstraintMinimumMismatch {
-                            actual,
-                            expected,
-                            account: #name_str,
-                        }.into());
-                    }
-                }}
-            });
-
-            let max = v.max.as_ref().map(|max| {
-                quote! {{
-                    let expected = #max;
-                    let actual = #name.len();
-
-                    if actual > expected {
-                        return Err(::fankor::errors::FankorErrorCode::AccountConstraintMaximumMismatch {
-                            actual,
-                            expected,
-                            account: #name_str,
-                        }.into());
-                    }
-                }}
-            });
-
-            (min, max)
-        };
+                if actual > expected {
+                    return Err(::fankor::errors::FankorErrorCode::AccountConstraintMaximumMismatch {
+                        actual,
+                        expected,
+                        account: #name_str,
+                    }.into());
+                }
+            }}
+        });
 
         if !conditions.is_empty() {
             quote! {
-                #name.verify_account_infos(&mut |info: &AccountInfo<'info>| {
+                self.#name.verify_account_infos(&mut |info: &AccountInfo<'info>| {
                     #(#conditions)*
 
                     Ok(())
@@ -264,7 +228,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         let ty = &v.ty;
 
         quote! {
-            #name:<#ty as ::fankor::traits::InstructionAccount<'info>>::CPI
+            pub #name:<#ty as ::fankor::traits::InstructionAccount<'info>>::CPI
         }
     });
     let cpi_fn_elements = mapped_fields.iter().map(|v| {
@@ -326,7 +290,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         let ty = &v.ty;
 
         quote! {
-            #name:<#ty as ::fankor::traits::InstructionAccount<'info>>::LPI
+            pub #name:<#ty as ::fankor::traits::InstructionAccount<'info>>::LPI
         }
     });
     let lpi_fn_elements = mapped_fields.iter().map(|v| {
@@ -385,41 +349,15 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
     let min_accounts_fn_elements = mapped_fields.iter().map(|v| {
         let ty = &v.ty;
 
-        match &v.kind {
-            FieldKind::Other => {
-                quote! {
-                    min_accounts += <#ty as ::fankor::traits::InstructionAccount>::min_accounts();
-                }
-            }
-            FieldKind::Vec(ty) => {
-                if let Some(min) = &v.min {
-                    quote! {
-                        min_accounts += #min * <#ty>::min_accounts();
-                    }
-                } else {
-                    quote! {
-                        min_accounts += <#ty as ::fankor::traits::InstructionAccount>::min_accounts();
-                    }
-                }
-            }
-            FieldKind::Rest => {
-                if let Some(min) = &v.min {
-                    quote! {
-                        min_accounts += #min;
-                    }
-                } else {
-                    quote! {
-                        min_accounts += <#ty as ::fankor::traits::InstructionAccount>::min_accounts();
-                    }
-                }
-            }
+        quote! {
+            min_accounts += <#ty as ::fankor::traits::InstructionAccount>::min_accounts();
         }
     });
 
     // Result
     let result = quote! {
         #[automatically_derived]
-        impl #generic_params ::fankor::traits::InstructionAccount<'info> for #name #generic_params #generic_where_clause {
+        impl #impl_generics ::fankor::traits::InstructionAccount<'info> for #name #ty_generics #where_clause {
             type CPI = #cpi_name <'info>;
             type LPI = #lpi_name <'info>;
 
@@ -442,11 +380,25 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                 accounts: &mut &'info [AccountInfo<'info>],
             ) -> ::fankor::errors::FankorResult<Self> {
                 #(#try_from_fn_deserialize)*
-                #(#try_from_fn_conditions)*
 
                 Ok(Self {
                     #(#fields),*
                 })
+            }
+        }
+
+        #[automatically_derived]
+        impl #impl_generics #name #ty_generics #where_clause {
+            pub(crate) fn validate(
+                &self,
+                context: &'info FankorContext<'info>,
+                #ixn_args_type
+            ) -> ::fankor::errors::FankorResult<()> {
+                use ::fankor::traits::InstructionAccount;
+
+                #(#try_from_fn_conditions)*
+
+                Ok(())
             }
         }
 

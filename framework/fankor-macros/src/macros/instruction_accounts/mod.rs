@@ -3,13 +3,14 @@ use syn::{Error, Item};
 
 use crate::Result;
 
-use crate::macros::instruction_accounts::r#enum::process_enum;
-use crate::macros::instruction_accounts::r#struct::process_struct;
+use crate::macros::instruction_accounts::enums::process_enum;
+use crate::macros::instruction_accounts::structs::process_struct;
 
-mod r#enum;
+mod arguments;
+mod enums;
 mod field;
 mod parser;
-mod r#struct;
+mod structs;
 
 pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
     // Process input.

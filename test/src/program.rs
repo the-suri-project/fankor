@@ -1,6 +1,8 @@
 use crate::accounts::EnumAccountData;
 use crate::errors::Errors;
-use crate::instruction::{InstructionEnumAccounts, InstructionStructAccounts};
+use crate::instruction::{
+    InstructionStructAccounts, InstructionStructAccountsWithoutAssociatedType,
+};
 use fankor::prelude::*;
 
 #[program]
@@ -13,9 +15,18 @@ impl TestProgram {
         Ok(())
     }
 
+    #[independent_validation]
+    fn instruction_with_args2(
+        context: FankorContext,
+        accounts: InstructionStructAccountsWithoutAssociatedType,
+        arguments: EnumAccountData,
+    ) -> FankorResult<()> {
+        Ok(())
+    }
+
     fn instruction_without_args(
         context: FankorContext,
-        accounts: InstructionEnumAccounts,
+        accounts: InstructionStructAccountsWithoutAssociatedType,
     ) -> FankorResult<u8> {
         Ok(3)
     }
@@ -31,32 +42,5 @@ impl TestProgram {
         require_not!(accounts.len() == 1, Errors::A);
 
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use crate::instruction::LpiInstructionEnumAccounts;
-    use solana_sdk::signer::Signer;
-    use solana_sdk::transaction::Transaction;
-
-    #[tokio::test]
-    async fn test_x() {
-        let (mut banks_client, payer, recent_blockhash) =
-            TestProgram::new_program_test().start().await;
-
-        let mut transaction = Transaction::new_with_payer(
-            &[
-                lpi::instruction_without_args(LpiInstructionEnumAccounts::UncheckedAccount(
-                    payer.pubkey(),
-                ))
-                .unwrap(),
-            ],
-            Some(&payer.pubkey()),
-        );
-
-        transaction.sign(&[&payer], recent_blockhash);
-        banks_client.process_transaction(transaction).await.unwrap();
     }
 }

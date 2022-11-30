@@ -20,22 +20,15 @@ pub struct Field {
     pub signer: Option<TokenStream>,
     pub min: Option<TokenStream>,
     pub max: Option<TokenStream>,
-    pub min_accounts: Option<TokenStream>,
+    pub pda: Option<TokenStream>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FieldKind {
     Other,
+    Option(Box<Type>),
     Vec(Box<Type>),
     Rest,
-}
-
-impl FieldKind {
-    // GETTERS -----------------------------------------------------------------
-
-    pub fn is_vec(&self) -> bool {
-        matches!(self, FieldKind::Vec(_))
-    }
 }
 
 impl Field {
@@ -56,7 +49,7 @@ impl Field {
             signer: None,
             min: None,
             max: None,
-            min_accounts: None,
+            pda: None,
         };
 
         new_field.parse_attributes(field.attrs, false)?;
@@ -89,7 +82,7 @@ impl Field {
                     signer: None,
                     min: None,
                     max: None,
-                    min_accounts: None,
+                    pda: None,
                 };
 
                 new_field.parse_attributes(variant.attrs, true)?;
@@ -128,6 +121,13 @@ impl Field {
                 if let Some(value) = meta.value {
                     match name.to_string().as_str() {
                         "owner" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The owner argument is not allowed in enums",
+                                ));
+                            }
+
                             if self.owner.is_some() {
                                 return Err(Error::new(
                                     name.span(),
@@ -138,6 +138,13 @@ impl Field {
                             self.owner = Some(quote! {#value});
                         }
                         "address" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The address argument is not allowed in enums",
+                                ));
+                            }
+
                             if self.address.is_some() {
                                 return Err(Error::new(
                                     name.span(),
@@ -148,6 +155,13 @@ impl Field {
                             self.address = Some(quote! {#value});
                         }
                         "initialized" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The initialized argument is not allowed in enums",
+                                ));
+                            }
+
                             if self.initialized.is_some() {
                                 return Err(Error::new(
                                     name.span(),
@@ -158,6 +172,13 @@ impl Field {
                             self.initialized = Some(quote! {#value});
                         }
                         "writable" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The writable argument is not allowed in enums",
+                                ));
+                            }
+
                             if self.writable.is_some() {
                                 return Err(Error::new(
                                     name.span(),
@@ -168,6 +189,13 @@ impl Field {
                             self.writable = Some(quote! {#value});
                         }
                         "executable" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The executable argument is not allowed in enums",
+                                ));
+                            }
+
                             if self.executable.is_some() {
                                 return Err(Error::new(
                                     name.span(),
@@ -178,6 +206,13 @@ impl Field {
                             self.executable = Some(quote! {#value});
                         }
                         "rent_exempt" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The rent_exempt argument is not allowed in enums",
+                                ));
+                            }
+
                             if self.rent_exempt.is_some() {
                                 return Err(Error::new(
                                     name.span(),
@@ -188,6 +223,13 @@ impl Field {
                             self.rent_exempt = Some(quote! {#value});
                         }
                         "signer" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The signer argument is not allowed in enums",
+                                ));
+                            }
+
                             if self.signer.is_some() {
                                 return Err(Error::new(
                                     name.span(),
@@ -198,6 +240,13 @@ impl Field {
                             self.signer = Some(quote! {#value});
                         }
                         "min" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The min argument is not allowed in enums",
+                                ));
+                            }
+
                             if size_attr {
                                 return Err(Error::new(
                                     name.span(),
@@ -215,6 +264,13 @@ impl Field {
                             self.min = Some(quote! {#value});
                         }
                         "max" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The max argument is not allowed in enums",
+                                ));
+                            }
+
                             if size_attr {
                                 return Err(Error::new(
                                     name.span(),
@@ -232,6 +288,13 @@ impl Field {
                             self.max = Some(quote! {#value});
                         }
                         "size" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The size argument is not allowed in enums",
+                                ));
+                            }
+
                             if size_attr {
                                 return Err(Error::new(
                                     name.span(),
@@ -250,22 +313,22 @@ impl Field {
                             self.max = Some(quote! {#value});
                             size_attr = true;
                         }
-                        "min_accounts" => {
-                            if !is_enum {
+                        "pda" => {
+                            if is_enum {
                                 return Err(Error::new(
                                     name.span(),
-                                    "The min_accounts attribute is only allowed in enums",
+                                    "The pda argument is not allowed in enums",
                                 ));
                             }
 
-                            if self.min_accounts.is_some() {
+                            if self.pda.is_some() {
                                 return Err(Error::new(
                                     name.span(),
-                                    "The min_accounts argument can only be defined once",
+                                    "The pda argument can only be defined once",
                                 ));
                             }
 
-                            self.min_accounts = Some(quote! {#value});
+                            self.pda = Some(quote! {#value});
                         }
                         _ => {
                             return Err(Error::new(name.span(), "Unknown argument"));
@@ -286,6 +349,13 @@ impl Field {
                             ));
                         }
                         "initialized" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The initialized argument is not allowed in enums",
+                                ));
+                            }
+
                             if self.initialized.is_some() {
                                 return Err(Error::new(
                                     name.span(),
@@ -296,6 +366,13 @@ impl Field {
                             self.initialized = Some(quote! {true});
                         }
                         "writable" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The writable argument is not allowed in enums",
+                                ));
+                            }
+
                             if self.writable.is_some() {
                                 return Err(Error::new(
                                     name.span(),
@@ -306,6 +383,13 @@ impl Field {
                             self.writable = Some(quote! {true});
                         }
                         "executable" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The executable argument is not allowed in enums",
+                                ));
+                            }
+
                             if self.executable.is_some() {
                                 return Err(Error::new(
                                     name.span(),
@@ -316,6 +400,13 @@ impl Field {
                             self.executable = Some(quote! {true});
                         }
                         "rent_exempt" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The rent_exempt argument is not allowed in enums",
+                                ));
+                            }
+
                             if self.rent_exempt.is_some() {
                                 return Err(Error::new(
                                     name.span(),
@@ -326,6 +417,13 @@ impl Field {
                             self.rent_exempt = Some(quote! {true});
                         }
                         "signer" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The signer argument is not allowed in enums",
+                                ));
+                            }
+
                             if self.signer.is_some() {
                                 return Err(Error::new(
                                     name.span(),
@@ -353,17 +451,10 @@ impl Field {
                                 "The size argument must use a value: size = <expr>",
                             ));
                         }
-                        "min_accounts" => {
-                            if !is_enum {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The min_accounts attribute is only allowed in enums",
-                                ));
-                            }
-
+                        "pda" => {
                             return Err(Error::new(
                                 name.span(),
-                                "The min_accounts argument must use a value: min_accounts = <expr>",
+                                "The pda argument must use a value: pda = <expr>",
                             ));
                         }
                         _ => {
@@ -385,6 +476,19 @@ impl Field {
 fn discriminate_type(ty: &Type) -> FieldKind {
     if let Type::Path(v) = ty {
         let last_arg = v.path.segments.last().unwrap();
+        if &last_arg.ident.to_string() == "Option" {
+            return match &last_arg.arguments {
+                PathArguments::AngleBracketed(v) => {
+                    let first = v.args.first().unwrap();
+                    match first {
+                        GenericArgument::Type(v) => FieldKind::Option(Box::new(v.clone())),
+                        _ => FieldKind::Other,
+                    }
+                }
+                _ => FieldKind::Other,
+            };
+        }
+
         if &last_arg.ident.to_string() == "Vec" {
             return match &last_arg.arguments {
                 PathArguments::AngleBracketed(v) => {
@@ -429,6 +533,14 @@ pub fn check_fields(fields: &[Field]) -> Result<()> {
                     ));
                 }
             }
+            FieldKind::Option(_) => {
+                if rest_field {
+                    return Err(Error::new(
+                        field.name.span(),
+                        "The rest field cannot be placed after other fields",
+                    ));
+                }
+            }
             FieldKind::Vec(_) => {
                 if rest_field {
                     return Err(Error::new(
@@ -438,13 +550,6 @@ pub fn check_fields(fields: &[Field]) -> Result<()> {
                 }
             }
             FieldKind::Rest => {
-                if field.min_accounts.is_some() {
-                    return Err(Error::new(
-                        field.name.span(),
-                        "The min_accounts field cannot be used for Rest, please use the min attribute instead",
-                    ));
-                }
-
                 if rest_field {
                     return Err(Error::new(
                         field.name.span(),

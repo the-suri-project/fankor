@@ -28,11 +28,21 @@ impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Vec<T> {
         context: &'info FankorContext<'info>,
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
-        crate::utils::deserialize::try_from_vec_accounts_with_bounds(
-            context,
-            accounts,
-            0,
-            usize::MAX,
-        )
+        let mut result = Vec::new();
+        let mut new_accounts = *accounts;
+
+        loop {
+            let mut step_accounts = new_accounts;
+            if let Ok(account) = T::try_from(context, &mut step_accounts) {
+                new_accounts = step_accounts;
+                result.push(account);
+            } else {
+                break;
+            }
+        }
+
+        *accounts = new_accounts;
+
+        Ok(result)
     }
 }
