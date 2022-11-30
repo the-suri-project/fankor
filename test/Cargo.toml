@@ -23,5 +23,15 @@ solana-sdk = "1.14.8"
 solana-program-test = "1.14.8"
 tokio = { version = "1.14.1", features = ["macros"] }
 
-[package.metadata.docs.rs]
-targets = ["x86_64-unknown-linux-gnu"]
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+
+[profile.release.build-override]
+opt-level = "z"
+overflow-checks = true
+codegen-units = 1
+incremental = false
