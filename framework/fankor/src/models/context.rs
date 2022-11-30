@@ -21,6 +21,10 @@ struct FankorContextInnerMut<'info> {
     // End actions to perform at the end of the instruction.
     // The key is u8 because the maximum number of accounts per transaction is 256.
     exit_actions: BTreeMap<u8, FankorContextExitAction<'info>>,
+
+    // The bump seeds used for the derived accounts.
+    // The key is u8 because the maximum number of accounts per transaction is 256.
+    bump_seeds: BTreeMap<u8, u8>,
 }
 
 /// The action to perform at the end of the instruction for a specific account.
@@ -60,6 +64,7 @@ impl<'info> FankorContext<'info> {
             accounts,
             inner: Rc::new(RefCell::new(FankorContextInnerMut {
                 exit_actions: Default::default(),
+                bump_seeds: Default::default(),
             })),
         }
     }
@@ -147,6 +152,76 @@ impl<'info> FankorContext<'info> {
                 }
             }
         }
+
+        Ok(())
+    }
+
+    /// Checks whether the given account is a canonical PDA with the given seeds.
+    ///
+    /// Note: the first time this method is called, it will save the generated bump seed
+    /// in the context. If you call this method again with other seeds,
+    /// it will return an error because it won't compute the same bump seed.
+    pub fn check_canonical_pda(
+        &self,
+        account: AccountInfo<'info>,
+        seeds: &[&[u8]],
+    ) -> FankorResult<()> {
+        self.check_canonical_pda_with_program(account, seeds, self.program_id)
+    }
+
+    /// Checks whether the given account is a canonical PDA with the given seeds and program_id.
+    ///
+    /// Note: the first time this method is called, it will save the generated bump seed
+    /// in the context. If you call this method again with other seeds and/or program_id,
+    /// it will return an error because it won't compute the same bump seed.
+    pub fn check_canonical_pda_with_program(
+        &self,
+        account: AccountInfo<'info>,
+        seeds: &[&[u8]],
+        program_id: &Pubkey,
+    ) -> FankorResult<()> {
+        let index = self.get_index_for_account(&account);
+        let saved_bump_seed = self.inner.borrow().bump_seeds.get(&index).cloned();
+
+        match saved_bump_seed {
+            Some(expected_bump_seed) => {
+                let bump_seed = &[expected_bump_seed];
+                let mut new_seeds = Vec::with_capacity(seeds.len() + 1);
+                new_seeds.extend_from_slice(seeds);
+                new_seeds.push(bump_seed.as_ref());
+
+                let expected_address = Pubkey::create_program_address(&new_seeds, program_id)
+                    .map_err(|_| FankorErrorCode::CannotFindValidPdaWithProvidedSeeds {
+                        program_id: *program_id,
+                    })?;
+
+                if expected_address != *account.key {
+                    return Err(FankorErrorCode::InvalidPda {
+                        expected: expected_address,
+                        actual: *account.key,
+                    }
+                    .into());
+                }
+            }
+            None => {
+                let (expected_address, expected_bump_seed) =
+                    Pubkey::find_program_address(seeds, self.program_id);
+
+                if expected_address != *account.key {
+                    return Err(FankorErrorCode::InvalidPda {
+                        expected: expected_address,
+                        actual: *account.key,
+                    }
+                    .into());
+                }
+
+                // Add the bump seed to the context.
+                self.inner
+                    .borrow_mut()
+                    .bump_seeds
+                    .insert(index, expected_bump_seed);
+            }
+        };
 
         Ok(())
     }

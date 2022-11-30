@@ -52,6 +52,21 @@ pub enum FankorErrorCode {
     )]
     MissingProgram { address: Pubkey, name: &'static str },
 
+    /// Cannot find a valid PDA with the provided seeds for the specified program
+    #[msg(
+        "Cannot find a valid PDA with the provided seeds for the specified program: {}",
+        program_id
+    )]
+    CannotFindValidPdaWithProvidedSeeds { program_id: Pubkey },
+
+    /// The provided PDA does not match expected one
+    #[msg(
+        "The provided PDA ({}) does not match expected one ({})",
+        actual,
+        expected
+    )]
+    InvalidPda { expected: Pubkey, actual: Pubkey },
+
     // ------------------------------------------------------------------------
     // Accounts ---------------------------------------------------------------
     // ------------------------------------------------------------------------
