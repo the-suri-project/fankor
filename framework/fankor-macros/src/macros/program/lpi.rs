@@ -24,7 +24,7 @@ pub fn build_lpi(program: &Program) -> Result<TokenStream> {
 
         quote! {
             pub fn #method_name<'info>(accounts: <#account_type<'info> as ::fankor::traits::InstructionAccount<'info>>::LPI #argument_param) -> ::fankor::errors::FankorResult<::fankor::prelude::solana_program::instruction::Instruction> {
-                let mut data = [#discriminant].to_vec();
+                let mut data = vec![#discriminant];
                 #arguments
 
                 let mut metas = Vec::new();
@@ -41,6 +41,10 @@ pub fn build_lpi(program: &Program) -> Result<TokenStream> {
 
     Ok(quote! {
         pub mod lpi {
+            //! Methods for creating this program's instructions off-chain.
+            //! The created instructions must be included into a transaction before
+            //! being sent to the network.
+
             use super::*;
 
             #(#methods)*

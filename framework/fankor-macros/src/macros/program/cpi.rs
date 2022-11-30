@@ -35,7 +35,7 @@ pub fn build_cpi(program: &Program) -> Result<TokenStream> {
 
         quote! {
             pub fn #method_name<'info>(_program: &::fankor::models::Program<super::#program_name>, accounts: <#account_type<'info> as ::fankor::traits::InstructionAccount<'info>>::CPI #argument_param, signer_seeds: &[&[&[u8]]]) -> ::fankor::errors::FankorResult<#result_param> {
-                let mut data = [#discriminant].to_vec();
+                let mut data = vec![#discriminant];
                 #arguments
 
                 let mut metas = Vec::new();
@@ -58,6 +58,8 @@ pub fn build_cpi(program: &Program) -> Result<TokenStream> {
 
     Ok(quote! {
         pub mod cpi {
+            //! CPI methods for calling this program's instructions inside another Solana program.
+
             use super::*;
 
             #(#methods)*
