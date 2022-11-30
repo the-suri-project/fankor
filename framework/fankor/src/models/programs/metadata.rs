@@ -1,6 +1,6 @@
 use crate::errors::FankorResult;
 use crate::models::programs::macros::impl_account;
-use crate::traits::{AccountDeserialize, AccountSerialize, Program};
+use crate::traits::{AccountDeserialize, AccountSerialize, ProgramType};
 use borsh::{BorshDeserialize, BorshSerialize};
 use mpl_token_metadata::state::TokenMetadataAccount;
 use solana_program::pubkey::Pubkey;
@@ -10,7 +10,7 @@ use std::ops::Deref;
 #[derive(Debug, Copy, Clone)]
 pub struct Metadata;
 
-impl Program for Metadata {
+impl ProgramType for Metadata {
     fn name() -> &'static str {
         "Metadata"
     }

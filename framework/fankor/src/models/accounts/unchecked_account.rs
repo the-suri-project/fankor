@@ -1,7 +1,7 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models;
 use crate::models::{FankorContext, System};
-use crate::traits::{InstructionAccount, Program};
+use crate::traits::{InstructionAccount, ProgramType};
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use crate::utils::rent::make_rent_exempt;

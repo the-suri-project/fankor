@@ -3,6 +3,7 @@ pub use crate::errors::*;
 pub use crate::macros::*;
 pub use crate::models::types::*;
 pub use crate::models::*;
+pub use crate::traits::*;
 pub use borsh;
 pub use bs58;
 pub use fankor_macros::*;

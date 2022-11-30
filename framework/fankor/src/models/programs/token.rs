@@ -1,6 +1,6 @@
 use crate::errors::FankorResult;
 use crate::models::programs::macros::impl_account;
-use crate::traits::{AccountDeserialize, AccountSerialize, Program};
+use crate::traits::{AccountDeserialize, AccountSerialize, ProgramType};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
@@ -10,7 +10,7 @@ use std::ops::Deref;
 #[derive(Debug, Copy, Clone)]
 pub struct Token;
 
-impl Program for Token {
+impl ProgramType for Token {
     fn name() -> &'static str {
         "Token"
     }

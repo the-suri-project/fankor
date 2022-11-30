@@ -1,10 +1,10 @@
-use crate::traits::Program;
+use crate::traits::ProgramType;
 use solana_program::pubkey::Pubkey;
 
 #[derive(Debug, Copy, Clone)]
 pub struct System;
 
-impl Program for System {
+impl ProgramType for System {
     fn name() -> &'static str {
         "System"
     }

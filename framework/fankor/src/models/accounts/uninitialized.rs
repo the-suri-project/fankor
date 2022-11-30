@@ -1,7 +1,7 @@
 use crate::cpi::system_program::CpiCreateAccount;
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{Account, Either, FankorContext, System};
-use crate::traits::{AccountSize, InstructionAccount, Program};
+use crate::traits::{AccountSize, InstructionAccount, ProgramType};
 use crate::{cpi, models};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
@@ -18,13 +18,13 @@ pub type MaybeUninitializedAccount<'info, T> =
     Either<Account<'info, T>, UninitializedAccount<'info, T>>;
 
 /// Wrapper for `AccountInfo` to explicitly define an uninitialized account.
-pub struct UninitializedAccount<'info, T: crate::traits::Account> {
+pub struct UninitializedAccount<'info, T: crate::traits::AccountType> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,
     _data: PhantomData<T>,
 }
 
-impl<'info, T: crate::traits::Account> UninitializedAccount<'info, T> {
+impl<'info, T: crate::traits::AccountType> UninitializedAccount<'info, T> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Creates a new account with the given data.
@@ -86,7 +86,7 @@ impl<'info, T: crate::traits::Account> UninitializedAccount<'info, T> {
     }
 }
 
-impl<'info, T: Default + crate::traits::Account> UninitializedAccount<'info, T> {
+impl<'info, T: Default + crate::traits::AccountType> UninitializedAccount<'info, T> {
     // METHODS ----------------------------------------------------------------
 
     /// Initializes the account transferring the necessary lamports to cover the rent
@@ -165,7 +165,7 @@ impl<'info, T: Default + crate::traits::Account> UninitializedAccount<'info, T> 
     }
 }
 
-impl<'info, T: Default + crate::traits::Account + AccountSize> UninitializedAccount<'info, T> {
+impl<'info, T: Default + crate::traits::AccountType + AccountSize> UninitializedAccount<'info, T> {
     // METHODS ----------------------------------------------------------------
 
     /// Initializes the account transferring the necessary lamports to cover the rent
@@ -190,7 +190,7 @@ impl<'info, T: Default + crate::traits::Account + AccountSize> UninitializedAcco
     }
 }
 
-impl<'info, T: crate::traits::Account + AccountSize> UninitializedAccount<'info, T> {
+impl<'info, T: crate::traits::AccountType + AccountSize> UninitializedAccount<'info, T> {
     // METHODS ----------------------------------------------------------------
 
     /// Initializes the account transferring the necessary lamports to cover the rent
@@ -267,7 +267,7 @@ impl<'info, T: crate::traits::Account + AccountSize> UninitializedAccount<'info,
     }
 }
 
-impl<'info, T: crate::traits::Account> InstructionAccount<'info>
+impl<'info, T: crate::traits::AccountType> InstructionAccount<'info>
     for UninitializedAccount<'info, T>
 {
     type CPI = AccountInfo<'info>;
@@ -300,7 +300,7 @@ impl<'info, T: crate::traits::Account> InstructionAccount<'info>
     }
 }
 
-impl<'info, T: crate::traits::Account> Debug for UninitializedAccount<'info, T> {
+impl<'info, T: crate::traits::AccountType> Debug for UninitializedAccount<'info, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("UninitializedAccount")
             .field("info", &self.info)

@@ -43,7 +43,7 @@ pub fn build_cpi(program: &Program) -> Result<TokenStream> {
                 ::fankor::traits::CpiInstructionAccount::to_account_metas_and_infos(&accounts, &mut metas, &mut infos)?;
 
                 let instruction = ::fankor::prelude::solana_program::instruction::Instruction {
-                    program_id: *<super::#program_name as ::fankor::traits::Program>::address(),
+                    program_id: *<super::#program_name as ::fankor::traits::ProgramType>::address(),
                     accounts: metas,
                     data,
                 };

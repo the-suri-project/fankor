@@ -4,7 +4,7 @@ macro_rules! impl_account {
         #[derive($($derived),*)]
         pub struct $name($ty);
 
-        impl crate::traits::Account for $name {
+        impl crate::traits::AccountType for $name {
             fn discriminant() -> u8 {
                 0
             }

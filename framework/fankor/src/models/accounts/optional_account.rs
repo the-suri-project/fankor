@@ -11,12 +11,12 @@ use std::fmt::{Debug, Formatter};
 /// This differs from `Option<T>` in that it if T does not deserialize, it does not consume
 /// the account while `OptionalAccount<T>` always consumes an account, i.e. there must be a
 /// deserializable account or the default one (1111...1111).
-pub enum OptionalAccount<'info, T: crate::traits::Account> {
+pub enum OptionalAccount<'info, T: crate::traits::AccountType> {
     Missing,
     Account(Account<'info, T>),
 }
 
-impl<'info, T: crate::traits::Account> OptionalAccount<'info, T> {
+impl<'info, T: crate::traits::AccountType> OptionalAccount<'info, T> {
     // GETTERS -----------------------------------------------------------------
 
     pub fn is_missing(&self) -> bool {
@@ -51,7 +51,7 @@ impl<'info, T: crate::traits::Account> OptionalAccount<'info, T> {
     }
 }
 
-impl<'info, T: crate::traits::Account> InstructionAccount<'info> for OptionalAccount<'info, T> {
+impl<'info, T: crate::traits::AccountType> InstructionAccount<'info> for OptionalAccount<'info, T> {
     type CPI = AccountInfo<'info>;
     type LPI = Pubkey;
 
@@ -94,7 +94,7 @@ impl<'info, T: crate::traits::Account> InstructionAccount<'info> for OptionalAcc
     }
 }
 
-impl<'info, T: crate::traits::Account> Debug for OptionalAccount<'info, T> {
+impl<'info, T: crate::traits::AccountType> Debug for OptionalAccount<'info, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             OptionalAccount::Missing => f.debug_struct("OptionalAccount::Missing").finish(),

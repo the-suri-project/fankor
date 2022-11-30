@@ -8,13 +8,13 @@ use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
-pub struct Program<'info, T: crate::traits::Program> {
+pub struct Program<'info, T: crate::traits::ProgramType> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,
     _data: PhantomData<T>,
 }
 
-impl<'info, T: crate::traits::Program> Program<'info, T> {
+impl<'info, T: crate::traits::ProgramType> Program<'info, T> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Creates a new account with the given data.
@@ -89,7 +89,7 @@ impl<'info, T: crate::traits::Program> Program<'info, T> {
     }
 }
 
-impl<'info, T: crate::traits::Program> InstructionAccount<'info> for Program<'info, T> {
+impl<'info, T: crate::traits::ProgramType> InstructionAccount<'info> for Program<'info, T> {
     type CPI = AccountInfo<'info>;
     type LPI = Pubkey;
 
@@ -122,13 +122,13 @@ impl<'info, T: crate::traits::Program> InstructionAccount<'info> for Program<'in
     }
 }
 
-impl<'info, T: crate::traits::Program> Debug for Program<'info, T> {
+impl<'info, T: crate::traits::ProgramType> Debug for Program<'info, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Program").field("info", &self.info).finish()
     }
 }
 
-impl<'info, T: crate::traits::Program> AsRef<AccountInfo<'info>> for Program<'info, T> {
+impl<'info, T: crate::traits::ProgramType> AsRef<AccountInfo<'info>> for Program<'info, T> {
     fn as_ref(&self) -> &AccountInfo<'info> {
         self.info
     }

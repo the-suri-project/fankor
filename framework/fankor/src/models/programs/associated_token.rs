@@ -1,10 +1,10 @@
-use crate::traits::Program;
+use crate::traits::ProgramType;
 use solana_program::pubkey::Pubkey;
 
 #[derive(Debug, Copy, Clone)]
 pub struct AssociatedToken;
 
-impl Program for AssociatedToken {
+impl ProgramType for AssociatedToken {
     fn name() -> &'static str {
         "AssociatedToken"
     }

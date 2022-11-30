@@ -153,7 +153,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
 
         #[automatically_derived]
-        impl ::fankor::traits::Program for #name {
+        impl ::fankor::traits::ProgramType for #name {
             fn name() -> &'static str {
                 #name_str
             }

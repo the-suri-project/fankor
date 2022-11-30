@@ -2,7 +2,7 @@ use crate::errors::FankorResult;
 use solana_program::pubkey::Pubkey;
 use std::io::Write;
 
-pub trait Account:
+pub trait AccountType:
     borsh::BorshSerialize + borsh::BorshDeserialize + AccountSerialize + AccountDeserialize
 {
     /// The discriminant of the account.

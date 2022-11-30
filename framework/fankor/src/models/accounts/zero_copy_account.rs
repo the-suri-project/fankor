@@ -2,7 +2,7 @@ use crate::errors::{Error, FankorErrorCode, FankorResult};
 use crate::models;
 use crate::models::{FankorContext, FankorContextExitAction, System, Zc};
 use crate::prelude::CopyType;
-use crate::traits::{InstructionAccount, Program};
+use crate::traits::{InstructionAccount, ProgramType};
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use crate::utils::rent::make_rent_exempt;
@@ -17,13 +17,13 @@ use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
 /// An initialized account deserialized in Zero Copy mode.
-pub struct ZcAccount<'info, T: crate::traits::Account + CopyType<'info>> {
+pub struct ZcAccount<'info, T: crate::traits::AccountType + CopyType<'info>> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,
     _data: PhantomData<T>,
 }
 
-impl<'info, T: crate::traits::Account + CopyType<'info>> ZcAccount<'info, T> {
+impl<'info, T: crate::traits::AccountType + CopyType<'info>> ZcAccount<'info, T> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Creates a new account with the given data.
@@ -344,7 +344,7 @@ impl<'info, T: crate::traits::Account + CopyType<'info>> ZcAccount<'info, T> {
     }
 }
 
-impl<'info, T: crate::traits::Account + CopyType<'info>> InstructionAccount<'info>
+impl<'info, T: crate::traits::AccountType + CopyType<'info>> InstructionAccount<'info>
     for ZcAccount<'info, T>
 {
     type CPI = AccountInfo<'info>;
@@ -392,14 +392,14 @@ impl<'info, T: crate::traits::Account + CopyType<'info>> InstructionAccount<'inf
     }
 }
 
-impl<'info, T: crate::traits::Account + CopyType<'info>> Debug for ZcAccount<'info, T> {
+impl<'info, T: crate::traits::AccountType + CopyType<'info>> Debug for ZcAccount<'info, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Account").field("info", &self.info).finish()
     }
 }
 
 /// Execute the last actions over the account.
-impl<'info, T: crate::traits::Account + CopyType<'info>> Drop for ZcAccount<'info, T> {
+impl<'info, T: crate::traits::AccountType + CopyType<'info>> Drop for ZcAccount<'info, T> {
     fn drop(&mut self) {
         if let Err(e) = drop_aux(self) {
             crate::macros::panic_error!(e);
@@ -407,7 +407,7 @@ impl<'info, T: crate::traits::Account + CopyType<'info>> Drop for ZcAccount<'inf
     }
 }
 
-fn drop_aux<'info, T: crate::traits::Account + CopyType<'info>>(
+fn drop_aux<'info, T: crate::traits::AccountType + CopyType<'info>>(
     account: &mut ZcAccount<'info, T>,
 ) -> FankorResult<()> {
     // Ignore if not owned by program.

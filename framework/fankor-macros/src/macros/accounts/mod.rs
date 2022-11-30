@@ -305,7 +305,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             #[automatically_derived]
             impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
                 fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
-                    if writer.write_all(&[<#name #ty_generics as ::fankor::traits::Account>::discriminant()]).is_err() {
+                    if writer.write_all(&[<#name #ty_generics as ::fankor::traits::AccountType>::discriminant()]).is_err() {
                         return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
                             account: #name_str.to_string()
                         }.into());
@@ -335,7 +335,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             }
 
             #[automatically_derived]
-            impl #impl_generics ::fankor::traits::Account for #name #ty_generics #where_clause {
+            impl #impl_generics ::fankor::traits::AccountType for #name #ty_generics #where_clause {
                 fn discriminant() -> u8 {
                     0
                 }
@@ -402,7 +402,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             #[automatically_derived]
             impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
                 fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
-                    if writer.write_all(&[<#name #ty_generics as ::fankor::traits::Account>::discriminant()]).is_err() {
+                    if writer.write_all(&[<#name #ty_generics as ::fankor::traits::AccountType>::discriminant()]).is_err() {
                         return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
                             account: #name_str.to_string()
                         }.into());
@@ -432,7 +432,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             }
 
             #[automatically_derived]
-            impl #impl_generics ::fankor::traits::Account for #name #ty_generics #where_clause {
+            impl #impl_generics ::fankor::traits::AccountType for #name #ty_generics #where_clause {
                 fn discriminant() -> u8 {
                     0
                 }
