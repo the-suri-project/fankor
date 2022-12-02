@@ -15,10 +15,10 @@ pub const ERROR_CODE_OFFSET: u32 = 6000;
 
 /// Error codes that can be returned by internal framework code.
 ///
-/// - 1000..1500 - General
-/// - 1500..2000 - Accounts
-/// - 2000..2500 - CPI
-/// - 2500..3000 - ZeroCopy
+/// - 1000..1499 - General
+/// - 1500..1999 - Accounts
+/// - 2000..2499 - CPI
+/// - 2500..2999 - ZeroCopy
 ///
 /// The starting point for user-defined errors is defined
 /// by the [ERROR_CODE_OFFSET](crate::error::ERROR_CODE_OFFSET).

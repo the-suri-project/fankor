@@ -145,6 +145,8 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[derive(Debug, Copy, Clone)]
         pub struct #name;
 
+        #[automatically_derived]
+        #[allow(dead_code)]
         #item
 
         #[automatically_derived]
