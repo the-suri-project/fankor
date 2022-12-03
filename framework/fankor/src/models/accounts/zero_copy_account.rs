@@ -2,7 +2,7 @@ use crate::errors::{Error, FankorErrorCode, FankorResult};
 use crate::models;
 use crate::models::{FankorContext, FankorContextExitAction, System, Zc};
 use crate::prelude::CopyType;
-use crate::traits::{AccountType, InstructionAccount, ProgramType};
+use crate::traits::{AccountType, InstructionAccount, PdaChecker, ProgramType};
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use crate::utils::rent::make_rent_exempt;
@@ -387,6 +387,12 @@ impl<'info, T: AccountType + CopyType<'info>> InstructionAccount<'info> for ZcAc
 
         *accounts = &accounts[1..];
         Ok(result)
+    }
+}
+
+impl<'info, T: AccountType + CopyType<'info>> PdaChecker<'info> for ZcAccount<'info, T> {
+    fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {
+        Some(self.info)
     }
 }
 

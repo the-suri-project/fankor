@@ -1,7 +1,7 @@
 use crate::cpi::system_program::CpiCreateAccount;
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{Account, Either, FankorContext, System};
-use crate::traits::{AccountSize, AccountType, InstructionAccount, ProgramType};
+use crate::traits::{AccountSize, AccountType, InstructionAccount, PdaChecker, ProgramType};
 use crate::{cpi, models};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
@@ -295,6 +295,12 @@ impl<'info, T: AccountType> InstructionAccount<'info> for UninitializedAccount<'
         let info = &accounts[0];
         *accounts = &accounts[1..];
         UninitializedAccount::new(context, info)
+    }
+}
+
+impl<'info, T: AccountType> PdaChecker<'info> for UninitializedAccount<'info, T> {
+    fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {
+        Some(self.info)
     }
 }
 

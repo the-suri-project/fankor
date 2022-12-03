@@ -1,7 +1,7 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{CopyType, FankorContext};
 use crate::prelude::ZcAccount;
-use crate::traits::{AccountType, InstructionAccount};
+use crate::traits::{AccountType, InstructionAccount, PdaChecker};
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 use std::fmt;
@@ -87,6 +87,15 @@ impl<'info, T: AccountType + CopyType<'info>> InstructionAccount<'info>
 
         *accounts = &accounts[1..];
         Ok(result)
+    }
+}
+
+impl<'info, T: AccountType + CopyType<'info>> PdaChecker<'info> for OptionalZcAccount<'info, T> {
+    fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {
+        match self {
+            OptionalZcAccount::Missing => None,
+            OptionalZcAccount::Account(v) => PdaChecker::pda_info(v),
+        }
     }
 }
 

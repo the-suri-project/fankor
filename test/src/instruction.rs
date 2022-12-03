@@ -86,8 +86,6 @@ pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
     pub account2: Account<'info, StructAccountData>,
 
     #[account(metadata_pda = Metadata::get_metadata_pda_seeds(self.account.address()))]
-    pub account3: Account<'info, StructAccountData>,
-
     pub optional_zc_account: OptionalZcAccount<'info, ZeroCopyStructAccountData>,
 }
 

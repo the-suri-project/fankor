@@ -1,6 +1,6 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
-use crate::traits::InstructionAccount;
+use crate::traits::{InstructionAccount, PdaChecker, ProgramType};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::pubkey::Pubkey;
@@ -8,13 +8,13 @@ use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
-pub struct Program<'info, T: crate::traits::ProgramType> {
+pub struct Program<'info, T: ProgramType> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,
     _data: PhantomData<T>,
 }
 
-impl<'info, T: crate::traits::ProgramType> Program<'info, T> {
+impl<'info, T: ProgramType> Program<'info, T> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Creates a new account with the given data.
@@ -89,7 +89,7 @@ impl<'info, T: crate::traits::ProgramType> Program<'info, T> {
     }
 }
 
-impl<'info, T: crate::traits::ProgramType> InstructionAccount<'info> for Program<'info, T> {
+impl<'info, T: ProgramType> InstructionAccount<'info> for Program<'info, T> {
     type CPI = AccountInfo<'info>;
     type LPI = Pubkey;
 
@@ -122,13 +122,19 @@ impl<'info, T: crate::traits::ProgramType> InstructionAccount<'info> for Program
     }
 }
 
-impl<'info, T: crate::traits::ProgramType> Debug for Program<'info, T> {
+impl<'info, T: ProgramType> PdaChecker<'info> for Program<'info, T> {
+    fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {
+        Some(self.info)
+    }
+}
+
+impl<'info, T: ProgramType> Debug for Program<'info, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Program").field("info", &self.info).finish()
     }
 }
 
-impl<'info, T: crate::traits::ProgramType> AsRef<AccountInfo<'info>> for Program<'info, T> {
+impl<'info, T: ProgramType> AsRef<AccountInfo<'info>> for Program<'info, T> {
     fn as_ref(&self) -> &AccountInfo<'info> {
         self.info
     }

@@ -4,7 +4,7 @@ use syn::ItemStruct;
 use crate::Result;
 
 use crate::macros::instruction_accounts::arguments::InstructionArguments;
-use crate::macros::instruction_accounts::field::{check_fields,  Field};
+use crate::macros::instruction_accounts::field::{check_fields, Field};
 
 pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
     let instruction_arguments = InstructionArguments::from(&item.attrs)?;
@@ -176,15 +176,19 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
             pda_methods.push(quote! {
                 pub fn #pda_method_name(&self, context: &FankorContext<'info>, #ixn_args_type) -> FankorResult<Vec<u8>> {
+                    let info = match self.#name.pda_info() {
+                        Some(v) => v,
+                        None => return Ok(Vec::new()),
+                    };
+
                     let seeds = #pda;
                     let size = seeds.iter().fold(0, |acc, s| acc + s.len());
                     let mut buf = Vec::with_capacity(size + 1);
                     seeds.iter().for_each(|s| buf.extend_from_slice(s));
 
                     // Get bump.
-                    let info = self.#name.info();
-                    let bump = context.get_bump_seed_from_account(info).ok_or_else(|| FankorErrorCode::MissingPdaBumpSeed {
-                        account: *self.#name.address()
+                    let bump = context.get_bump_seed_from_account(info).ok_or_else(|| ::fankor::errors::FankorErrorCode::MissingPdaBumpSeed {
+                        account: *info.key
                     })?;
                     buf.push(bump);
 

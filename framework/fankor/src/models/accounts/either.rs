@@ -1,5 +1,6 @@
 use crate::errors::FankorResult;
 use crate::models::FankorContext;
+use crate::prelude::PdaChecker;
 use crate::traits::{CpiInstructionAccount, InstructionAccount};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -108,6 +109,15 @@ impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> Instruct
                 Ok(Either::Left(l))
             }
             Err(_) => Ok(Either::Right(R::try_from(context, accounts)?)),
+        }
+    }
+}
+
+impl<'info, L: PdaChecker<'info>, R: PdaChecker<'info>> PdaChecker<'info> for Either<L, R> {
+    fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {
+        match self {
+            Either::Left(v) => v.pda_info(),
+            Either::Right(v) => v.pda_info(),
         }
     }
 }

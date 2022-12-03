@@ -1,6 +1,6 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{Account, FankorContext};
-use crate::traits::{AccountType, InstructionAccount};
+use crate::traits::{AccountType, InstructionAccount, PdaChecker};
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 use std::fmt;
@@ -91,6 +91,15 @@ impl<'info, T: AccountType> InstructionAccount<'info> for OptionalAccount<'info,
 
         *accounts = &accounts[1..];
         Ok(result)
+    }
+}
+
+impl<'info, T: AccountType> PdaChecker<'info> for OptionalAccount<'info, T> {
+    fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {
+        match self {
+            OptionalAccount::Missing => None,
+            OptionalAccount::Account(v) => PdaChecker::pda_info(v),
+        }
     }
 }
 

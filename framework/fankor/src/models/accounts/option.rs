@@ -1,6 +1,6 @@
 use crate::errors::FankorResult;
 use crate::models::FankorContext;
-use crate::traits::InstructionAccount;
+use crate::traits::{InstructionAccount, PdaChecker};
 use solana_program::account_info::AccountInfo;
 
 impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Option<T> {
@@ -34,6 +34,15 @@ impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Option<T
                 Ok(Some(v))
             }
             Err(_) => Ok(None),
+        }
+    }
+}
+
+impl<'info, T: PdaChecker<'info>> PdaChecker<'info> for Option<T> {
+    fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {
+        match self {
+            Some(v) => v.pda_info(),
+            None => None,
         }
     }
 }
