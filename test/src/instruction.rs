@@ -1,5 +1,6 @@
 use crate::accounts::*;
 use crate::arguments::*;
+use crate::errors::Errors;
 use fankor::prelude::*;
 use std::cmp::Ordering;
 
@@ -80,6 +81,7 @@ pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
     #[account(pda_program_id = AssociatedToken::address())]
     pub account: Account<'info, StructAccountData>,
 
+    #[account(constraint = (1 + 1).cmp(&2) == Ordering::Equal @ Errors::A)]
     #[account(associated_token_pda = (self.account.address(), self.account2.address()))]
     pub account2: Account<'info, StructAccountData>,
 

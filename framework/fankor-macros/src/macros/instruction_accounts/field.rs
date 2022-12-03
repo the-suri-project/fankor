@@ -1,8 +1,10 @@
-use crate::macros::instruction_accounts::parser::CustomMetaList;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+use syn::parse::{Parse, ParseStream};
+use syn::parse_quote::ParseQuote;
+use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{Attribute, Error, Expr, Fields, GenericArgument, PathArguments, Type, Variant};
+use syn::{Attribute, Error, Expr, Fields, GenericArgument, PathArguments, Token, Type, Variant};
 
 use crate::Result;
 
@@ -22,7 +24,7 @@ pub struct Field {
     pub max: Option<TokenStream>,
     pub pda: Option<TokenStream>,
     pub pda_program_id: Option<TokenStream>,
-    pub constraints: Vec<TokenStream>,
+    pub constraints: Vec<Constraint>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -31,6 +33,11 @@ pub enum FieldKind {
     Option(Box<Type>),
     Vec(Box<Type>),
     Rest,
+}
+
+pub struct Constraint {
+    pub condition: TokenStream,
+    pub error: Option<TokenStream>,
 }
 
 impl Field {
@@ -111,7 +118,7 @@ impl Field {
             }
 
             let attribute_span = attribute.span();
-            let args = match attribute.parse_args::<CustomMetaList>() {
+            let args = match attribute.parse_args::<CustomMetaListWithErrors>() {
                 Ok(v) => v,
                 Err(_) => {
                     return Err(Error::new(
@@ -141,6 +148,13 @@ impl Field {
                                 ));
                             }
 
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The owner argument cannot have an error field",
+                                ));
+                            }
+
                             self.owner = Some(quote! {#value});
                         }
                         "address" => {
@@ -155,6 +169,13 @@ impl Field {
                                 return Err(Error::new(
                                     name.span(),
                                     "The address argument can only be defined once",
+                                ));
+                            }
+
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The address argument cannot have an error field",
                                 ));
                             }
 
@@ -175,6 +196,13 @@ impl Field {
                                 ));
                             }
 
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The initialized argument cannot have an error field",
+                                ));
+                            }
+
                             self.initialized = Some(quote! {#value});
                         }
                         "writable" => {
@@ -189,6 +217,13 @@ impl Field {
                                 return Err(Error::new(
                                     name.span(),
                                     "The writable argument can only be defined once",
+                                ));
+                            }
+
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The owner writable cannot have an error field",
                                 ));
                             }
 
@@ -209,6 +244,13 @@ impl Field {
                                 ));
                             }
 
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The executable argument cannot have an error field",
+                                ));
+                            }
+
                             self.executable = Some(quote! {#value});
                         }
                         "rent_exempt" => {
@@ -226,6 +268,13 @@ impl Field {
                                 ));
                             }
 
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The rent_exempt argument cannot have an error field",
+                                ));
+                            }
+
                             self.rent_exempt = Some(quote! {#value});
                         }
                         "signer" => {
@@ -240,6 +289,13 @@ impl Field {
                                 return Err(Error::new(
                                     name.span(),
                                     "The signer argument can only be defined once",
+                                ));
+                            }
+
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The signer argument cannot have an error field",
                                 ));
                             }
 
@@ -267,6 +323,13 @@ impl Field {
                                 ));
                             }
 
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The min argument cannot have an error field",
+                                ));
+                            }
+
                             self.min = Some(quote! {#value});
                         }
                         "max" => {
@@ -288,6 +351,13 @@ impl Field {
                                 return Err(Error::new(
                                     name.span(),
                                     "The max argument can only be defined once",
+                                ));
+                            }
+
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The max argument cannot have an error field",
                                 ));
                             }
 
@@ -315,6 +385,13 @@ impl Field {
                                 ));
                             }
 
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The size argument cannot have an error field",
+                                ));
+                            }
+
                             self.min = Some(quote! {#value});
                             self.max = Some(quote! {#value});
                             size_attr = true;
@@ -334,6 +411,13 @@ impl Field {
                                 ));
                             }
 
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The pda argument cannot have an error field",
+                                ));
+                            }
+
                             self.pda = Some(quote! {#value});
                         }
                         "pda_program_id" => {
@@ -348,6 +432,13 @@ impl Field {
                                 return Err(Error::new(
                                     name.span(),
                                     "The pda_program_id argument can only be defined once",
+                                ));
+                            }
+
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The pda_program_id argument cannot have an error field",
                                 ));
                             }
 
@@ -372,6 +463,13 @@ impl Field {
                                 return Err(Error::new(
                                     name.span(),
                                     "The associated_token_pda is incompatible with the pda_program_id argument",
+                                ));
+                            }
+
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The associated_token_pda argument cannot have an error field",
                                 ));
                             }
 
@@ -421,6 +519,13 @@ impl Field {
                                 ));
                             }
 
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The metadata_pda argument cannot have an error field",
+                                ));
+                            }
+
                             self.pda = Some(quote! {#value});
                             self.pda_program_id = Some(quote! {Metadata::address()});
                         }
@@ -432,7 +537,10 @@ impl Field {
                                 ));
                             }
 
-                            self.constraints.push(quote! {#value});
+                            self.constraints.push(Constraint {
+                                condition: quote! {#value},
+                                error: meta.error.map(|e| quote! {#e}),
+                            });
                         }
                         _ => {
                             return Err(Error::new(name.span(), "Unknown argument"));
@@ -467,6 +575,13 @@ impl Field {
                                 ));
                             }
 
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The initialized argument cannot have an error field",
+                                ));
+                            }
+
                             self.initialized = Some(quote! {true});
                         }
                         "writable" => {
@@ -481,6 +596,13 @@ impl Field {
                                 return Err(Error::new(
                                     name.span(),
                                     "The writable argument can only be defined once",
+                                ));
+                            }
+
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The writable argument cannot have an error field",
                                 ));
                             }
 
@@ -501,6 +623,13 @@ impl Field {
                                 ));
                             }
 
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The executable argument cannot have an error field",
+                                ));
+                            }
+
                             self.executable = Some(quote! {true});
                         }
                         "rent_exempt" => {
@@ -518,6 +647,13 @@ impl Field {
                                 ));
                             }
 
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The rent_exempt argument cannot have an error field",
+                                ));
+                            }
+
                             self.rent_exempt = Some(quote! {true});
                         }
                         "signer" => {
@@ -532,6 +668,13 @@ impl Field {
                                 return Err(Error::new(
                                     name.span(),
                                     "The signer argument can only be defined once",
+                                ));
+                            }
+
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The signer argument cannot have an error field",
                                 ));
                             }
 
@@ -565,6 +708,18 @@ impl Field {
                             return Err(Error::new(
                                 name.span(),
                                 "The pda_program_id argument must use a value: pda_program_id = <expr>",
+                            ));
+                        }
+                        "associated_token_pda" => {
+                            return Err(Error::new(
+                                name.span(),
+                                "The associated_token_pda argument must use a value: pda_program_id = <expr>",
+                            ));
+                        }
+                        "metadata_pda" => {
+                            return Err(Error::new(
+                                name.span(),
+                                "The metadata_pda argument must use a value: pda_program_id = <expr>",
                             ));
                         }
                         "constraint" => {
@@ -686,4 +841,55 @@ pub fn check_fields(fields: &[Field]) -> Result<()> {
     }
 
     Ok(())
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+pub struct CustomMetaListWithErrors {
+    pub list: Punctuated<CustomMetaWithError, Token![,]>,
+}
+
+impl Parse for CustomMetaListWithErrors {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        Ok(Self {
+            list: <Punctuated<CustomMetaWithError, Token![,]>>::parse(input)?,
+        })
+    }
+}
+
+pub struct CustomMetaWithError {
+    pub name: Ident,
+    pub eq_token: Option<Token![=]>,
+    pub value: Option<Expr>,
+    pub at_token: Option<Token![@]>,
+    pub error: Option<Expr>,
+}
+
+impl Parse for CustomMetaWithError {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let name = input.parse::<Ident>()?;
+        let eq_token = input.parse::<Option<Token![=]>>()?;
+        let value = if eq_token.is_some() {
+            Some(input.parse::<Expr>()?)
+        } else {
+            None
+        };
+
+        let at_token = input.parse::<Option<Token![@]>>()?;
+        let error = if at_token.is_some() {
+            Some(input.parse::<Expr>()?)
+        } else {
+            None
+        };
+
+        Ok(Self {
+            name,
+            eq_token,
+            value,
+            at_token,
+            error,
+        })
+    }
 }

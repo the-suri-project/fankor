@@ -4,7 +4,7 @@ use syn::ItemStruct;
 use crate::Result;
 
 use crate::macros::instruction_accounts::arguments::InstructionArguments;
-use crate::macros::instruction_accounts::field::{check_fields, Field};
+use crate::macros::instruction_accounts::field::{check_fields,  Field};
 
 pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
     let instruction_arguments = InstructionArguments::from(&item.attrs)?;
@@ -202,11 +202,21 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         }
 
         for constraint in &v.constraints {
+            let condition = &constraint.condition;
+            let error = match &constraint.error {
+                Some(v) => v.clone(),
+                None => {
+                    quote! {
+                        FankorErrorCode::AccountConstraintFailed {
+                            account: #name_str,
+                            constraint: stringify!(#condition),
+                        }
+                    }
+                }
+            };
+
             conditions.push(quote! {{
-                require!(#constraint, FankorErrorCode::AccountConstraintFailed {
-                    account: #name_str,
-                    constraint: stringify!(#constraint),
-                });
+                require!(#condition, #error);
             }});
         }
 
