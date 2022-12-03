@@ -76,9 +76,15 @@ pub struct InstructionStructAccounts<'info> {
 #[derive(InstructionAccounts)]
 pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
     #[account(constraint = (1 + 1).cmp(&2) == Ordering::Equal)]
-    #[account(pda = AssociatedToken::get_pda_seeds(self.account.address(), self.account.address()))]
+    #[account(pda = AssociatedToken::get_pda_seeds(self.account.address(), self.account2.address()))]
     #[account(pda_program_id = AssociatedToken::address())]
     pub account: Account<'info, StructAccountData>,
+
+    #[account(associated_token_pda = (self.account.address(), self.account2.address()))]
+    pub account2: Account<'info, StructAccountData>,
+
+    #[account(metadata_pda = Metadata::get_metadata_pda_seeds(self.account.address()))]
+    pub account3: Account<'info, StructAccountData>,
 }
 
 // ----------------------------------------------------------------------------

@@ -2,7 +2,7 @@ use crate::macros::instruction_accounts::parser::CustomMetaList;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::spanned::Spanned;
-use syn::{Attribute, Error, Fields, GenericArgument, PathArguments, Type, Variant};
+use syn::{Attribute, Error, Expr, Fields, GenericArgument, PathArguments, Type, Variant};
 
 use crate::Result;
 
@@ -352,6 +352,77 @@ impl Field {
                             }
 
                             self.pda_program_id = Some(quote! {#value});
+                        }
+                        "associated_token_pda" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The associated_token_pda argument is not allowed in enums",
+                                ));
+                            }
+
+                            if self.pda.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The associated_token_pda argument can only be defined once",
+                                ));
+                            }
+
+                            if self.pda_program_id.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The associated_token_pda is incompatible with the pda_program_id argument",
+                                ));
+                            }
+
+                            // Check value.
+                            match &value {
+                                Expr::Tuple(v) => {
+                                    if v.elems.len() == 2 {
+                                        self.pda = Some(quote! {
+                                            AssociatedToken::get_pda_seeds #value
+                                        });
+                                    } else {
+                                        return Err(Error::new(
+                                            name.span(),
+                                            "The associated_token_pda argument must be a tuple with two elements: (wallet, mint)",
+                                        ));
+                                    }
+                                }
+                                _ => {
+                                    return Err(Error::new(
+                                        name.span(),
+                                        "The associated_token_pda argument must be a tuple with two elements: (wallet, mint)",
+                                    ));
+                                }
+                            }
+
+                            self.pda_program_id = Some(quote! {AssociatedToken::address()});
+                        }
+                        "metadata_pda" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The metadata_pda argument is not allowed in enums",
+                                ));
+                            }
+
+                            if self.pda.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The metadata_pda argument can only be defined once",
+                                ));
+                            }
+
+                            if self.pda_program_id.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The metadata_pda is incompatible with the pda_program_id argument",
+                                ));
+                            }
+
+                            self.pda = Some(quote! {#value});
+                            self.pda_program_id = Some(quote! {Metadata::address()});
                         }
                         "constraint" => {
                             if is_enum {
