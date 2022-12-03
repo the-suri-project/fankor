@@ -162,6 +162,12 @@ impl<'info> FankorContext<'info> {
         Ok(())
     }
 
+    /// Sets the bump seed associated with an account.
+    pub unsafe fn set_bump_seed(&self, account: &AccountInfo<'info>, bump_seed: u8) {
+        let index = self.get_index_for_account(account);
+        self.inner.borrow_mut().bump_seeds.insert(index, bump_seed);
+    }
+
     /// Checks whether the given account is a canonical PDA with the given seeds.
     ///
     /// Note: the first time this method is called, it will save the generated bump seed
