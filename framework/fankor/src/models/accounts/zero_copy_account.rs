@@ -113,7 +113,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
     pub fn data(&self) -> Zc<'info, T> {
         Zc {
             info: self.info,
-            offset: 0,
+            offset: 1, // Skip the discriminant.
             _data: PhantomData,
         }
     }
