@@ -12,6 +12,7 @@ use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::system_program;
 use solana_program::sysvar::Sysvar;
+use std::any::type_name;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
@@ -47,6 +48,22 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
         // Check it is not closed.
         if context.is_account_uninitialized(info) {
             return Err(FankorErrorCode::NewFromClosedAccount { address: *info.key }.into());
+        }
+
+        // Check discriminant.
+        {
+            let data = info.data.borrow();
+            let actual = data[0];
+            let expected = T::discriminant();
+
+            if actual != expected {
+                return Err(FankorErrorCode::AccountDiscriminantMismatch {
+                    actual,
+                    expected,
+                    account: format!("ZcAccount<{}>", type_name::<T>()),
+                }
+                .into());
+            }
         }
 
         Ok(ZcAccount {
@@ -381,6 +398,27 @@ impl<'info, T: AccountType + CopyType<'info>> InstructionAccount<'info> for ZcAc
                 actual: *info.owner,
             }
             .into());
+        }
+
+        // Check it is not closed.
+        if context.is_account_uninitialized(info) {
+            return Err(FankorErrorCode::NewFromClosedAccount { address: *info.key }.into());
+        }
+
+        // Check discriminant.
+        {
+            let data = info.data.borrow();
+            let actual = data[0];
+            let expected = T::discriminant();
+
+            if actual != expected {
+                return Err(FankorErrorCode::AccountDiscriminantMismatch {
+                    actual,
+                    expected,
+                    account: format!("ZcAccount<{}>", type_name::<T>()),
+                }
+                .into());
+            }
         }
 
         let result = ZcAccount::new_without_checks(context, info);

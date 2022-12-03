@@ -500,7 +500,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                     #[automatically_derived]
                     impl #zc_impl_generics ZeroCopyType<'info> for #zc_name #zc_ty_generics #zc_where_clause {
-                        fn new(info: &'info AccountInfo<'info>, __offset: usize) -> FankorResult<(Self, Option<usize>)> {
+                        fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
+                            let __offset = offset;
                             let bytes = info
                                 .try_borrow_data()
                                 .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock { type_name: std::any::type_name::<Self>() })?;
