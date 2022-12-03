@@ -6,8 +6,8 @@ use fankor::prelude::*;
 #[program]
 impl TestProgram {
     fn instruction_with_args(
-        context: FankorContext,
-        accounts: InstructionStructAccounts,
+        context: FankorContext<'info>,
+        accounts: InstructionStructAccounts<'info>,
         arguments: InstructionArgs,
     ) -> FankorResult<()> {
         Ok(())
@@ -15,24 +15,24 @@ impl TestProgram {
 
     #[independent_validation]
     fn instruction_with_args2(
-        context: FankorContext,
-        accounts: InstructionStructAccountsWithoutAssociatedType,
+        context: FankorContext<'info>,
+        accounts: InstructionStructAccountsWithoutAssociatedType<'info>,
         arguments: InstructionArgs,
     ) -> FankorResult<()> {
         Ok(())
     }
 
     fn instruction_without_args(
-        context: FankorContext,
-        accounts: InstructionStructAccountsWithoutAssociatedType,
+        context: FankorContext<'info>,
+        accounts: InstructionStructAccountsWithoutAssociatedType<'info>,
     ) -> FankorResult<u8> {
         Ok(3)
     }
 
     fn fallback(
-        program_id: &Pubkey,
-        accounts: &[AccountInfo],
-        instruction_data: &[u8],
+        program_id: &'info Pubkey,
+        accounts: &'info [AccountInfo],
+        instruction_data: &'info [u8],
     ) -> FankorResult<()> {
         msg!("instruction1");
 

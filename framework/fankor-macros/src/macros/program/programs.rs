@@ -6,8 +6,9 @@ use std::ops::RangeInclusive;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::{
-    parse_macro_input, Attribute, Error, Expr, ExprParen, ExprTuple, FnArg, GenericArgument,
-    ImplItem, ItemImpl, Lit, MetaList, NestedMeta, PathArguments, RangeLimits, ReturnType, Type,
+    parse_macro_input, parse_quote, Attribute, Error, Expr, ExprParen, ExprTuple, FnArg,
+    GenericArgument, ImplItem, ItemImpl, Lit, MetaList, NestedMeta, PathArguments, RangeLimits,
+    ReturnType, Type,
 };
 
 use crate::utils::unwrap_int_from_literal;
@@ -182,6 +183,8 @@ impl Program {
         }
 
         program.parse_methods()?;
+
+        program.item.generics.params.push(parse_quote!('info));
 
         Ok(program)
     }

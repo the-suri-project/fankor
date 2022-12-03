@@ -23,7 +23,7 @@ pub fn build_lpi(program: &Program) -> Result<TokenStream> {
         };
 
         quote! {
-            pub fn #method_name<'info>(accounts: <#account_type<'info> as ::fankor::traits::InstructionAccount<'info>>::LPI #argument_param) -> ::fankor::errors::FankorResult<::fankor::prelude::solana_program::instruction::Instruction> {
+            pub fn #method_name<'info>(accounts: <#account_type as ::fankor::traits::InstructionAccount<'info>>::LPI #argument_param) -> ::fankor::errors::FankorResult<::fankor::prelude::solana_program::instruction::Instruction> {
                 let mut data = vec![#discriminant];
                 #arguments
 

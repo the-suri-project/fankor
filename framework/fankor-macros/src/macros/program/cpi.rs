@@ -34,7 +34,7 @@ pub fn build_cpi(program: &Program) -> Result<TokenStream> {
         };
 
         quote! {
-            pub fn #method_name<'info>(_program: &::fankor::models::Program<super::#program_name>, accounts: <#account_type<'info> as ::fankor::traits::InstructionAccount<'info>>::CPI #argument_param, signer_seeds: &[&[&[u8]]]) -> ::fankor::errors::FankorResult<#result_param> {
+            pub fn #method_name<'info>(_program: &::fankor::models::Program<super::#program_name>, accounts: <#account_type as ::fankor::traits::InstructionAccount<'info>>::CPI #argument_param, signer_seeds: &[&[&[u8]]]) -> ::fankor::errors::FankorResult<#result_param> {
                 let mut data = vec![#discriminant];
                 #arguments
 
