@@ -1,7 +1,7 @@
 use crate::errors::{Error, FankorErrorCode, FankorResult};
 use crate::models;
 use crate::models::{FankorContext, FankorContextExitAction, System};
-use crate::traits::{AccountSize, InstructionAccount, ProgramType};
+use crate::traits::{AccountSize, AccountType, InstructionAccount, ProgramType};
 use crate::utils::bpf_writer::BpfWriter;
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
@@ -17,13 +17,13 @@ use std::fmt::{Debug, Formatter};
 use std::io::Write;
 
 /// An initialized account.
-pub struct Account<'info, T: crate::traits::AccountType> {
+pub struct Account<'info, T: AccountType> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,
     data: T,
 }
 
-impl<'info, T: crate::traits::AccountType> Account<'info, T> {
+impl<'info, T: AccountType> Account<'info, T> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Creates a new account with the given data.
@@ -403,7 +403,7 @@ impl<'info, T: crate::traits::AccountType> Account<'info, T> {
     }
 }
 
-impl<'info, T: crate::traits::AccountType + AccountSize> Account<'info, T> {
+impl<'info, T: AccountType + AccountSize> Account<'info, T> {
     // GETTERS ----------------------------------------------------------------
 
     /// Whether the account has enough lamports to be rent-exempt or not.
@@ -486,7 +486,7 @@ impl<'info, T: crate::traits::AccountType + AccountSize> Account<'info, T> {
     }
 }
 
-impl<'info, T: crate::traits::AccountType> InstructionAccount<'info> for Account<'info, T> {
+impl<'info, T: AccountType> InstructionAccount<'info> for Account<'info, T> {
     type CPI = AccountInfo<'info>;
     type LPI = Pubkey;
 
@@ -533,14 +533,14 @@ impl<'info, T: crate::traits::AccountType> InstructionAccount<'info> for Account
     }
 }
 
-impl<'info, T: crate::traits::AccountType> Debug for Account<'info, T> {
+impl<'info, T: AccountType> Debug for Account<'info, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Account").field("info", &self.info).finish()
     }
 }
 
 /// Execute the last actions over the account.
-impl<'info, T: crate::traits::AccountType> Drop for Account<'info, T> {
+impl<'info, T: AccountType> Drop for Account<'info, T> {
     fn drop(&mut self) {
         if let Err(e) = drop_aux(self) {
             crate::macros::panic_error!(e);
@@ -548,7 +548,7 @@ impl<'info, T: crate::traits::AccountType> Drop for Account<'info, T> {
     }
 }
 
-fn drop_aux<T: crate::traits::AccountType>(account: &mut Account<T>) -> FankorResult<()> {
+fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
     // Ignore if not owned by program.
     if !account.is_owned_by_program() {
         return Ok(());

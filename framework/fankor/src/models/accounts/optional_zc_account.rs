@@ -1,57 +1,53 @@
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{Account, FankorContext};
+use crate::models::{CopyType, FankorContext};
+use crate::prelude::ZcAccount;
 use crate::traits::{AccountType, InstructionAccount};
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 
-/// Deserializes `T` only if the account is not the default one, i.e. 1111...1111.
+/// Deserializes `Zc<T>` only if the account is not the default one, i.e. 1111...1111.
 ///
 /// This differs from `Option<T>` in that it if T does not deserialize, it does not consume
-/// the account while `OptionalAccount<T>` always consumes an account, i.e. there must be a
+/// the account while `OptionalZcAccount<T>` always consumes an account, i.e. there must be a
 /// deserializable account or the default one (1111...1111).
-pub enum OptionalAccount<'info, T: AccountType> {
+pub enum OptionalZcAccount<'info, T: AccountType + CopyType<'info>> {
     Missing,
-    Account(Account<'info, T>),
+    Account(ZcAccount<'info, T>),
 }
 
-impl<'info, T: AccountType> OptionalAccount<'info, T> {
+impl<'info, T: AccountType + CopyType<'info>> OptionalZcAccount<'info, T> {
     // GETTERS -----------------------------------------------------------------
 
     pub fn is_missing(&self) -> bool {
-        matches!(self, OptionalAccount::Missing)
+        matches!(self, OptionalZcAccount::Missing)
     }
 
     pub fn is_account(&self) -> bool {
         !self.is_missing()
     }
 
-    pub fn account(&self) -> Option<&Account<'info, T>> {
+    pub fn account(&self) -> Option<&ZcAccount<'info, T>> {
         match self {
-            OptionalAccount::Missing => None,
-            OptionalAccount::Account(v) => Some(v),
-        }
-    }
-
-    pub fn account_mut(&mut self) -> Option<&mut Account<'info, T>> {
-        match self {
-            OptionalAccount::Missing => None,
-            OptionalAccount::Account(v) => Some(v),
+            OptionalZcAccount::Missing => None,
+            OptionalZcAccount::Account(v) => Some(v),
         }
     }
 
     // METHOD -----------------------------------------------------------------
 
-    pub fn unwrap_account(self) -> Option<Account<'info, T>> {
+    pub fn unwrap_account(self) -> Option<ZcAccount<'info, T>> {
         match self {
-            OptionalAccount::Missing => None,
-            OptionalAccount::Account(v) => Some(v),
+            OptionalZcAccount::Missing => None,
+            OptionalZcAccount::Account(v) => Some(v),
         }
     }
 }
 
-impl<'info, T: AccountType> InstructionAccount<'info> for OptionalAccount<'info, T> {
+impl<'info, T: AccountType + CopyType<'info>> InstructionAccount<'info>
+    for OptionalZcAccount<'info, T>
+{
     type CPI = AccountInfo<'info>;
     type LPI = Pubkey;
 
@@ -65,8 +61,8 @@ impl<'info, T: AccountType> InstructionAccount<'info> for OptionalAccount<'info,
         F: FnMut(&AccountInfo<'info>) -> FankorResult<()>,
     {
         match self {
-            OptionalAccount::Missing => Ok(()),
-            OptionalAccount::Account(v) => v.verify_account_infos(f),
+            OptionalZcAccount::Missing => Ok(()),
+            OptionalZcAccount::Account(v) => v.verify_account_infos(f),
         }
     }
 
@@ -82,24 +78,24 @@ impl<'info, T: AccountType> InstructionAccount<'info> for OptionalAccount<'info,
         let info = &accounts[0];
         if info.key == &Pubkey::default() {
             *accounts = &accounts[1..];
-            return Ok(OptionalAccount::Missing);
+            return Ok(OptionalZcAccount::Missing);
         }
 
-        let result = OptionalAccount::Account(
-            <Account<'info, T> as InstructionAccount<'info>>::try_from(context, accounts)?,
-        );
+        let result = OptionalZcAccount::Account(<ZcAccount<'info, T> as InstructionAccount<
+            'info,
+        >>::try_from(context, accounts)?);
 
         *accounts = &accounts[1..];
         Ok(result)
     }
 }
 
-impl<'info, T: AccountType> Debug for OptionalAccount<'info, T> {
+impl<'info, T: AccountType + CopyType<'info>> Debug for OptionalZcAccount<'info, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            OptionalAccount::Missing => f.debug_struct("OptionalAccount::Missing").finish(),
-            OptionalAccount::Account(v) => f
-                .debug_struct("OptionalAccount")
+            OptionalZcAccount::Missing => f.debug_struct("OptionalZcAccount::Missing").finish(),
+            OptionalZcAccount::Account(v) => f
+                .debug_struct("OptionalZcAccount")
                 .field("Account", &v)
                 .finish(),
         }

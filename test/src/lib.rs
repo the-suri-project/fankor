@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use fankor::prelude::*;
 
 mod accounts;
