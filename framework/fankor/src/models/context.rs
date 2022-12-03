@@ -86,6 +86,12 @@ impl<'info> FankorContext<'info> {
         self.accounts.iter().find(|account| account.key == address)
     }
 
+    /// Gets the corresponding bump seed for an account if it was previously computed.
+    pub fn get_bump_seed_from_account(&self, account: &AccountInfo<'info>) -> Option<u8> {
+        let index = self.get_index_for_account(account);
+        self.inner.borrow().bump_seeds.get(&index).cloned()
+    }
+
     pub(crate) fn get_index_for_account(&self, account: &AccountInfo<'info>) -> u8 {
         self.accounts
             .iter()

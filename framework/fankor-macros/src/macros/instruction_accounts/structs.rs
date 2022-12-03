@@ -39,6 +39,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         }
     });
 
+    let mut pda_methods = Vec::new();
     let try_from_fn_conditions = mapped_fields.iter().map(|v| {
         let name = &v.name;
         let name_str = name.to_string();
@@ -171,6 +172,25 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         }
 
         if let Some(pda) = &v.pda {
+            let pda_method_name = format_ident!("{}_pda_seeds", name);
+            pda_methods.push(quote! {
+                pub fn #pda_method_name(&self, context: &FankorContext<'info>, #ixn_args_type) -> FankorResult<Vec<u8>> {
+                    let seeds = #pda;
+                    let size = seeds.iter().fold(0, |acc, s| acc + s.len());
+                    let mut buf = Vec::with_capacity(size + 1);
+                    seeds.iter().for_each(|s| buf.extend_from_slice(s));
+
+                    // Get bump.
+                    let info = self.#name.info();
+                    let bump = context.get_bump_seed_from_account(info).ok_or_else(|| FankorErrorCode::MissingPdaBumpSeed {
+                        account: *self.#name.address()
+                    })?;
+                    buf.push(bump);
+
+                    Ok(buf)
+                }
+            });
+
             conditions.push(quote! {{
                 let seeds = #pda;
 
@@ -408,6 +428,8 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
                 Ok(())
             }
+
+            #(#pda_methods)*
         }
 
         #[automatically_derived]
