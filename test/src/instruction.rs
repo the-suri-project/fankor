@@ -1,6 +1,7 @@
 use crate::accounts::*;
 use crate::arguments::*;
 use fankor::prelude::*;
+use std::cmp::Ordering;
 
 #[derive(InstructionAccounts)]
 #[instruction(args = "InstructionArgs")]
@@ -74,6 +75,7 @@ pub struct InstructionStructAccounts<'info> {
 
 #[derive(InstructionAccounts)]
 pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
+    #[account(constraint = (1 + 1).cmp(&2) == Ordering::Equal)]
     pub account: Account<'info, StructAccountData>,
 }
 

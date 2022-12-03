@@ -22,6 +22,7 @@ pub struct Field {
     pub max: Option<TokenStream>,
     pub pda: Option<TokenStream>,
     pub pda_program_id: Option<TokenStream>,
+    pub constraints: Vec<TokenStream>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -52,6 +53,7 @@ impl Field {
             max: None,
             pda: None,
             pda_program_id: None,
+            constraints: Vec::new(),
         };
 
         new_field.parse_attributes(field.attrs, false)?;
@@ -86,6 +88,7 @@ impl Field {
                     max: None,
                     pda: None,
                     pda_program_id: None,
+                    constraints: Vec::new(),
                 };
 
                 new_field.parse_attributes(variant.attrs, true)?;
@@ -350,6 +353,16 @@ impl Field {
 
                             self.pda_program_id = Some(quote! {#value});
                         }
+                        "constraint" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The constraint argument is not allowed in enums",
+                                ));
+                            }
+
+                            self.constraints.push(quote! {#value});
+                        }
                         _ => {
                             return Err(Error::new(name.span(), "Unknown argument"));
                         }
@@ -481,6 +494,12 @@ impl Field {
                             return Err(Error::new(
                                 name.span(),
                                 "The pda_program_id argument must use a value: pda_program_id = <expr>",
+                            ));
+                        }
+                        "constraint" => {
+                            return Err(Error::new(
+                                name.span(),
+                                "The constraint argument must use a value: constraint = <expr>",
                             ));
                         }
                         _ => {

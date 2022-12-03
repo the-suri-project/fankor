@@ -281,6 +281,17 @@ pub enum FankorErrorCode {
         account: &'static str,
     },
 
+    /// The constraint '{}' of the account '{}' has failed
+    #[msg(
+        "The constraint '{}' of the account '{}' has failed",
+        constraint,
+        account
+    )]
+    AccountConstraintFailed {
+        account: &'static str,
+        constraint: &'static str,
+    },
+
     // ------------------------------------------------------------------------
     // CPI --------------------------------------------------------------------
     // ------------------------------------------------------------------------

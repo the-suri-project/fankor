@@ -173,6 +173,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
         if let Some(pda) = &v.pda {
             let pda_method_name = format_ident!("{}_pda_seeds", name);
+
             pda_methods.push(quote! {
                 pub fn #pda_method_name(&self, context: &FankorContext<'info>, #ixn_args_type) -> FankorResult<Vec<u8>> {
                     let seeds = #pda;
@@ -197,6 +198,15 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                 let program_id = #program_id;
 
                 context.check_canonical_pda_with_program(info, &seeds, program_id)?;
+            }});
+        }
+
+        for constraint in &v.constraints {
+            conditions.push(quote! {{
+                require!(#constraint, FankorErrorCode::AccountConstraintFailed {
+                    account: #name_str,
+                    constraint: stringify!(#constraint),
+                });
             }});
         }
 
