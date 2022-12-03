@@ -102,3 +102,16 @@ pub enum InstructionEnumAccounts<'info> {
 
     OptionalAccount(Option<InstructionStructAccounts<'info>>),
 }
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+#[derive(InstructionAccounts)]
+pub enum InstructionEnumAccountsWithoutArgs<'info> {
+    Struct1(InstructionStructAccountsWithoutAssociatedType<'info>),
+
+    Struct2(Box<InstructionStructAccountsWithoutAssociatedType<'info>>),
+
+    OptionalAccount(Option<InstructionStructAccountsWithoutAssociatedType<'info>>),
+}

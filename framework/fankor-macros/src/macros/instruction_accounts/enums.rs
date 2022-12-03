@@ -15,7 +15,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
     let ixn_args_type = instruction_arguments
         .args
         .map(|args| quote! { args: &#args })
-        .unwrap_or(quote! { () });
+        .unwrap_or(quote! {});
 
     let verify_fn_fields = item.variants.iter().map(|v| {
         let variant_name = &v.ident;
