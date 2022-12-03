@@ -191,10 +191,12 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                 }
             });
 
+            let program_id = v.pda_program_id.clone().unwrap_or_else(|| quote! { context.program_id() });
             conditions.push(quote! {{
                 let seeds = #pda;
+                let program_id = #program_id;
 
-                context.check_canonical_pda(info, &seeds)?;
+                context.check_canonical_pda_with_program(info, &seeds, program_id)?;
             }});
         }
 

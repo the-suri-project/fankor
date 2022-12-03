@@ -17,6 +17,8 @@ pub struct InstructionStructAccounts<'info> {
     #[account(executable = false)]
     #[account(rent_exempt = false)]
     #[account(signer = false)]
+    #[account(pda = [crate::ID.as_ref(), &self.account2.data().value1.to_le_bytes(), &args.arg2.to_le_bytes()])]
+    #[account(pda_program_id = &crate::ID)]
     pub account2: Box<Account<'info, StructAccountData>>,
 
     pub account3: Option<Account<'info, StructAccountData>>,

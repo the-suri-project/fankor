@@ -21,6 +21,7 @@ pub struct Field {
     pub min: Option<TokenStream>,
     pub max: Option<TokenStream>,
     pub pda: Option<TokenStream>,
+    pub pda_program_id: Option<TokenStream>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -50,6 +51,7 @@ impl Field {
             min: None,
             max: None,
             pda: None,
+            pda_program_id: None,
         };
 
         new_field.parse_attributes(field.attrs, false)?;
@@ -83,6 +85,7 @@ impl Field {
                     min: None,
                     max: None,
                     pda: None,
+                    pda_program_id: None,
                 };
 
                 new_field.parse_attributes(variant.attrs, true)?;
@@ -330,6 +333,23 @@ impl Field {
 
                             self.pda = Some(quote! {#value});
                         }
+                        "pda_program_id" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The pda_program_id argument is not allowed in enums",
+                                ));
+                            }
+
+                            if self.pda_program_id.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The pda_program_id argument can only be defined once",
+                                ));
+                            }
+
+                            self.pda_program_id = Some(quote! {#value});
+                        }
                         _ => {
                             return Err(Error::new(name.span(), "Unknown argument"));
                         }
@@ -457,12 +477,25 @@ impl Field {
                                 "The pda argument must use a value: pda = <expr>",
                             ));
                         }
+                        "pda_program_id" => {
+                            return Err(Error::new(
+                                name.span(),
+                                "The pda_program_id argument must use a value: pda_program_id = <expr>",
+                            ));
+                        }
                         _ => {
                             return Err(Error::new(name.span(), "Unknown argument"));
                         }
                     }
                 }
             }
+        }
+
+        if let (Some(v), true) = (&self.pda_program_id, self.pda.is_none()) {
+            return Err(Error::new(
+                v.span(),
+                "The pda_program_id argument cannot be defined without the pda argument",
+            ));
         }
 
         Ok(())
