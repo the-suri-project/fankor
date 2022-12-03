@@ -1,18 +1,16 @@
-use crate::accounts::{
-    EnumAccountData, StructAccountData, ZeroCopyEnumAccountData, ZeroCopyStructAccountData,
-};
+use crate::accounts::*;
+use crate::arguments::*;
 use fankor::prelude::*;
-use fankor::traits::AccountSize;
 
 #[derive(InstructionAccounts)]
-#[instruction(args = "EnumAccountData")]
+#[instruction(args = "InstructionArgs")]
 pub struct InstructionStructAccounts<'info> {
     #[account(owner = &crate::ID)]
     #[account(writable)]
     #[account(executable)]
     #[account(rent_exempt)]
     #[account(signer)]
-    #[account(pda = [crate::ID.as_ref(), &self.account2.data().value1.to_le_bytes(), &args.actual_account_size().to_le_bytes()])]
+    #[account(pda = [crate::ID.as_ref(), &self.account2.data().value1.to_le_bytes(), &args.arg2.to_le_bytes()])]
     pub account1: Account<'info, StructAccountData>,
 
     #[account(writable = false)]
@@ -82,7 +80,7 @@ pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
 // ----------------------------------------------------------------------------
 
 #[derive(InstructionAccounts)]
-#[instruction(args = "EnumAccountData")]
+#[instruction(args = "InstructionArgs")]
 pub enum InstructionEnumAccounts<'info> {
     Struct1(InstructionStructAccounts<'info>),
 

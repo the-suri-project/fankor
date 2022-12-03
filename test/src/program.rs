@@ -1,8 +1,6 @@
-use crate::accounts::EnumAccountData;
+use crate::arguments::*;
 use crate::errors::Errors;
-use crate::instruction::{
-    InstructionStructAccounts, InstructionStructAccountsWithoutAssociatedType,
-};
+use crate::instruction::*;
 use fankor::prelude::*;
 
 #[program]
@@ -10,7 +8,7 @@ impl TestProgram {
     fn instruction_with_args(
         context: FankorContext,
         accounts: InstructionStructAccounts,
-        arguments: EnumAccountData,
+        arguments: InstructionArgs,
     ) -> FankorResult<()> {
         Ok(())
     }
@@ -19,7 +17,7 @@ impl TestProgram {
     fn instruction_with_args2(
         context: FankorContext,
         accounts: InstructionStructAccountsWithoutAssociatedType,
-        arguments: EnumAccountData,
+        arguments: InstructionArgs,
     ) -> FankorResult<()> {
         Ok(())
     }

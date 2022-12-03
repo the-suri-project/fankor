@@ -59,7 +59,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         let (arguments_tokens,validation_call, method_call) = if let Some(argument_type) = &v.argument_type {
             let arguments_tokens = quote! {
                 let mut ix_data = ix_data;
-                let arguments = <#argument_type as fankor::traits::AccountDeserialize>::try_deserialize(&mut ix_data)?;
+                let arguments: #argument_type = ::fankor::prelude::borsh::BorshDeserialize::deserialize(&mut ix_data)?;
             };
 
             let validation_call = if v.independent_validation {
