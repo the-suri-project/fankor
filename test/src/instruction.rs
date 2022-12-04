@@ -77,16 +77,23 @@ pub struct InstructionStructAccounts<'info> {
 #[derive(InstructionAccounts)]
 pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
     #[account(constraint = (1 + 1).cmp(&2) == Ordering::Equal)]
-    #[account(pda = AssociatedToken::get_pda_seeds(self.account.address(), self.account2.address()))]
+    #[account(pda = AssociatedToken::get_pda_seeds(self.account.address(), self.boxed_zc_account.address()))]
     #[account(pda_program_id = AssociatedToken::address())]
     pub account: Account<'info, StructAccountData>,
 
     #[account(constraint = (1 + 1).cmp(&2) == Ordering::Equal @ Errors::A)]
-    #[account(associated_token_pda = (self.account.address(), self.account2.address()))]
-    pub account2: Account<'info, StructAccountData>,
+    #[account(associated_token_pda = (self.account.address(), self.boxed_zc_account.address()))]
+    pub boxed_zc_account: Box<ZcAccount<'info, ZeroCopyStructAccountData>>,
 
     #[account(metadata_pda = Metadata::get_metadata_pda_seeds(self.account.address()))]
     pub optional_zc_account: OptionalZcAccount<'info, ZeroCopyStructAccountData>,
+
+    pub option_zc_account: Option<ZcAccount<'info, ZeroCopyStructAccountData>>,
+
+    pub either:
+        Either<Account<'info, StructAccountData>, ZcAccount<'info, ZeroCopyStructAccountData>>,
+
+    pub maybe_uninitialized: MaybeUninitializedZcAccount<'info, ZeroCopyStructAccountData>,
 }
 
 // ----------------------------------------------------------------------------

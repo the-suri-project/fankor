@@ -1,6 +1,6 @@
 use crate::cpi::system_program::CpiCreateAccount;
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{Account, Either, FankorContext, System};
+use crate::models::{Account, Either, FankorContext, System, ZcAccount};
 use crate::traits::{AccountSize, AccountType, InstructionAccount, PdaChecker, ProgramType};
 use crate::{cpi, models};
 use solana_program::account_info::AccountInfo;
@@ -16,6 +16,10 @@ use std::marker::PhantomData;
 /// Alias for the common case of having either an actual account or its uninitialized counterpart.
 pub type MaybeUninitializedAccount<'info, T> =
     Either<Account<'info, T>, UninitializedAccount<'info, T>>;
+
+/// Alias for the common case of having either an actual zero-copy account or its uninitialized counterpart.
+pub type MaybeUninitializedZcAccount<'info, T> =
+    Either<ZcAccount<'info, T>, UninitializedAccount<'info, T>>;
 
 /// Wrapper for `AccountInfo` to explicitly define an uninitialized account.
 pub struct UninitializedAccount<'info, T: AccountType> {
