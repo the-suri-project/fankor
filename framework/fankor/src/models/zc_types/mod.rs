@@ -1,15 +1,15 @@
 pub mod arrays;
 pub mod bool;
+pub mod boxed;
 pub mod maps;
 pub mod numbers;
 pub mod options;
 pub mod pubkeys;
+pub mod ranges;
 pub mod sets;
 pub mod strings;
 pub mod tuples;
 pub mod vec;
-pub mod boxed;
-pub mod ranges;
 
 use crate::errors::FankorResult;
 use borsh::{BorshDeserialize, BorshSerialize};
@@ -94,6 +94,15 @@ impl<'info, T: CopyType<'info> + BorshDeserialize> Zc<'info, T> {
         let bytes = (*self.info.data).borrow();
         let mut bytes = &bytes[self.offset..];
         Ok(T::deserialize(&mut bytes)?)
+    }
+
+    /// Gets the zero-copy version of the type.
+    ///
+    /// # Safety
+    ///
+    /// This method can fail if `bytes` cannot be deserialized into the type.
+    pub fn get_zero_copy_value(&self) -> FankorResult<T::ZeroCopyType> {
+        T::ZeroCopyType::new(self.info, self.offset).map(|(v, _)| v)
     }
 }
 
