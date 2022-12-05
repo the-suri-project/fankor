@@ -62,13 +62,13 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 let arguments: #argument_type = ::fankor::prelude::borsh::BorshDeserialize::deserialize(&mut ix_data)?;
             };
 
-            let validation_call = if v.independent_validation {
-                quote! {
-                    accounts.validate(&context)?;
-                }
-            }else {
+            let validation_call = if v.validation_with_args {
                 quote! {
                     accounts.validate(&context, &arguments)?;
+                }
+            } else {
+                quote! {
+                    accounts.validate(&context)?;
                 }
             };
 

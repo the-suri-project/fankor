@@ -36,7 +36,7 @@ pub struct ProgramMethod {
     pub result_type: Option<Type>,
     pub discriminant: u8,
     pub deprecated: bool,
-    pub independent_validation: bool,
+    pub validation_with_args: bool,
 }
 
 impl Program {
@@ -280,7 +280,7 @@ impl Program {
 
                     let mut discriminant = None;
                     let mut deprecated = false;
-                    let mut independent_validation = false;
+                    let mut validation_with_args = false;
                     let mut index = 0;
 
                     while index < item.attrs.len() {
@@ -351,18 +351,18 @@ impl Program {
 
                             deprecated = true;
                             index += 1;
-                        } else if attribute.path.is_ident("independent_validation") {
+                        } else if attribute.path.is_ident("validation_with_args") {
                             let attribute = item.attrs.remove(index);
                             let attribute_span = attribute.span();
 
-                            if independent_validation {
+                            if validation_with_args {
                                 return Err(Error::new(
                                     attribute_span,
-                                    "The independent_validation attribute can only be used once",
+                                    "The validation_with_args attribute can only be used once",
                                 ));
                             }
 
-                            independent_validation = true;
+                            validation_with_args = true;
                         } else {
                             index += 1;
                         }
@@ -414,7 +414,7 @@ impl Program {
                         result_type,
                         discriminant: u8_index,
                         deprecated,
-                        independent_validation,
+                        validation_with_args,
                     });
 
                     u8_index += 1;
@@ -426,7 +426,7 @@ impl Program {
 
                     let mut discriminant = None;
                     let mut deprecated = false;
-                    let mut independent_validation = false;
+                    let mut validation_with_args = false;
                     let mut index = 0;
                     while index < item.attrs.len() {
                         let attribute = &item.attrs[index];
@@ -496,18 +496,18 @@ impl Program {
 
                             deprecated = true;
                             index += 1;
-                        } else if attribute.path.is_ident("independent_validation") {
+                        } else if attribute.path.is_ident("validation_with_args") {
                             let attribute = item.attrs.remove(index);
                             let attribute_span = attribute.span();
 
-                            if independent_validation {
+                            if validation_with_args {
                                 return Err(Error::new(
                                     attribute_span,
-                                    "The independent_validation attribute can only be used once",
+                                    "The validation_with_args attribute can only be used once",
                                 ));
                             }
 
-                            independent_validation = true;
+                            validation_with_args = true;
                         } else {
                             index += 1;
                         }
@@ -557,7 +557,7 @@ impl Program {
                         result_type,
                         discriminant: u8_index,
                         deprecated,
-                        independent_validation,
+                        validation_with_args,
                     };
 
                     if is_fallback {

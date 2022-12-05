@@ -5,6 +5,7 @@ use fankor::prelude::*;
 
 #[program]
 impl TestProgram {
+    #[validation_with_args]
     fn instruction_with_args(
         context: FankorContext<'info>,
         accounts: InstructionStructAccounts<'info>,
@@ -13,7 +14,6 @@ impl TestProgram {
         Ok(())
     }
 
-    #[independent_validation]
     fn instruction_with_args2(
         context: FankorContext<'info>,
         accounts: InstructionStructAccountsWithoutAssociatedType<'info>,
