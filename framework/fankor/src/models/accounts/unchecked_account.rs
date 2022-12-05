@@ -1,7 +1,6 @@
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models;
-use crate::models::{FankorContext, System};
-use crate::traits::{InstructionAccount, PdaChecker, ProgramType};
+use crate::models::{FankorContext, Program, System};
+use crate::traits::{InstructionAccount, PdaChecker};
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use crate::utils::rent::make_rent_exempt;
@@ -117,18 +116,8 @@ impl<'info> UncheckedAccount<'info> {
         size: usize,
         zero_bytes: bool,
         payer: Option<&'info AccountInfo<'info>>,
+        system_program: &Program<System>,
     ) -> FankorResult<()> {
-        let program = match self.context.get_account_from_address(System::address()) {
-            Some(v) => v,
-            None => {
-                return Err(FankorErrorCode::MissingProgram {
-                    address: *System::address(),
-                    name: System::name(),
-                }
-                .into());
-            }
-        };
-
         if !self.is_owned_by_program() {
             return Err(FankorErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
@@ -153,29 +142,16 @@ impl<'info> UncheckedAccount<'info> {
             .into());
         }
 
-        realloc_account_to_size(
-            &models::Program::new(self.context, program)?,
-            self.info,
-            size,
-            zero_bytes,
-            payer,
-        )
+        realloc_account_to_size(system_program, size, zero_bytes, self.info, payer)
     }
 
     /// Makes the account rent-exempt by adding or removing funds from/to `payer`
     /// if necessary.
-    pub fn make_rent_exempt(&self, payer: &'info AccountInfo<'info>) -> FankorResult<()> {
-        let program = match self.context.get_account_from_address(System::address()) {
-            Some(v) => v,
-            None => {
-                return Err(FankorErrorCode::MissingProgram {
-                    address: *System::address(),
-                    name: System::name(),
-                }
-                .into());
-            }
-        };
-
+    pub fn make_rent_exempt(
+        &self,
+        payer: &'info AccountInfo<'info>,
+        system_program: &Program<System>,
+    ) -> FankorResult<()> {
         if !self.is_owned_by_program() {
             return Err(FankorErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
@@ -201,12 +177,7 @@ impl<'info> UncheckedAccount<'info> {
         }
 
         let new_size = self.info.data_len();
-        make_rent_exempt(
-            &models::Program::new(self.context, program)?,
-            self.info,
-            new_size,
-            payer,
-        )
+        make_rent_exempt(system_program, self.info, new_size, payer)
     }
 }
 

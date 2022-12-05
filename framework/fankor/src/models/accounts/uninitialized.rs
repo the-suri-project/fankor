@@ -1,8 +1,8 @@
+use crate::cpi;
 use crate::cpi::system_program::CpiCreateAccount;
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{Account, Either, FankorContext, System, ZcAccount};
-use crate::traits::{AccountSize, AccountType, InstructionAccount, PdaChecker, ProgramType};
-use crate::{cpi, models};
+use crate::models::{Account, Either, FankorContext, Program, System, ZcAccount};
+use crate::traits::{AccountSize, AccountType, InstructionAccount, PdaChecker};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::pubkey::Pubkey;
@@ -95,22 +95,17 @@ impl<'info, T: Default + AccountType> UninitializedAccount<'info, T> {
 
     /// Initializes the account transferring the necessary lamports to cover the rent
     /// for the given `space` using `payer` as the funding account.
-    pub fn init(self, payer: &AccountInfo<'info>, space: usize) -> FankorResult<Account<'info, T>> {
+    pub fn init(
+        self,
+        space: usize,
+        payer: &AccountInfo<'info>,
+        system_program: &Program<System>,
+    ) -> FankorResult<Account<'info, T>> {
         let rent = Rent::get()?;
         let lamports = rent.minimum_balance(space as usize);
-        let program = match self.context.get_account_from_address(System::address()) {
-            Some(v) => v,
-            None => {
-                return Err(FankorErrorCode::MissingProgram {
-                    address: *System::address(),
-                    name: System::name(),
-                }
-                .into());
-            }
-        };
 
         cpi::system_program::create_account(
-            &models::Program::new(self.context, program)?,
+            system_program,
             CpiCreateAccount {
                 from: payer.clone(),
                 to: self.info.clone(),
@@ -132,25 +127,16 @@ impl<'info, T: Default + AccountType> UninitializedAccount<'info, T> {
     /// for the given `space` using `payer` as the funding account.
     pub fn init_pda(
         self,
-        payer: &AccountInfo<'info>,
         space: usize,
         seeds: &[&[u8]],
+        payer: &AccountInfo<'info>,
+        system_program: &Program<System>,
     ) -> FankorResult<Account<'info, T>> {
         let rent = Rent::get()?;
         let lamports = rent.minimum_balance(space as usize);
-        let program = match self.context.get_account_from_address(System::address()) {
-            Some(v) => v,
-            None => {
-                return Err(FankorErrorCode::MissingProgram {
-                    address: *System::address(),
-                    name: System::name(),
-                }
-                .into());
-            }
-        };
 
         cpi::system_program::create_account(
-            &models::Program::new(self.context, program)?,
+            system_program,
             CpiCreateAccount {
                 from: payer.clone(),
                 to: self.info.clone(),
@@ -178,8 +164,9 @@ impl<'info, T: Default + AccountType + AccountSize> UninitializedAccount<'info, 
     pub fn init_with_min_space(
         self,
         payer: &AccountInfo<'info>,
+        system_program: &Program<System>,
     ) -> FankorResult<Account<'info, T>> {
-        self.init(payer, T::min_account_size())
+        self.init(T::min_account_size(), payer, system_program)
     }
 
     /// Initializes the PDA account transferring the necessary lamports to cover the rent
@@ -187,10 +174,11 @@ impl<'info, T: Default + AccountType + AccountSize> UninitializedAccount<'info, 
     /// using `payer` as the funding account.
     pub fn init_pda_with_min_space(
         self,
-        payer: &AccountInfo<'info>,
         seeds: &[&[u8]],
+        payer: &AccountInfo<'info>,
+        system_program: &Program<System>,
     ) -> FankorResult<Account<'info, T>> {
-        self.init_pda(payer, T::min_account_size(), seeds)
+        self.init_pda(T::min_account_size(), seeds, payer, system_program)
     }
 }
 
@@ -203,23 +191,14 @@ impl<'info, T: AccountType + AccountSize> UninitializedAccount<'info, T> {
         self,
         payer: &AccountInfo<'info>,
         value: T,
+        system_program: &Program<System>,
     ) -> FankorResult<Account<'info, T>> {
         let rent = Rent::get()?;
         let space = value.actual_account_size();
         let lamports = rent.minimum_balance(space as usize);
-        let program = match self.context.get_account_from_address(System::address()) {
-            Some(v) => v,
-            None => {
-                return Err(FankorErrorCode::MissingProgram {
-                    address: *System::address(),
-                    name: System::name(),
-                }
-                .into());
-            }
-        };
 
         cpi::system_program::create_account(
-            &models::Program::new(self.context, program)?,
+            system_program,
             CpiCreateAccount {
                 from: payer.clone(),
                 to: self.info.clone(),
@@ -237,26 +216,17 @@ impl<'info, T: AccountType + AccountSize> UninitializedAccount<'info, T> {
     /// for the required space to contain `value` using `payer` as the funding account.
     pub fn init_pda_with_value(
         self,
-        payer: &AccountInfo<'info>,
         value: T,
         seeds: &[&[u8]],
+        payer: &AccountInfo<'info>,
+        system_program: &Program<System>,
     ) -> FankorResult<Account<'info, T>> {
         let rent = Rent::get()?;
         let space = value.actual_account_size();
         let lamports = rent.minimum_balance(space as usize);
-        let program = match self.context.get_account_from_address(System::address()) {
-            Some(v) => v,
-            None => {
-                return Err(FankorErrorCode::MissingProgram {
-                    address: *System::address(),
-                    name: System::name(),
-                }
-                .into());
-            }
-        };
 
         cpi::system_program::create_account(
-            &models::Program::new(self.context, program)?,
+            system_program,
             CpiCreateAccount {
                 from: payer.clone(),
                 to: self.info.clone(),

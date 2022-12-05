@@ -1,7 +1,6 @@
 use crate::errors::{Error, FankorErrorCode, FankorResult};
-use crate::models;
-use crate::models::{FankorContext, FankorContextExitAction, System};
-use crate::traits::{AccountSize, AccountType, InstructionAccount, PdaChecker, ProgramType};
+use crate::models::{FankorContext, FankorContextExitAction, Program, System};
+use crate::traits::{AccountSize, AccountType, InstructionAccount, PdaChecker};
 use crate::utils::bpf_writer::BpfWriter;
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
@@ -219,18 +218,8 @@ impl<'info, T: AccountType> Account<'info, T> {
         size: usize,
         zero_bytes: bool,
         payer: Option<&'info AccountInfo<'info>>,
+        system_program: &Program<System>,
     ) -> FankorResult<()> {
-        let program = match self.context.get_account_from_address(System::address()) {
-            Some(v) => v,
-            None => {
-                return Err(FankorErrorCode::MissingProgram {
-                    address: *System::address(),
-                    name: System::name(),
-                }
-                .into());
-            }
-        };
-
         if !self.is_owned_by_program() {
             return Err(FankorErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
@@ -255,29 +244,16 @@ impl<'info, T: AccountType> Account<'info, T> {
             .into());
         }
 
-        realloc_account_to_size(
-            &models::Program::new(self.context, program)?,
-            self.info,
-            size,
-            zero_bytes,
-            payer,
-        )
+        realloc_account_to_size(system_program, size, zero_bytes, self.info, payer)
     }
 
     /// Makes the account rent-exempt by adding or removing funds from/to `payer`
     /// if necessary.
-    pub fn make_rent_exempt(&self, payer: &'info AccountInfo<'info>) -> FankorResult<()> {
-        let program = match self.context.get_account_from_address(System::address()) {
-            Some(v) => v,
-            None => {
-                return Err(FankorErrorCode::MissingProgram {
-                    address: *System::address(),
-                    name: System::name(),
-                }
-                .into());
-            }
-        };
-
+    pub fn make_rent_exempt(
+        &self,
+        payer: &'info AccountInfo<'info>,
+        system_program: &Program<System>,
+    ) -> FankorResult<()> {
         if !self.is_owned_by_program() {
             return Err(FankorErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
@@ -303,12 +279,7 @@ impl<'info, T: AccountType> Account<'info, T> {
         }
 
         let new_size = self.info.data_len();
-        make_rent_exempt(
-            &models::Program::new(self.context, program)?,
-            self.info,
-            new_size,
-            payer,
-        )
+        make_rent_exempt(system_program, self.info, new_size, payer)
     }
 
     /// Invalidates the exit action for this account.
@@ -332,8 +303,9 @@ impl<'info, T: AccountType> Account<'info, T> {
     /// This replaces other exit actions associated with this account.
     pub fn realloc_at_exit(
         &self,
-        payer: Option<&'info AccountInfo<'info>>,
         zero_bytes: bool,
+        payer: Option<&'info AccountInfo<'info>>,
+        system_program: &'info Program<'info, System>,
     ) -> FankorResult<()> {
         if !self.is_owned_by_program() {
             return Err(FankorErrorCode::AccountNotOwnedByProgram {
@@ -361,7 +333,11 @@ impl<'info, T: AccountType> Account<'info, T> {
 
         self.context().set_exit_action(
             self.info,
-            FankorContextExitAction::Realloc { payer, zero_bytes },
+            FankorContextExitAction::Realloc {
+                payer,
+                zero_bytes,
+                system_program,
+            },
         );
 
         Ok(())
@@ -430,8 +406,16 @@ impl<'info, T: AccountType + AccountSize> Account<'info, T> {
         &self,
         zero_bytes: bool,
         payer: Option<&'info AccountInfo<'info>>,
+        system_program: &Program<System>,
     ) -> FankorResult<()> {
-        unsafe { self.realloc(self.data.actual_account_size() + 1, zero_bytes, payer) }
+        unsafe {
+            self.realloc(
+                self.data.actual_account_size() + 1,
+                zero_bytes,
+                payer,
+                system_program,
+            )
+        }
     }
 
     /// Makes the account rent-exempt by adding or removing funds from/to `payer`
@@ -440,18 +424,8 @@ impl<'info, T: AccountType + AccountSize> Account<'info, T> {
     pub fn make_rent_exempt_to_contain_data(
         &self,
         payer: &'info AccountInfo<'info>,
+        system_program: &Program<System>,
     ) -> FankorResult<()> {
-        let program = match self.context.get_account_from_address(System::address()) {
-            Some(v) => v,
-            None => {
-                return Err(FankorErrorCode::MissingProgram {
-                    address: *System::address(),
-                    name: System::name(),
-                }
-                .into());
-            }
-        };
-
         if !self.is_owned_by_program() {
             return Err(FankorErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
@@ -477,12 +451,7 @@ impl<'info, T: AccountType + AccountSize> Account<'info, T> {
         }
 
         let new_size = self.data.actual_account_size() + 1;
-        make_rent_exempt(
-            &models::Program::new(self.context, program)?,
-            self.info,
-            new_size,
-            payer,
-        )
+        make_rent_exempt(system_program, self.info, new_size, payer)
     }
 }
 
@@ -568,14 +537,18 @@ fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
             }
         }
         Some(FankorContextExitAction::Ignore) => {}
-        Some(FankorContextExitAction::Realloc { zero_bytes, payer }) => {
+        Some(FankorContextExitAction::Realloc {
+            zero_bytes,
+            payer,
+            system_program,
+        }) => {
             // Serialize.
             let mut serialized = Vec::with_capacity(account.info.data_len());
             account.data.try_serialize(&mut serialized)?;
 
             // Reallocate.
             unsafe {
-                account.realloc(serialized.len(), zero_bytes, payer)?;
+                account.realloc(serialized.len(), zero_bytes, payer, system_program)?;
             }
 
             // Write data.

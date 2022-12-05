@@ -1,4 +1,5 @@
 use crate::errors::{FankorErrorCode, FankorResult};
+use crate::models::{Program, System};
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 use std::cell::RefCell;
@@ -39,6 +40,7 @@ pub enum FankorContextExitAction<'info> {
     Realloc {
         zero_bytes: bool,
         payer: Option<&'info AccountInfo<'info>>,
+        system_program: &'info Program<'info, System>,
     },
 
     /// Closes the account.

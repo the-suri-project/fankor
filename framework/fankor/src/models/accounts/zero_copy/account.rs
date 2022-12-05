@@ -1,8 +1,7 @@
 use crate::errors::{Error, FankorErrorCode, FankorResult};
-use crate::models;
-use crate::models::{FankorContext, FankorContextExitAction, System, Zc};
+use crate::models::{FankorContext, FankorContextExitAction, Program, System, Zc};
 use crate::prelude::CopyType;
-use crate::traits::{AccountType, InstructionAccount, PdaChecker, ProgramType};
+use crate::traits::{AccountType, InstructionAccount, PdaChecker};
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use crate::utils::rent::make_rent_exempt;
@@ -180,18 +179,8 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
         size: usize,
         zero_bytes: bool,
         payer: Option<&'info AccountInfo<'info>>,
+        system_program: &Program<System>,
     ) -> FankorResult<()> {
-        let program = match self.context.get_account_from_address(System::address()) {
-            Some(v) => v,
-            None => {
-                return Err(FankorErrorCode::MissingProgram {
-                    address: *System::address(),
-                    name: System::name(),
-                }
-                .into());
-            }
-        };
-
         if !self.is_owned_by_program() {
             return Err(FankorErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
@@ -216,29 +205,16 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
             .into());
         }
 
-        realloc_account_to_size(
-            &models::Program::new(self.context, program)?,
-            self.info,
-            size,
-            zero_bytes,
-            payer,
-        )
+        realloc_account_to_size(system_program, size, zero_bytes, self.info, payer)
     }
 
     /// Makes the account rent-exempt by adding or removing funds from/to `payer`
     /// if necessary.
-    pub fn make_rent_exempt(&self, payer: &'info AccountInfo<'info>) -> FankorResult<()> {
-        let program = match self.context.get_account_from_address(System::address()) {
-            Some(v) => v,
-            None => {
-                return Err(FankorErrorCode::MissingProgram {
-                    address: *System::address(),
-                    name: System::name(),
-                }
-                .into());
-            }
-        };
-
+    pub fn make_rent_exempt(
+        &self,
+        payer: &'info AccountInfo<'info>,
+        system_program: &Program<System>,
+    ) -> FankorResult<()> {
         if !self.is_owned_by_program() {
             return Err(FankorErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
@@ -264,12 +240,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
         }
 
         let new_size = self.info.data_len();
-        make_rent_exempt(
-            &models::Program::new(self.context, program)?,
-            self.info,
-            new_size,
-            payer,
-        )
+        make_rent_exempt(system_program, self.info, new_size, payer)
     }
 
     /// Invalidates the exit action for this account.
@@ -289,7 +260,11 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
     /// Makes the account be rent-exempt at exit.
     ///
     /// This replaces other exit actions associated with this account.
-    pub fn make_rent_exempt_at_exit(&self, payer: &'info AccountInfo<'info>) -> FankorResult<()> {
+    pub fn make_rent_exempt_at_exit(
+        &self,
+        payer: &'info AccountInfo<'info>,
+        system_program: &'info Program<'info, System>,
+    ) -> FankorResult<()> {
         if !self.is_owned_by_program() {
             return Err(FankorErrorCode::AccountNotOwnedByProgram {
                 address: *self.address(),
@@ -319,6 +294,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
             FankorContextExitAction::Realloc {
                 payer: Some(payer),
                 zero_bytes: false,
+                system_program,
             },
         );
 
@@ -460,7 +436,11 @@ fn drop_aux<'info, T: AccountType + CopyType<'info>>(
     match account.context.get_exit_action(account.info) {
         None => {}
         Some(FankorContextExitAction::Ignore) => {}
-        Some(FankorContextExitAction::Realloc { payer, .. }) => {
+        Some(FankorContextExitAction::Realloc {
+            payer,
+            system_program,
+            ..
+        }) => {
             let payer = match payer {
                 Some(payer) => payer,
                 None => {
@@ -470,7 +450,7 @@ fn drop_aux<'info, T: AccountType + CopyType<'info>>(
                 }
             };
 
-            account.make_rent_exempt(payer)?;
+            account.make_rent_exempt(payer, system_program)?;
         }
         Some(FankorContextExitAction::Close {
             destination_account,
