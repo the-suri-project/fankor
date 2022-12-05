@@ -189,14 +189,15 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                         None => return Ok(Vec::new()),
                     };
 
-                    let seeds = {
+                    let mut buf = {
                         #(#data)*
+                        let seeds = #pda;
+                        let size = seeds.iter().fold(0, |acc, s| acc + s.len());
+                        let mut buf = Vec::with_capacity(size + 1);
+                        seeds.iter().for_each(|s| buf.extend_from_slice(s));
 
-                        #pda
+                        buf
                     };
-                    let size = seeds.iter().fold(0, |acc, s| acc + s.len());
-                    let mut buf = Vec::with_capacity(size + 1);
-                    seeds.iter().for_each(|s| buf.extend_from_slice(s));
 
                     // Get bump.
                     let bump = context.get_bump_seed_from_account(info).ok_or_else(|| ::fankor::errors::FankorErrorCode::MissingPdaBumpSeed {
