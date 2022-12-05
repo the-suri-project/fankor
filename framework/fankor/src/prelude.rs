@@ -15,6 +15,14 @@ pub use solana_program::instruction::AccountMeta;
 pub use solana_program::msg;
 pub use solana_program::program_error::ProgramError;
 pub use solana_program::pubkey::Pubkey;
+pub use solana_program::sysvar::clock::Clock;
+pub use solana_program::sysvar::epoch_schedule::EpochSchedule;
+pub use solana_program::sysvar::instructions::Instructions;
+pub use solana_program::sysvar::rent::Rent;
+pub use solana_program::sysvar::rewards::Rewards;
+pub use solana_program::sysvar::slot_hashes::SlotHashes;
+pub use solana_program::sysvar::slot_history::SlotHistory;
+pub use solana_program::sysvar::stake_history::StakeHistory;
 #[cfg(feature = "token-program")]
 pub use spl_associated_token_account;
 #[cfg(feature = "token-program")]

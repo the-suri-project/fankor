@@ -95,6 +95,8 @@ pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
         Either<Account<'info, StructAccountData>, ZcAccount<'info, ZeroCopyStructAccountData>>,
 
     pub maybe_uninitialized: MaybeUninitializedZcAccount<'info, ZeroCopyStructAccountData>,
+
+    pub instructions_sysvar: SysvarAccount<'info, Instructions>,
 }
 
 // ----------------------------------------------------------------------------

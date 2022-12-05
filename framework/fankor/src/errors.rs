@@ -158,6 +158,10 @@ pub enum FankorErrorCode {
         actual: Pubkey,
     },
 
+    /// Sysvar account was expected to be correct
+    #[msg("Sysvar account {} was expected to be {}", actual, expected)]
+    IncorrectSysvarAccount { actual: Pubkey, expected: Pubkey },
+
     /// The account cannot be writen because it is already closed
     #[msg(
         "Cannot {} the account {} because it is already closed",
