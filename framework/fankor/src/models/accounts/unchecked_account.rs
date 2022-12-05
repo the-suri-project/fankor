@@ -177,7 +177,7 @@ impl<'info> UncheckedAccount<'info> {
         }
 
         let new_size = self.info.data_len();
-        make_rent_exempt(system_program, self.info, new_size, payer)
+        make_rent_exempt(new_size, payer, self.info, system_program)
     }
 }
 

@@ -16,7 +16,7 @@ pub(crate) fn realloc_account_to_size<'info>(
     info.realloc(size, zero_bytes)?;
 
     if let Some(payer) = payer {
-        make_rent_exempt(program, info, size, payer)?;
+        make_rent_exempt(size, payer, info, program)?;
     }
 
     Ok(())

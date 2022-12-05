@@ -279,7 +279,7 @@ impl<'info, T: AccountType> Account<'info, T> {
         }
 
         let new_size = self.info.data_len();
-        make_rent_exempt(system_program, self.info, new_size, payer)
+        make_rent_exempt(new_size, payer, self.info, system_program)
     }
 
     /// Invalidates the exit action for this account.
@@ -305,7 +305,7 @@ impl<'info, T: AccountType> Account<'info, T> {
         &self,
         zero_bytes: bool,
         payer: Option<&'info AccountInfo<'info>>,
-        system_program: &'info Program<'info, System>,
+        system_program: &Program<'info, System>,
     ) -> FankorResult<()> {
         if !self.is_owned_by_program() {
             return Err(FankorErrorCode::AccountNotOwnedByProgram {
@@ -336,7 +336,7 @@ impl<'info, T: AccountType> Account<'info, T> {
             FankorContextExitAction::Realloc {
                 payer,
                 zero_bytes,
-                system_program,
+                system_program: system_program.info(),
             },
         );
 
@@ -451,7 +451,7 @@ impl<'info, T: AccountType + AccountSize> Account<'info, T> {
         }
 
         let new_size = self.data.actual_account_size() + 1;
-        make_rent_exempt(system_program, self.info, new_size, payer)
+        make_rent_exempt(new_size, payer, self.info, system_program)
     }
 }
 
@@ -548,7 +548,12 @@ fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
 
             // Reallocate.
             unsafe {
-                account.realloc(serialized.len(), zero_bytes, payer, system_program)?;
+                account.realloc(
+                    serialized.len(),
+                    zero_bytes,
+                    payer,
+                    &Program::new(account.context(), system_program)?,
+                )?;
             }
 
             // Write data.

@@ -10,10 +10,10 @@ use std::cmp::Ordering;
 /// Makes an `account` be rent exempt. If `payer` is provided it ensures
 /// it to be rent-exempt with only the exact required amount.
 pub(crate) fn make_rent_exempt<'info>(
-    program: &Program<System>,
-    info: &AccountInfo<'info>,
     new_size: usize,
     payer: &AccountInfo<'info>,
+    info: &AccountInfo<'info>,
+    program: &Program<System>,
 ) -> FankorResult<()> {
     if !payer.is_writable {
         return Err(FankorErrorCode::ReadonlyAccountModification {

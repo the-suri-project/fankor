@@ -240,7 +240,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
         }
 
         let new_size = self.info.data_len();
-        make_rent_exempt(system_program, self.info, new_size, payer)
+        make_rent_exempt(new_size, payer, self.info, system_program)
     }
 
     /// Invalidates the exit action for this account.
@@ -263,7 +263,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
     pub fn make_rent_exempt_at_exit(
         &self,
         payer: &'info AccountInfo<'info>,
-        system_program: &'info Program<'info, System>,
+        system_program: &Program<'info, System>,
     ) -> FankorResult<()> {
         if !self.is_owned_by_program() {
             return Err(FankorErrorCode::AccountNotOwnedByProgram {
@@ -294,7 +294,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
             FankorContextExitAction::Realloc {
                 payer: Some(payer),
                 zero_bytes: false,
-                system_program,
+                system_program: system_program.info(),
             },
         );
 
@@ -450,7 +450,7 @@ fn drop_aux<'info, T: AccountType + CopyType<'info>>(
                 }
             };
 
-            account.make_rent_exempt(payer, system_program)?;
+            account.make_rent_exempt(payer, &Program::new(account.context(), system_program)?)?;
         }
         Some(FankorContextExitAction::Close {
             destination_account,
