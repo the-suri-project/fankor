@@ -44,6 +44,14 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         let name = &v.name;
         let name_str = name.to_string();
 
+        let data = v.data.iter().map(|v| {
+            let name = &v.name;
+            let value = &v.value;
+
+            quote! {
+                let #name = #value;
+            }
+        }).collect::<Vec<_>>();
         let mut conditions = Vec::new();
 
         if let Some(owner) = &v.owner {
@@ -181,7 +189,11 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                         None => return Ok(Vec::new()),
                     };
 
-                    let seeds = #pda;
+                    let seeds = {
+                        #(#data)*
+
+                        #pda
+                    };
                     let size = seeds.iter().fold(0, |acc, s| acc + s.len());
                     let mut buf = Vec::with_capacity(size + 1);
                     seeds.iter().for_each(|s| buf.extend_from_slice(s));
@@ -256,6 +268,8 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
         if !conditions.is_empty() {
             quote! {
+                #(#data)*
+
                 self.#name.verify_account_infos(&mut |info: &AccountInfo<'info>| {
                     #(#conditions)*
 
@@ -267,6 +281,8 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
             }
         } else {
             quote! {
+                #(#data)*
+
                 #min
                 #max
             }

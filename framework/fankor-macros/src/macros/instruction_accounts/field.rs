@@ -25,6 +25,7 @@ pub struct Field {
     pub pda: Option<TokenStream>,
     pub pda_program_id: Option<TokenStream>,
     pub constraints: Vec<Constraint>,
+    pub data: Vec<Data>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -38,6 +39,11 @@ pub enum FieldKind {
 pub struct Constraint {
     pub condition: TokenStream,
     pub error: Option<TokenStream>,
+}
+
+pub struct Data {
+    pub name: TokenStream,
+    pub value: TokenStream,
 }
 
 impl Field {
@@ -61,6 +67,7 @@ impl Field {
             pda: None,
             pda_program_id: None,
             constraints: Vec::new(),
+            data: Vec::new(),
         };
 
         new_field.parse_attributes(field.attrs, false)?;
@@ -96,6 +103,7 @@ impl Field {
                     pda: None,
                     pda_program_id: None,
                     constraints: Vec::new(),
+                    data: Vec::new(),
                 };
 
                 new_field.parse_attributes(variant.attrs, true)?;
@@ -542,6 +550,35 @@ impl Field {
                                 error: meta.error.map(|e| quote! {#e}),
                             });
                         }
+                        "data" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The data argument is not allowed in enums",
+                                ));
+                            }
+
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The data argument cannot have an error field",
+                                ));
+                            }
+
+                            let sub_name = match &meta.sub_name {
+                                Some((_, _, v)) => v,
+                                None => {
+                                    return Err(Error::new(
+                                        name.span(),
+                                        "The data argument requires a name: data::<name> = <value>",
+                                    ));
+                                }
+                            };
+                            self.data.push(Data {
+                                name: quote! {#sub_name},
+                                value: quote! {#value},
+                            });
+                        }
                         _ => {
                             return Err(Error::new(name.span(), "Unknown argument"));
                         }
@@ -728,6 +765,12 @@ impl Field {
                                 "The constraint argument must use a value: constraint = <expr>",
                             ));
                         }
+                        "data" => {
+                            return Err(Error::new(
+                                name.span(),
+                                "The data argument must use a value: data = <expr>",
+                            ));
+                        }
                         _ => {
                             return Err(Error::new(name.span(), "Unknown argument"));
                         }
@@ -861,6 +904,7 @@ impl Parse for CustomMetaListWithErrors {
 
 pub struct CustomMetaWithError {
     pub name: Ident,
+    pub sub_name: Option<(Token![:], Token![:], Ident)>,
     pub eq_token: Option<Token![=]>,
     pub value: Option<Expr>,
     pub at_token: Option<Token![@]>,
@@ -870,6 +914,17 @@ pub struct CustomMetaWithError {
 impl Parse for CustomMetaWithError {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let name = input.parse::<Ident>()?;
+
+        let sub_name = if name.to_string() == "data" {
+            let token_colon1 = input.parse::<Token![:]>()?;
+            let token_colon2 = input.parse::<Token![:]>()?;
+            let sub_name = input.parse::<Ident>()?;
+
+            Some((token_colon1, token_colon2, sub_name))
+        } else {
+            None
+        };
+
         let eq_token = input.parse::<Option<Token![=]>>()?;
         let value = if eq_token.is_some() {
             Some(input.parse::<Expr>()?)
@@ -886,6 +941,7 @@ impl Parse for CustomMetaWithError {
 
         Ok(Self {
             name,
+            sub_name,
             eq_token,
             value,
             at_token,

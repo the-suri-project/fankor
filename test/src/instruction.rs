@@ -85,7 +85,8 @@ pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
     #[account(associated_token_pda = (self.account.address(), self.boxed_zc_account.address()))]
     pub boxed_zc_account: Box<ZcAccount<'info, ZeroCopyStructAccountData>>,
 
-    #[account(metadata_pda = Metadata::get_metadata_pda_seeds(self.account.address()))]
+    #[account(data::x = self.account.address())]
+    #[account(metadata_pda = Metadata::get_metadata_pda_seeds(x))]
     pub optional_zc_account: OptionalZcAccount<'info, ZeroCopyStructAccountData>,
 
     pub option_zc_account: Option<ZcAccount<'info, ZeroCopyStructAccountData>>,
