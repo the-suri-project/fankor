@@ -144,7 +144,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                 let lamports = info.lamports();
                 let data_len = info.data_len();
 
-                let rent: Rent = ::fankor::prelude::solana_program::sysvar::Sysvar::get().expect("Cannot access Rent Sysvar");
+                let rent: sysvar::rent::Rent = ::fankor::prelude::solana_program::sysvar::Sysvar::get().expect("Cannot access Rent Sysvar");
                 let is_rent_exempt = rent.is_exempt(lamports, data_len);
 
                 if rent_exempt {
