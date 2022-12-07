@@ -22,9 +22,9 @@ pub struct Field {
     pub signer: Option<TokenStream>,
     pub min: Option<TokenStream>,
     pub max: Option<TokenStream>,
-    pub pda: Option<TokenStream>,
+    pub pda: Option<DataAndError>,
     pub pda_program_id: Option<TokenStream>,
-    pub constraints: Vec<Constraint>,
+    pub constraints: Vec<DataAndError>,
     pub data: Vec<Data>,
 }
 
@@ -36,8 +36,8 @@ pub enum FieldKind {
     Rest,
 }
 
-pub struct Constraint {
-    pub condition: TokenStream,
+pub struct DataAndError {
+    pub data: TokenStream,
     pub error: Option<TokenStream>,
 }
 
@@ -419,14 +419,10 @@ impl Field {
                                 ));
                             }
 
-                            if meta.error.is_some() {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The pda argument cannot have an error field",
-                                ));
-                            }
-
-                            self.pda = Some(quote! {#value});
+                            self.pda = Some(DataAndError {
+                                data: quote! {#value},
+                                error: meta.error.map(|e| quote! {#e}),
+                            });
                         }
                         "pda_program_id" => {
                             if is_enum {
@@ -485,8 +481,11 @@ impl Field {
                             match &value {
                                 Expr::Tuple(v) => {
                                     if v.elems.len() == 2 {
-                                        self.pda = Some(quote! {
-                                            AssociatedToken::get_pda_seeds #value
+                                        self.pda = Some(DataAndError {
+                                            data: quote! {
+                                                AssociatedToken::get_pda_seeds #value
+                                            },
+                                            error: meta.error.map(|e| quote! {#e}),
                                         });
                                     } else {
                                         return Err(Error::new(
@@ -527,14 +526,10 @@ impl Field {
                                 ));
                             }
 
-                            if meta.error.is_some() {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The metadata_pda argument cannot have an error field",
-                                ));
-                            }
-
-                            self.pda = Some(quote! {#value});
+                            self.pda = Some(DataAndError {
+                                data: quote! {#value},
+                                error: meta.error.map(|e| quote! {#e}),
+                            });
                             self.pda_program_id = Some(quote! {Metadata::address()});
                         }
                         "constraint" => {
@@ -545,8 +540,8 @@ impl Field {
                                 ));
                             }
 
-                            self.constraints.push(Constraint {
-                                condition: quote! {#value},
+                            self.constraints.push(DataAndError {
+                                data: quote! {#value},
                                 error: meta.error.map(|e| quote! {#e}),
                             });
                         }

@@ -181,6 +181,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
         if let Some(pda) = &v.pda {
             let pda_method_name = format_ident!("{}_pda_seeds", name);
+            let seeds = &pda.data;
 
             pda_methods.push(quote! {
                 pub fn #pda_method_name(&self, context: &FankorContext<'info>, #ixn_args_type) -> FankorResult<Vec<u8>> {
@@ -191,7 +192,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
                     let mut buf = {
                         #(#data)*
-                        let seeds = #pda;
+                        let seeds = #seeds;
                         let size = seeds.iter().fold(0, |acc, s| acc + s.len());
                         let mut buf = Vec::with_capacity(size + 1);
                         seeds.iter().for_each(|s| buf.extend_from_slice(s));
@@ -210,16 +211,27 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
             });
 
             let program_id = v.pda_program_id.clone().unwrap_or_else(|| quote! { context.program_id() });
+            let error = match &pda.error {
+                Some(v) => {
+                    quote! {
+                        .map_err(|_| #v)?
+                    }
+                },
+                None => {
+                    quote! { ? }
+                }
+            };
+
             conditions.push(quote! {{
-                let seeds = #pda;
+                let seeds = #seeds;
                 let program_id = #program_id;
 
-                context.check_canonical_pda_with_program(info, &seeds, program_id)?;
+                context.check_canonical_pda_with_program(info, &seeds, program_id)#error;
             }});
         }
 
         for constraint in &v.constraints {
-            let condition = &constraint.condition;
+            let condition = &constraint.data;
             let error = match &constraint.error {
                 Some(v) => v.clone(),
                 None => {
