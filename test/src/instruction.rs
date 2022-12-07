@@ -5,7 +5,9 @@ use fankor::prelude::*;
 use std::cmp::Ordering;
 
 #[derive(InstructionAccounts)]
-#[instruction(args = "InstructionArgs")]
+#[account(args = InstructionArgs)]
+#[account(initial_validation)]
+#[account(final_validation)]
 pub struct InstructionStructAccounts<'info> {
     #[account(owner = &crate::ID)]
     #[account(writable)]
@@ -70,11 +72,33 @@ pub struct InstructionStructAccounts<'info> {
     pub rest: Rest<'info>,
 }
 
+impl<'info> InstructionStructAccounts<'info> {
+    // METHODS ----------------------------------------------------------------
+
+    pub fn initial_validation(
+        &self,
+        _context: &FankorContext<'info>,
+        _args: &InstructionArgs,
+    ) -> FankorResult<()> {
+        Ok(())
+    }
+
+    pub fn final_validation(
+        &self,
+        _context: &FankorContext<'info>,
+        _args: &InstructionArgs,
+    ) -> FankorResult<()> {
+        Ok(())
+    }
+}
+
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
 #[derive(InstructionAccounts)]
+#[account(initial_validation)]
+#[account(final_validation)]
 pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
     #[account(constraint = (1 + 1).cmp(&2) == Ordering::Equal)]
     #[account(pda = AssociatedToken::get_pda_seeds(self.account.address(), self.boxed_zc_account.address()))]
@@ -99,12 +123,24 @@ pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
     pub instructions_sysvar: SysvarAccount<'info, Instructions>,
 }
 
+impl<'info> InstructionStructAccountsWithoutAssociatedType<'info> {
+    // METHODS ----------------------------------------------------------------
+
+    pub fn initial_validation(&self, _context: &FankorContext<'info>) -> FankorResult<()> {
+        Ok(())
+    }
+
+    pub fn final_validation(&self, _context: &FankorContext<'info>) -> FankorResult<()> {
+        Ok(())
+    }
+}
+
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
 #[derive(InstructionAccounts)]
-#[instruction(args = "InstructionArgs")]
+#[account(args = InstructionArgs)]
 pub enum InstructionEnumAccounts<'info> {
     Struct1(InstructionStructAccounts<'info>),
 

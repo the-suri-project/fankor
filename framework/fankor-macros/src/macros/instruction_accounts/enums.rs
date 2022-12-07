@@ -1,4 +1,4 @@
-use crate::macros::instruction_accounts::arguments::InstructionArguments;
+use crate::macros::instruction_accounts::arguments::{InstructionArguments, Validation};
 use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{Error, ItemEnum};
@@ -14,6 +14,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
     let (impl_generics, ty_generics, where_clause) = item.generics.split_for_impl();
     let ixn_args_type = instruction_arguments
         .args
+        .clone()
         .map(|args| quote! { args: &#args })
         .unwrap_or(quote! {});
 
@@ -260,6 +261,29 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
         }
     });
 
+    // Validations.
+    let validation_args = if ixn_args_type.is_empty() {
+        quote! {}
+    } else {
+        quote! { args }
+    };
+    let initial_validation = &instruction_arguments.initial_validation.map(|v| match v {
+        Validation::Implicit => {
+            quote! {
+                self.initial_validation(context, #validation_args)?;
+            }
+        }
+        Validation::Explicit(v) => v,
+    });
+    let final_validation = &instruction_arguments.final_validation.map(|v| match v {
+        Validation::Implicit => {
+            quote! {
+                self.final_validation(context, #validation_args)?;
+            }
+        }
+        Validation::Explicit(v) => v,
+    });
+
     // Result
     let min_accounts = if mapped_fields.is_empty() {
         0
@@ -302,14 +326,18 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
 
         #[automatically_derived]
         impl #impl_generics #name #ty_generics #where_clause {
-            pub(crate) fn validate(
+            pub fn validate(
                 &self,
                 context: &'info FankorContext<'info>,
                 #ixn_args_type
             ) -> ::fankor::errors::FankorResult<()> {
+                #initial_validation
+
                 match self {
                     #(#try_from_fn_conditions)*
                 }
+
+                #final_validation
 
                 Ok(())
             }

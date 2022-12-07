@@ -1,15 +1,21 @@
 use crate::macros::instruction_accounts::parser::CustomMetaList;
-use proc_macro2::Ident;
-use quote::format_ident;
+use proc_macro2::{Ident, TokenStream};
+use quote::quote;
 use syn::spanned::Spanned;
 use syn::{Attribute, Error, Expr};
 
-use crate::utils::unwrap_string_from_literal;
 use crate::Result;
 
 pub struct InstructionArguments {
     // Attributes.
     pub args: Option<Ident>,
+    pub initial_validation: Option<Validation>,
+    pub final_validation: Option<Validation>,
+}
+
+pub enum Validation {
+    Implicit,
+    Explicit(TokenStream),
 }
 
 impl InstructionArguments {
@@ -17,10 +23,14 @@ impl InstructionArguments {
 
     /// Creates a new instance of the Field struct from the given attributes.
     pub fn from(attributes: &[Attribute]) -> Result<InstructionArguments> {
-        let mut result = InstructionArguments { args: None };
+        let mut result = InstructionArguments {
+            args: None,
+            initial_validation: None,
+            final_validation: None,
+        };
 
         for attribute in attributes {
-            if !attribute.path.is_ident("instruction") {
+            if !attribute.path.is_ident("account") {
                 continue;
             }
 
@@ -49,28 +59,47 @@ impl InstructionArguments {
                             }
 
                             match value {
-                                Expr::Lit(v) => {
-                                    let lit = unwrap_string_from_literal(v.lit)?;
+                                Expr::Path(v) => {
+                                    if v.path.segments.len() != 1 {
+                                        return Err(Error::new(
+                                            name.span(),
+                                            "The args argument must be a single identifier",
+                                        ));
+                                    }
 
-                                    result.args =
-                                        Some(format_ident!("{}", lit.value(), span = lit.span()))
+                                    let ident = v.path.segments.first().unwrap().ident.clone();
+                                    result.args = Some(ident)
                                 }
                                 _ => {
                                     return Err(Error::new(name.span(), "Unknown argument"));
                                 }
                             }
                         }
+                        "initial_validation" => {
+                            result.initial_validation = Some(Validation::Explicit(quote!(#value)));
+                        }
+                        "final_validation" => {
+                            result.final_validation = Some(Validation::Explicit(quote!(#value)));
+                        }
                         _ => {
                             return Err(Error::new(name.span(), "Unknown argument"));
                         }
                     }
                 } else {
-                    return match name.to_string().as_str() {
-                        "args" => Err(Error::new(
-                            name.span(),
-                            "The args argument must use a value: args = <expr>",
-                        )),
-                        _ => Err(Error::new(name.span(), "Unknown argument")),
+                    match name.to_string().as_str() {
+                        "args" => {
+                            return Err(Error::new(
+                                name.span(),
+                                "The args argument must use a value: args = <expr>",
+                            ))
+                        }
+                        "initial_validation" => {
+                            result.initial_validation = Some(Validation::Implicit);
+                        }
+                        "final_validation" => {
+                            result.final_validation = Some(Validation::Implicit);
+                        }
+                        _ => return Err(Error::new(name.span(), "Unknown argument")),
                     };
                 }
             }

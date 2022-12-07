@@ -28,7 +28,6 @@ pub struct Field {
     pub data: Vec<Data>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum FieldKind {
     Other,
     Option(Box<Type>),
