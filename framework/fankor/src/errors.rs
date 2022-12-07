@@ -74,10 +74,10 @@ pub enum FankorErrorCode {
     // ------------------------------------------------------------------------
     // Accounts ---------------------------------------------------------------
     // ------------------------------------------------------------------------
-    /// The instruction contains duplicated mutable accounts
-    #[msg("The instruction contains duplicated mutable accounts: {}", address)]
+    /// The instruction contains duplicated writable accounts
+    #[msg("The instruction contains duplicated writable accounts: {}", address)]
     #[code(1500)]
-    DuplicatedMutableAccounts { address: Pubkey },
+    DuplicatedWritableAccounts { address: Pubkey },
 
     /// No 8 byte discriminant was found on the account
     #[msg("No 8 byte discriminant was found on the account: {}", account)]

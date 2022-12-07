@@ -18,13 +18,21 @@ pub struct FankorContext<'info> {
 }
 
 struct FankorContextInnerMut<'info> {
-    // End actions to perform at the end of the instruction.
+    // Data for each account.
     // The key is u8 because the maximum number of accounts per transaction is 256.
-    exit_actions: BTreeMap<u8, FankorContextExitAction<'info>>,
+    account_data: BTreeMap<u8, FankorContextAccountData<'info>>,
+}
 
-    // The bump seeds used for the derived accounts.
-    // The key is u8 because the maximum number of accounts per transaction is 256.
-    bump_seeds: BTreeMap<u8, u8>,
+struct FankorContextAccountData<'info> {
+    // End action to perform at the end of the instruction.
+    exit_action: Option<FankorContextExitAction<'info>>,
+
+    // The bump seed used for the derived the account.
+    bump_seed: Option<u8>,
+
+    // Flag that indicates if the account has already been writen at exit, avoiding writing
+    // twice an account therefore preventing errors related to duplicated accounts.
+    already_writen_at_exit: bool,
 }
 
 /// The action to perform at the end of the instruction for a specific account.
@@ -64,8 +72,7 @@ impl<'info> FankorContext<'info> {
             program_id,
             accounts,
             inner: Rc::new(RefCell::new(FankorContextInnerMut {
-                exit_actions: Default::default(),
-                bump_seeds: Default::default(),
+                account_data: Default::default(),
             })),
         }
     }
@@ -90,7 +97,23 @@ impl<'info> FankorContext<'info> {
     /// Gets the corresponding bump seed for an account if it was previously computed.
     pub fn get_bump_seed_from_account(&self, account: &AccountInfo<'info>) -> Option<u8> {
         let index = self.get_index_for_account(account);
-        self.inner.borrow().bump_seeds.get(&index).cloned()
+        self.inner
+            .borrow()
+            .account_data
+            .get(&index)
+            .map(|v| v.bump_seed.clone())
+            .flatten()
+    }
+
+    /// Gets the already_writen_at_exit flag for an account.
+    pub fn get_already_writen_at_exit(&self, account: &AccountInfo<'info>) -> bool {
+        let index = self.get_index_for_account(account);
+        self.inner
+            .borrow()
+            .account_data
+            .get(&index)
+            .map(|v| v.already_writen_at_exit)
+            .unwrap_or(false)
     }
 
     pub(crate) fn get_index_for_account(&self, account: &AccountInfo<'info>) -> u8 {
@@ -115,7 +138,12 @@ impl<'info> FankorContext<'info> {
         account: &AccountInfo<'info>,
     ) -> Option<FankorContextExitAction<'info>> {
         let index = self.get_index_for_account(account);
-        (*self.inner).borrow().exit_actions.get(&index).cloned()
+        (*self.inner)
+            .borrow()
+            .account_data
+            .get(&index)
+            .map(|v| v.exit_action.clone())
+            .flatten()
     }
 
     pub(crate) fn set_exit_action(
@@ -124,49 +152,72 @@ impl<'info> FankorContext<'info> {
         exit_action: FankorContextExitAction<'info>,
     ) {
         let index = self.get_index_for_account(account);
-        (*self.inner)
-            .borrow_mut()
-            .exit_actions
-            .insert(index, exit_action);
+        let mut inner = (*self.inner).borrow_mut();
+
+        match inner.account_data.get_mut(&index) {
+            Some(v) => v.exit_action = Some(exit_action),
+            None => {
+                inner.account_data.insert(
+                    index,
+                    FankorContextAccountData {
+                        exit_action: Some(exit_action),
+                        bump_seed: None,
+                        already_writen_at_exit: false,
+                    },
+                );
+            }
+        }
     }
 
     pub(crate) fn remove_exit_action(&self, account: &AccountInfo<'info>) {
         let index = self.get_index_for_account(account);
-        (*self.inner).borrow_mut().exit_actions.remove(&index);
+        let mut inner = (*self.inner).borrow_mut();
+
+        if let Some(v) = inner.account_data.get_mut(&index) {
+            v.exit_action = None;
+        }
     }
 
-    /// Checks whether there are duplicated mutable accounts.
-    pub fn check_duplicated_mutable_accounts(&self) -> FankorResult<()> {
-        for i in 0..self.accounts.len() {
-            let i_account = &self.accounts[i];
+    /// Sets the already_writen_at_exit flag for an account.
+    pub(crate) fn set_already_writen_at_exit(&self, account: &AccountInfo<'info>) {
+        let index = self.get_index_for_account(account);
+        let mut inner = (*self.inner).borrow_mut();
 
-            if !i_account.is_writable {
-                continue;
+        match inner.account_data.get_mut(&index) {
+            Some(v) => {
+                v.already_writen_at_exit = true;
             }
-
-            for j in i + 1..self.accounts.len() {
-                let j_account = &self.accounts[j];
-
-                if !j_account.is_writable {
-                    continue;
-                }
-
-                if std::ptr::eq(i_account, j_account) {
-                    return Err(FankorErrorCode::DuplicatedMutableAccounts {
-                        address: *i_account.key,
-                    }
-                    .into());
-                }
+            None => {
+                inner.account_data.insert(
+                    index,
+                    FankorContextAccountData {
+                        exit_action: None,
+                        bump_seed: None,
+                        already_writen_at_exit: true,
+                    },
+                );
             }
         }
-
-        Ok(())
     }
 
     /// Sets the bump seed associated with an account.
     pub unsafe fn set_bump_seed(&self, account: &AccountInfo<'info>, bump_seed: u8) {
         let index = self.get_index_for_account(account);
-        self.inner.borrow_mut().bump_seeds.insert(index, bump_seed);
+        let mut inner = (*self.inner).borrow_mut();
+
+        match inner.account_data.get_mut(&index) {
+            Some(v) => v.bump_seed = Some(bump_seed),
+            None => {
+                inner.account_data.insert(
+                    index,
+                    FankorContextAccountData {
+                        exit_action: None,
+                        bump_seed: Some(bump_seed),
+                        already_writen_at_exit: false,
+                    },
+                );
+            }
+        }
     }
 
     /// Checks whether the given account is a canonical PDA with the given seeds.
@@ -194,7 +245,13 @@ impl<'info> FankorContext<'info> {
         program_id: &Pubkey,
     ) -> FankorResult<()> {
         let index = self.get_index_for_account(account);
-        let saved_bump_seed = self.inner.borrow().bump_seeds.get(&index).cloned();
+        let saved_bump_seed = self
+            .inner
+            .borrow()
+            .account_data
+            .get(&index)
+            .map(|v| v.bump_seed)
+            .flatten();
 
         match saved_bump_seed {
             Some(expected_bump_seed) => {
@@ -229,10 +286,20 @@ impl<'info> FankorContext<'info> {
                 }
 
                 // Add the bump seed to the context.
-                self.inner
-                    .borrow_mut()
-                    .bump_seeds
-                    .insert(index, expected_bump_seed);
+                let mut inner = (*self.inner).borrow_mut();
+                match inner.account_data.get_mut(&index) {
+                    Some(v) => v.bump_seed = Some(expected_bump_seed),
+                    None => {
+                        inner.account_data.insert(
+                            index,
+                            FankorContextAccountData {
+                                exit_action: None,
+                                bump_seed: Some(expected_bump_seed),
+                                already_writen_at_exit: false,
+                            },
+                        );
+                    }
+                }
             }
         };
 

@@ -533,6 +533,17 @@ fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
         None => {
             // Ignore if not writable or non from current program.
             if account.is_writable() && account.is_owned_by_program() {
+                // Prevent writing twice.
+                if account.context.get_already_writen_at_exit(account.info) {
+                    return Err(FankorErrorCode::DuplicatedWritableAccounts {
+                        address: *account.info.key,
+                    }
+                    .into());
+                }
+
+                account.context.set_already_writen_at_exit(account.info);
+
+                // Write the data.
                 account.save()?;
             }
         }
@@ -542,6 +553,16 @@ fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
             payer,
             system_program,
         }) => {
+            // Prevent writing twice.
+            if account.context.get_already_writen_at_exit(account.info) {
+                return Err(FankorErrorCode::DuplicatedWritableAccounts {
+                    address: *account.info.key,
+                }
+                .into());
+            }
+
+            account.context.set_already_writen_at_exit(account.info);
+
             // Serialize.
             let mut serialized = Vec::with_capacity(account.info.data_len());
             account.data.try_serialize(&mut serialized)?;

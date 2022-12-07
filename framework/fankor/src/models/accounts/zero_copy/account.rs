@@ -444,7 +444,7 @@ fn drop_aux<'info, T: AccountType + CopyType<'info>>(
             let payer = match payer {
                 Some(payer) => payer,
                 None => {
-                    // Ignore if payer is not provided because all ZCAccounts are
+                    // Ignore if payer is not provided because all ZcAccounts are
                     // already reallocated.
                     return Ok(());
                 }
