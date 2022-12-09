@@ -8,6 +8,8 @@ use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
+/// An account that represents a program.
+#[derive(Clone)]
 pub struct Program<'info, T: ProgramType> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,

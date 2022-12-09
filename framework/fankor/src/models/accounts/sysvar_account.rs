@@ -10,10 +10,11 @@ use std::fmt::{Debug, Formatter};
 use std::marker::PhantomData;
 
 /// A Sysvar account.
+#[derive(Clone)]
 pub struct SysvarAccount<'info, T: SysvarId> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,
-    data: PhantomData<T>,
+    _data: PhantomData<T>,
 }
 
 impl<'info, T: SysvarId> SysvarAccount<'info, T> {
@@ -35,7 +36,7 @@ impl<'info, T: SysvarId> SysvarAccount<'info, T> {
         Ok(SysvarAccount {
             context,
             info,
-            data: PhantomData,
+            _data: PhantomData,
         })
     }
 
