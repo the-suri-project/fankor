@@ -10,6 +10,13 @@ pub trait AccountType:
 
     /// Defines an address expected to own an account.
     fn owner() -> &'static Pubkey;
+
+    /// Checks whether the discriminant matches this account type.
+    /// This is mainly used when there's more than one discriminant
+    /// for this account.
+    fn check_discriminant(discriminant: u8) -> bool {
+        discriminant == Self::discriminant()
+    }
 }
 
 pub trait AccountSerialize {

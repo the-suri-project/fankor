@@ -64,8 +64,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                     _ => return Err(
                         ::fankor::errors::FankorErrorCode::AccountDiscriminantMismatch {
                             account: #name_str.to_string(),
-                            expected: <#name #ty_generics as ::fankor::traits::AccountType>::discriminant(),
-                            actual: account.discriminant_code()
                         }
                         .into(),
                     )

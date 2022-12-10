@@ -83,18 +83,9 @@ pub enum FankorErrorCode {
     #[msg("No 8 byte discriminant was found on the account: {}", account)]
     AccountDiscriminantNotFound { account: String },
 
-    /// The account discriminant did not match what was expected
-    #[msg(
-        "The account discriminant {} did not match what was expected {} of account {}",
-        actual,
-        expected,
-        account
-    )]
-    AccountDiscriminantMismatch {
-        actual: u8,
-        expected: u8,
-        account: String,
-    },
+    /// The account discriminant did not match account's one
+    #[msg("The account discriminant did not match account {}'s one", account)]
+    AccountDiscriminantMismatch { account: String },
 
     /// Failed to serialize the account
     #[msg("Failed to serialize the account: {}", account)]

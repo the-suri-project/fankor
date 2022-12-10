@@ -80,6 +80,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let mut from_methods = Vec::with_capacity(variants.len());
     let mut serialize_entries = Vec::with_capacity(variants.len());
     let mut deserialize_entries = Vec::with_capacity(variants.len());
+    let mut discriminants_as_list = Vec::with_capacity(variants.len());
     let code_variants = variants
         .iter()
         .map(|v| {
@@ -207,20 +208,11 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 #variant_name
             });
 
-            if arguments.accounts_type_name.is_some() {
                 serialize_entries.push(quote! {
                     #name::#variant_name(v) => {
                         borsh::BorshSerialize::serialize(v, writer)?;
                     }
                 });
-            }else {
-                serialize_entries.push(quote! {
-                    #name::#variant_name(v) => {
-                        borsh::BorshSerialize::serialize(&#u8_index, writer)?;
-                        borsh::BorshSerialize::serialize(v, writer)?;
-                    }
-                });
-            }
 
             if arguments.accounts_type_name.is_some() {
                 deserialize_entries.push(quote! {
@@ -229,12 +221,18 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                         Ok(#name::#variant_name(v))
                     }
                 });
-            }else {
+            } else {
                 deserialize_entries.push(quote! {
                     #u8_index => {
                         let v = borsh::BorshDeserialize::deserialize(buf)?;
                         Ok(#name::#variant_name(v))
                     }
+                });
+            }
+
+            if arguments.accounts_type_name.is_some() {
+                discriminants_as_list.push(quote! {
+                    #discriminant_name::#variant_name.code()
                 });
             }
 
@@ -278,8 +276,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
             impl #impl_generics borsh::BorshSerialize for #name #ty_generics #where_clause {
                 fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-                    borsh::BorshSerialize::serialize(&self.discriminant_code(), writer)?;
-
                     match self {
                         #(#serialize_entries)*
                     }
@@ -290,7 +286,10 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
             impl #impl_generics borsh::BorshDeserialize for #name #ty_generics #where_clause {
                 fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
-                    let discriminant: u8 = borsh::BorshDeserialize::deserialize(buf)?;
+                    // buf_aux exists to not move the original buf for getting the discriminant
+                    // due to account deserializers will handle them too.
+                    let mut buf_aux = *buf;
+                    let discriminant: u8 = borsh::BorshDeserialize::deserialize(&mut buf_aux)?;
 
                     match discriminant {
                         #(#deserialize_entries)*
@@ -305,12 +304,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             #[automatically_derived]
             impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
                 fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
-                    if writer.write_all(&[<#name #ty_generics as ::fankor::traits::AccountType>::discriminant()]).is_err() {
-                        return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
-                            account: #name_str.to_string()
-                        }.into());
-                    }
-
                     if ::fankor::prelude::borsh::BorshSerialize::serialize(self, writer).is_err() {
                         return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize {
                             account: #name_str.to_string()
@@ -343,9 +336,17 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 fn owner() -> &'static Pubkey {
                     &crate::ID
                 }
+
+                fn check_discriminant(discriminant: u8) -> bool {
+                    const discriminants: &[u8] = &[#(#discriminants_as_list),*];
+                    discriminants.contains(&discriminant)
+                }
             }
         }
     } else {
+        let mut sorted_discriminants = used_discriminants.iter().copied().collect::<Vec<_>>();
+        sorted_discriminants.sort();
+
         quote! {
             #(#attrs)*
             #visibility enum #name #ty_generics #where_clause {
@@ -366,7 +367,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                     }
                 }
 
-                pub fn discriminant_code(&self) -> u8 {
+                pub const fn discriminant_code(&self) -> u8 {
                     match self {
                         #(#discriminant_code_variants,)*
                     }
@@ -387,7 +388,10 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
             impl #impl_generics borsh::BorshDeserialize for #name #ty_generics #where_clause {
                 fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
-                    let discriminant = borsh::BorshDeserialize::deserialize(buf)?;
+                    // buf_aux exists to not move the original buf for getting the discriminant
+                    // due to account deserializers will handle them too.
+                    let mut buf_aux = *buf;
+                    let discriminant: u8 = borsh::BorshDeserialize::deserialize(&mut buf_aux)?;
 
                     match discriminant {
                         #(#deserialize_entries)*
@@ -402,12 +406,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             #[automatically_derived]
             impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
                 fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
-                    if writer.write_all(&[<#name #ty_generics as ::fankor::traits::AccountType>::discriminant()]).is_err() {
-                        return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize{
-                            account: #name_str.to_string()
-                        }.into());
-                    }
-
                     if ::fankor::prelude::borsh::BorshSerialize::serialize(self, writer).is_err() {
                         return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize {
                             account: #name_str.to_string()
@@ -440,6 +438,11 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 fn owner() -> &'static Pubkey {
                     &crate::ID
                 }
+
+                fn check_discriminant(discriminant: u8) -> bool {
+                    const discriminants: &[u8] = &[#(#sorted_discriminants),*];
+                    discriminants.binary_search(&discriminant).is_ok()
+                }
             }
 
             #visibility enum #discriminant_name {
@@ -448,7 +451,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
             #[automatically_derived]
             impl #discriminant_name {
-                pub fn code(&self) -> u8 {
+                pub const fn code(&self) -> u8 {
                     match self {
                         #(#code_variants,)*
                     }

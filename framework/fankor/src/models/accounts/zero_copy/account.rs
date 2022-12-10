@@ -56,12 +56,9 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
         {
             let data = info.data.borrow();
             let actual = data[0];
-            let expected = T::discriminant();
 
-            if actual != expected {
+            if !T::check_discriminant(actual) {
                 return Err(FankorErrorCode::AccountDiscriminantMismatch {
-                    actual,
-                    expected,
                     account: format!("ZcAccount<{}>", type_name::<T>()),
                 }
                 .into());
@@ -450,12 +447,9 @@ impl<'info, T: AccountType + CopyType<'info>> InstructionAccount<'info> for ZcAc
         {
             let data = info.data.borrow();
             let actual = data[0];
-            let expected = T::discriminant();
 
-            if actual != expected {
+            if !T::check_discriminant(actual) {
                 return Err(FankorErrorCode::AccountDiscriminantMismatch {
-                    actual,
-                    expected,
                     account: format!("ZcAccount<{}>", type_name::<T>()),
                 }
                 .into());
