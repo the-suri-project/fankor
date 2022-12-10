@@ -289,6 +289,62 @@ impl<'info, T: AccountType> Account<'info, T> {
         make_rent_exempt(new_size, payer, self.info, system_program)
     }
 
+    /// Transmutes the current account into another type.
+    /// This method automatically saves the new value into the account.
+    pub fn transmute<D: AccountType>(
+        mut self,
+        new_value: D,
+        zero_bytes: bool,
+        payer: &'info AccountInfo<'info>,
+        system_program: &Program<'info, System>,
+    ) -> FankorResult<Account<'info, D>> {
+        if !self.is_owned_by_program() {
+            return Err(FankorErrorCode::AccountNotOwnedByProgram {
+                address: *self.address(),
+                action: "transmute",
+            }
+            .into());
+        }
+
+        if !self.is_writable() {
+            return Err(FankorErrorCode::ReadonlyAccountModification {
+                address: *self.address(),
+                action: "transmute",
+            }
+            .into());
+        }
+
+        if self.context.is_account_uninitialized(self.info) {
+            return Err(FankorErrorCode::AlreadyClosedAccount {
+                address: *self.address(),
+                action: "transmute",
+            }
+            .into());
+        }
+
+        let new_account = Account::new_without_checks(self.context, self.info, new_value);
+
+        // Serialize the new value.
+        let mut data_bytes = Vec::with_capacity(new_account.info().data_len());
+        new_account.data().try_serialize(&mut data_bytes)?;
+
+        // Realloc account.
+        unsafe {
+            new_account.realloc(data_bytes.len(), zero_bytes, Some(payer), system_program)?;
+        }
+
+        // Save data.
+        let mut data = self.info.try_borrow_mut_data()?;
+        let dst: &mut [u8] = &mut data;
+        let mut writer = BpfWriter::new(dst);
+        writer.write_all(&data_bytes)?;
+
+        // Prevent old account to execute the drop actions.
+        self.dropped = true;
+
+        Ok(new_account)
+    }
+
     /// Invalidates the exit action for this account.
     pub fn remove_exit_action(&self) {
         self.context().remove_exit_action(self.info);
