@@ -41,7 +41,7 @@ impl<'info, T: AccountType> OptionalAccount<'info, T> {
         }
     }
 
-    // METHOD -----------------------------------------------------------------
+    // METHODS ----------------------------------------------------------------
 
     pub fn unwrap_account(self) -> Option<Account<'info, T>> {
         match self {

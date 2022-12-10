@@ -35,7 +35,7 @@ impl<'info, T: AccountType + CopyType<'info>> OptionalZcAccount<'info, T> {
         }
     }
 
-    // METHOD -----------------------------------------------------------------
+    // METHODS ----------------------------------------------------------------
 
     pub fn unwrap_account(self) -> Option<ZcAccount<'info, T>> {
         match self {

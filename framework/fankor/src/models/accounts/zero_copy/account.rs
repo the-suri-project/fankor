@@ -21,6 +21,7 @@ pub struct ZcAccount<'info, T: AccountType + CopyType<'info>> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,
     _data: PhantomData<T>,
+    dropped: bool,
 }
 
 impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
@@ -69,6 +70,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
             context,
             info,
             _data: PhantomData,
+            dropped: false,
         })
     }
 
@@ -80,6 +82,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
             context,
             info,
             _data: PhantomData,
+            dropped: false,
         }
     }
 
@@ -168,8 +171,12 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
     // METHODS ----------------------------------------------------------------
 
     /// Closes the account and sends the lamports to the `destination_account`.
-    pub fn close(self, destination_account: &AccountInfo<'info>) -> FankorResult<()> {
-        close_account(self.info, self.context(), destination_account)
+    pub fn close(mut self, destination_account: &AccountInfo<'info>) -> FankorResult<()> {
+        close_account(self.info, self.context(), destination_account)?;
+
+        // Prevent account to execute the drop actions.
+        self.dropped = true;
+        Ok(())
     }
 
     /// Reallocates the account to the given `size`. If a `payer` is provided,
@@ -419,6 +426,11 @@ impl<'info, T: AccountType + CopyType<'info>> Debug for ZcAccount<'info, T> {
 /// Execute the last actions over the account.
 impl<'info, T: AccountType + CopyType<'info>> Drop for ZcAccount<'info, T> {
     fn drop(&mut self) {
+        // Ignore already dropped accounts.
+        if self.dropped {
+            return;
+        }
+
         if let Err(e) = drop_aux(self) {
             crate::macros::panic_error!(e);
         }

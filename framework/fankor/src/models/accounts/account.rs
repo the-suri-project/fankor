@@ -20,6 +20,7 @@ pub struct Account<'info, T: AccountType> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,
     data: T,
+    dropped: bool,
 }
 
 impl<'info, T: AccountType> Account<'info, T> {
@@ -53,6 +54,7 @@ impl<'info, T: AccountType> Account<'info, T> {
             context,
             info,
             data,
+            dropped: false,
         })
     }
 
@@ -65,6 +67,7 @@ impl<'info, T: AccountType> Account<'info, T> {
             context,
             info,
             data,
+            dropped: false,
         }
     }
 
@@ -202,8 +205,12 @@ impl<'info, T: AccountType> Account<'info, T> {
     }
 
     /// Closes the account and sends the lamports to the `destination_account`.
-    pub fn close(self, destination_account: &AccountInfo<'info>) -> FankorResult<()> {
-        close_account(self.info, self.context(), destination_account)
+    pub fn close(mut self, destination_account: &AccountInfo<'info>) -> FankorResult<()> {
+        close_account(self.info, self.context(), destination_account)?;
+
+        // Prevent account to execute the drop actions.
+        self.dropped = true;
+        Ok(())
     }
 
     /// Reallocates the account to the given `size`. If a `payer` is provided,
@@ -517,6 +524,11 @@ impl<'info, T: AccountType> Debug for Account<'info, T> {
 /// Execute the last actions over the account.
 impl<'info, T: AccountType> Drop for Account<'info, T> {
     fn drop(&mut self) {
+        // Ignore already dropped accounts.
+        if self.dropped {
+            return;
+        }
+
         if let Err(e) = drop_aux(self) {
             crate::macros::panic_error!(e);
         }

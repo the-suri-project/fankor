@@ -59,7 +59,7 @@ impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> Either<L
         }
     }
 
-    // METHOD -----------------------------------------------------------------
+    // METHODS ----------------------------------------------------------------
 
     pub fn unwrap_left(self) -> Option<L> {
         match self {
