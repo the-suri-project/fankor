@@ -511,6 +511,12 @@ fn drop_aux<'info, T: AccountType + CopyType<'info>>(
     match account.context.get_exit_action(account.info) {
         None => {}
         Some(FankorContextExitAction::Ignore) => {}
+        Some(FankorContextExitAction::Processed) => {
+            return Err(FankorErrorCode::DuplicatedWritableAccounts {
+                address: *account.address(),
+            }
+            .into());
+        }
         Some(FankorContextExitAction::Realloc {
             payer,
             system_program,
@@ -526,11 +532,21 @@ fn drop_aux<'info, T: AccountType + CopyType<'info>>(
             };
 
             account.make_rent_exempt(payer, &Program::new(account.context(), system_program)?)?;
+
+            // Prevent executing this action twice.
+            account
+                .context
+                .set_exit_action(account.info, FankorContextExitAction::Processed);
         }
         Some(FankorContextExitAction::Close {
             destination_account,
         }) => {
             close_account(account.info(), account.context(), destination_account)?;
+
+            // Prevent executing this action twice.
+            account
+                .context
+                .set_exit_action(account.info, FankorContextExitAction::Processed);
         }
     }
 

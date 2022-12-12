@@ -11,27 +11,32 @@ use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::system_program;
 use solana_program::sysvar::Sysvar;
+use std::cell::{Ref, RefCell};
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::io::Write;
+use std::rc::Rc;
 
-/// An initialized account.
-pub struct Account<'info, T: AccountType> {
+/// An initialized account whose value is inside a reference to avoid duplicates.
+pub struct RefAccount<'info, T: AccountType + 'static> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,
-    data: T,
+    data: Rc<RefCell<T>>,
     dropped: bool,
 }
 
-impl<'info, T: AccountType> Account<'info, T> {
+impl<'info, T: AccountType + 'static> RefAccount<'info, T> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Creates a new account with the given data.
-    pub fn new(
+    pub fn new<F>(
         context: &'info FankorContext<'info>,
         info: &'info AccountInfo<'info>,
-        data: T,
-    ) -> FankorResult<Account<'info, T>> {
+        default: F,
+    ) -> FankorResult<RefAccount<'info, T>>
+    where
+        F: FnOnce() -> T,
+    {
         if info.owner == &system_program::ID && info.lamports() == 0 {
             return Err(FankorErrorCode::AccountNotInitialized { address: *info.key }.into());
         }
@@ -50,7 +55,32 @@ impl<'info, T: AccountType> Account<'info, T> {
             return Err(FankorErrorCode::NewFromClosedAccount { address: *info.key }.into());
         }
 
-        Ok(Account {
+        let data = match context.get_deserialized_data_for_account(info) {
+            Some(data) => {
+                {
+                    let data = &*data.borrow();
+
+                    if !data.is::<T>() {
+                        return Err(FankorErrorCode::DuplicatedAccountWithDifferentType {
+                            address: *info.key,
+                        }
+                        .into());
+                    }
+                }
+
+                unsafe { Rc::from_raw(Rc::into_raw(data) as *const RefCell<T>) }
+            }
+            None => {
+                let value = default();
+                let value = Rc::new(RefCell::new(value));
+
+                context.set_deserialized_data_for_account(info, value.clone());
+
+                value
+            }
+        };
+
+        Ok(RefAccount {
             context,
             info,
             data,
@@ -61,9 +91,9 @@ impl<'info, T: AccountType> Account<'info, T> {
     pub(crate) fn new_without_checks(
         context: &'info FankorContext<'info>,
         info: &'info AccountInfo<'info>,
-        data: T,
-    ) -> Account<'info, T> {
-        Account {
+        data: Rc<RefCell<T>>,
+    ) -> RefAccount<'info, T> {
+        RefAccount {
             context,
             info,
             data,
@@ -114,13 +144,8 @@ impl<'info, T: AccountType> Account<'info, T> {
     }
 
     #[inline(always)]
-    pub fn data(&self) -> &T {
-        &self.data
-    }
-
-    #[inline(always)]
-    pub fn data_mut(&mut self) -> &mut T {
-        &mut self.data
+    pub fn data(&self) -> Ref<T> {
+        self.data.borrow()
     }
 
     #[inline(always)]
@@ -164,7 +189,9 @@ impl<'info, T: AccountType> Account<'info, T> {
             let mut data: &[u8] = &info.try_borrow_data()?;
             T::try_deserialize(&mut data)?
         };
-        self.data = result;
+
+        let mut data = RefCell::borrow_mut(&self.data);
+        *data = result;
 
         Ok(())
     }
@@ -199,7 +226,7 @@ impl<'info, T: AccountType> Account<'info, T> {
         let mut data = self.info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
         let mut writer = BpfWriter::new(dst);
-        self.data.try_serialize(&mut writer)?;
+        self.data.borrow().try_serialize(&mut writer)?;
 
         Ok(())
     }
@@ -287,62 +314,6 @@ impl<'info, T: AccountType> Account<'info, T> {
 
         let new_size = self.info.data_len();
         make_rent_exempt(new_size, payer, self.info, system_program)
-    }
-
-    /// Transmutes the current account into another type.
-    /// This method automatically saves the new value into the account.
-    pub fn transmute<D: AccountType>(
-        mut self,
-        new_value: D,
-        zero_bytes: bool,
-        payer: &'info AccountInfo<'info>,
-        system_program: &Program<'info, System>,
-    ) -> FankorResult<Account<'info, D>> {
-        if !self.is_owned_by_program() {
-            return Err(FankorErrorCode::AccountNotOwnedByProgram {
-                address: *self.address(),
-                action: "transmute",
-            }
-            .into());
-        }
-
-        if !self.is_writable() {
-            return Err(FankorErrorCode::ReadonlyAccountModification {
-                address: *self.address(),
-                action: "transmute",
-            }
-            .into());
-        }
-
-        if self.context.is_account_uninitialized(self.info) {
-            return Err(FankorErrorCode::AlreadyClosedAccount {
-                address: *self.address(),
-                action: "transmute",
-            }
-            .into());
-        }
-
-        let new_account = Account::new_without_checks(self.context, self.info, new_value);
-
-        // Serialize the new value.
-        let mut data_bytes = Vec::with_capacity(new_account.info().data_len());
-        new_account.data().try_serialize(&mut data_bytes)?;
-
-        // Realloc account.
-        unsafe {
-            new_account.realloc(data_bytes.len(), zero_bytes, Some(payer), system_program)?;
-        }
-
-        // Save data.
-        let mut data = self.info.try_borrow_mut_data()?;
-        let dst: &mut [u8] = &mut data;
-        let mut writer = BpfWriter::new(dst);
-        writer.write_all(&data_bytes)?;
-
-        // Prevent old account to execute the drop actions.
-        self.dropped = true;
-
-        Ok(new_account)
     }
 
     /// Invalidates the exit action for this account.
@@ -442,7 +413,7 @@ impl<'info, T: AccountType> Account<'info, T> {
     }
 }
 
-impl<'info, T: AccountType + AccountSize> Account<'info, T> {
+impl<'info, T: AccountType + AccountSize + 'static> RefAccount<'info, T> {
     // GETTERS ----------------------------------------------------------------
 
     /// Whether the account has enough lamports to be rent-exempt or not.
@@ -453,7 +424,7 @@ impl<'info, T: AccountType + AccountSize> Account<'info, T> {
     pub fn is_value_rent_exempt(&self) -> bool {
         let info = self.info();
         let lamports = info.lamports();
-        let data_len = self.data.actual_account_size();
+        let data_len = self.data.borrow().actual_account_size();
 
         let rent = Rent::get().expect("Cannot access Rent Sysvar");
 
@@ -473,7 +444,7 @@ impl<'info, T: AccountType + AccountSize> Account<'info, T> {
     ) -> FankorResult<()> {
         unsafe {
             self.realloc(
-                self.data.actual_account_size() + 1,
+                self.data.borrow().actual_account_size() + 1,
                 zero_bytes,
                 payer,
                 system_program,
@@ -513,12 +484,12 @@ impl<'info, T: AccountType + AccountSize> Account<'info, T> {
             .into());
         }
 
-        let new_size = self.data.actual_account_size() + 1;
+        let new_size = self.data.borrow().actual_account_size() + 1;
         make_rent_exempt(new_size, payer, self.info, system_program)
     }
 }
 
-impl<'info, T: AccountType> InstructionAccount<'info> for Account<'info, T> {
+impl<'info, T: AccountType + 'static> InstructionAccount<'info> for RefAccount<'info, T> {
     type CPI = AccountInfo<'info>;
     type LPI = Pubkey;
 
@@ -557,28 +528,53 @@ impl<'info, T: AccountType> InstructionAccount<'info> for Account<'info, T> {
             .into());
         }
 
-        let mut data: &[u8] = &info.try_borrow_data()?;
-        let result = Account::new_without_checks(context, info, T::try_deserialize(&mut data)?);
+        let data = match context.get_deserialized_data_for_account(info) {
+            Some(data) => {
+                {
+                    let data = &*data.borrow();
+
+                    if !data.is::<T>() {
+                        return Err(FankorErrorCode::DuplicatedAccountWithDifferentType {
+                            address: *info.key,
+                        }
+                        .into());
+                    }
+                }
+
+                unsafe { Rc::from_raw(Rc::into_raw(data) as *const RefCell<T>) }
+            }
+            None => {
+                let mut data: &[u8] = &info.try_borrow_data()?;
+                let value = T::try_deserialize(&mut data)?;
+                let value = Rc::new(RefCell::new(value));
+
+                context.set_deserialized_data_for_account(info, value.clone());
+
+                value
+            }
+        };
+
+        let result = RefAccount::new_without_checks(context, info, data);
 
         *accounts = &accounts[1..];
         Ok(result)
     }
 }
 
-impl<'info, T: AccountType> PdaChecker<'info> for Account<'info, T> {
+impl<'info, T: AccountType> PdaChecker<'info> for RefAccount<'info, T> {
     fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {
         Some(self.info)
     }
 }
 
-impl<'info, T: AccountType> Debug for Account<'info, T> {
+impl<'info, T: AccountType> Debug for RefAccount<'info, T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Account").field("info", &self.info).finish()
     }
 }
 
 /// Execute the last actions over the account.
-impl<'info, T: AccountType> Drop for Account<'info, T> {
+impl<'info, T: AccountType + 'static> Drop for RefAccount<'info, T> {
     fn drop(&mut self) {
         // Ignore already dropped accounts.
         if self.dropped {
@@ -591,7 +587,7 @@ impl<'info, T: AccountType> Drop for Account<'info, T> {
     }
 }
 
-fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
+fn drop_aux<T: AccountType + 'static>(account: &mut RefAccount<T>) -> FankorResult<()> {
     // Ignore if not owned by program.
     if !account.is_owned_by_program() {
         return Ok(());
@@ -615,7 +611,7 @@ fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
             return Err(FankorErrorCode::DuplicatedWritableAccounts {
                 address: *account.address(),
             }
-                .into());
+            .into());
         }
         Some(FankorContextExitAction::Realloc {
             zero_bytes,
@@ -624,7 +620,7 @@ fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
         }) => {
             // Serialize.
             let mut serialized = Vec::with_capacity(account.info.data_len());
-            account.data.try_serialize(&mut serialized)?;
+            account.data.borrow().try_serialize(&mut serialized)?;
 
             // Reallocate.
             unsafe {

@@ -1,6 +1,7 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
+use std::any::Any;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
@@ -30,9 +31,9 @@ struct FankorContextAccountData<'info> {
     // The bump seed used for the derived the account.
     bump_seed: Option<u8>,
 
-    // Flag that indicates if the account has already been writen at exit, avoiding writing
-    // twice an account therefore preventing errors related to duplicated accounts.
-    already_writen_at_exit: bool,
+    // A link to an associated data of any type. This is useful to store the data of the accounts
+    // and work with duplicates.
+    deserialized_data: Option<Rc<RefCell<dyn Any>>>,
 }
 
 /// The action to perform at the end of the instruction for a specific account.
@@ -41,6 +42,10 @@ pub enum FankorContextExitAction<'info> {
     /// Ignores the account and does nothing. This is useful to avoid writing
     /// twice an account.
     Ignore,
+
+    /// Indicates the account has already process the exit action.
+    /// It is used to detect duplicated actions.
+    Processed,
 
     /// Reallocates the account to contain all the data and optionally makes
     /// the account rent-exempt.
@@ -105,17 +110,6 @@ impl<'info> FankorContext<'info> {
             .flatten()
     }
 
-    /// Gets the already_writen_at_exit flag for an account.
-    pub fn get_already_writen_at_exit(&self, account: &AccountInfo<'info>) -> bool {
-        let index = self.get_index_for_account(account);
-        self.inner
-            .borrow()
-            .account_data
-            .get(&index)
-            .map(|v| v.already_writen_at_exit)
-            .unwrap_or(false)
-    }
-
     pub(crate) fn get_index_for_account(&self, account: &AccountInfo<'info>) -> u8 {
         self.accounts
             .iter()
@@ -162,7 +156,7 @@ impl<'info> FankorContext<'info> {
                     FankorContextAccountData {
                         exit_action: Some(exit_action),
                         bump_seed: None,
-                        already_writen_at_exit: false,
+                        deserialized_data: None,
                     },
                 );
             }
@@ -178,26 +172,40 @@ impl<'info> FankorContext<'info> {
         }
     }
 
-    /// Sets the already_writen_at_exit flag for an account.
-    pub(crate) fn set_already_writen_at_exit(&self, account: &AccountInfo<'info>) {
+    pub(crate) fn set_deserialized_data_for_account(
+        &'info self,
+        account: &AccountInfo<'info>,
+        value: Rc<RefCell<dyn Any>>,
+    ) {
         let index = self.get_index_for_account(account);
         let mut inner = (*self.inner).borrow_mut();
 
         match inner.account_data.get_mut(&index) {
-            Some(v) => {
-                v.already_writen_at_exit = true;
-            }
+            Some(v) => v.deserialized_data = Some(value),
             None => {
                 inner.account_data.insert(
                     index,
                     FankorContextAccountData {
                         exit_action: None,
                         bump_seed: None,
-                        already_writen_at_exit: true,
+                        deserialized_data: Some(value),
                     },
                 );
             }
         }
+    }
+
+    pub(crate) fn get_deserialized_data_for_account(
+        &'info self,
+        account: &AccountInfo<'info>,
+    ) -> Option<Rc<RefCell<dyn Any>>> {
+        let index = self.get_index_for_account(account);
+        (*self.inner)
+            .borrow()
+            .account_data
+            .get(&index)
+            .map(|v| v.deserialized_data.clone())
+            .flatten()
     }
 
     /// Sets the bump seed associated with an account.
@@ -213,7 +221,7 @@ impl<'info> FankorContext<'info> {
                     FankorContextAccountData {
                         exit_action: None,
                         bump_seed: Some(bump_seed),
-                        already_writen_at_exit: false,
+                        deserialized_data: None,
                     },
                 );
             }
@@ -295,7 +303,7 @@ impl<'info> FankorContext<'info> {
                             FankorContextAccountData {
                                 exit_action: None,
                                 bump_seed: Some(expected_bump_seed),
-                                already_writen_at_exit: false,
+                                deserialized_data: None,
                             },
                         );
                     }

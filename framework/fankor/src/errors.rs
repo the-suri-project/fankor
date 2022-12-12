@@ -287,6 +287,17 @@ pub enum FankorErrorCode {
         constraint: &'static str,
     },
 
+    /// The specified account has different types.
+    #[msg(
+        "A duplicated account ({}) is deserialized with two different types",
+        address
+    )]
+    DuplicatedAccountWithDifferentType { address: Pubkey },
+
+    /// The account must be the default one.
+    #[msg("The account must be the default one")]
+    AccountNotDefault,
+
     // ------------------------------------------------------------------------
     // CPI --------------------------------------------------------------------
     // ------------------------------------------------------------------------
