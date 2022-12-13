@@ -144,11 +144,6 @@ impl<'info, T: AccountType> Account<'info, T> {
         self.context().get_exit_action(self.info)
     }
 
-    /// Whether the account is uninitialized or not.
-    pub fn is_uninitialized(&self) -> bool {
-        self.info.owner == &system_program::ID && self.info.lamports() == 0
-    }
-
     /// Whether the account is owned by the current program.
     pub fn is_owned_by_program(&self) -> bool {
         self.info.owner == self.context.program_id()
@@ -291,6 +286,11 @@ impl<'info, T: AccountType> Account<'info, T> {
 
     /// Transmutes the current account into another type.
     /// This method automatically saves the new value into the account.
+    ///
+    /// # Safety
+    ///
+    /// If there is more than one account with the same underlying address, this
+    /// will only transmute the first one so it can cause undefined behavior.
     pub fn transmute<D: AccountType>(
         mut self,
         new_value: D,
@@ -348,15 +348,6 @@ impl<'info, T: AccountType> Account<'info, T> {
     /// Invalidates the exit action for this account.
     pub fn remove_exit_action(&self) {
         self.context().remove_exit_action(self.info);
-    }
-
-    /// Ignores the account in the exit of the instruction. This is useful to avoid writing
-    /// twice the same account.
-    ///
-    /// This replaces other exit actions associated with this account.
-    pub fn ignore_at_exit(&self) {
-        self.context()
-            .set_exit_action(self.info, FankorContextExitAction::Ignore);
     }
 
     /// Reallocates the account at the end of the instruction if the encoded data
@@ -610,12 +601,11 @@ fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
                     .set_exit_action(account.info, FankorContextExitAction::Processed);
             }
         }
-        Some(FankorContextExitAction::Ignore) => {}
         Some(FankorContextExitAction::Processed) => {
             return Err(FankorErrorCode::DuplicatedWritableAccounts {
                 address: *account.address(),
             }
-                .into());
+            .into());
         }
         Some(FankorContextExitAction::Realloc {
             zero_bytes,

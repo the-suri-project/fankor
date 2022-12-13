@@ -17,18 +17,12 @@ pub type MaybeUninitializedAccount<'info, T> =
 pub type MaybeUninitializedRefAccount<'info, T> =
     Either<RefAccount<'info, T>, UninitializedAccount<'info, T>>;
 
-/// Alias for the common case of having either an actual zero-copy account or its uninitialized counterpart.
+/// Alias for the common case of having either a zero-copy account or its uninitialized counterpart.
 pub type MaybeUninitializedZcAccount<'info, T> =
     Either<ZcAccount<'info, T>, UninitializedAccount<'info, T>>;
 
 /// Alias for the common case of having either an actual account or the default account.
-pub type OptionalAccount<'info, T> = Either<Account<'info, T>, DefaultAccount<'info>>;
-
-/// Alias for the common case of having either a referenced account or the default account.
-pub type OptionalRefAccount<'info, T> = Either<RefAccount<'info, T>, DefaultAccount<'info>>;
-
-/// Alias for the common case of having either an actual zero-copy account or the default account.
-pub type OptionalZcAccount<'info, T> = Either<ZcAccount<'info, T>, DefaultAccount<'info>>;
+pub type MaybeDefaultAccount<'info, T> = Either<T, DefaultAccount<'info>>;
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------

@@ -4,8 +4,6 @@ use crate::traits::{InstructionAccount, PdaChecker};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_program::sysvar::Sysvar;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 
@@ -82,27 +80,6 @@ impl<'info> DefaultAccount<'info> {
     #[inline(always)]
     pub fn context(&self) -> &'info FankorContext<'info> {
         self.context
-    }
-
-    /// Whether the account has enough lamports to be rent-exempt or not.
-    pub fn is_rent_exempt(&self) -> bool {
-        let info = self.info();
-        let lamports = info.lamports();
-        let data_len = info.data_len();
-
-        let rent = Rent::get().expect("Cannot access Rent Sysvar");
-
-        rent.is_exempt(lamports, data_len)
-    }
-
-    /// Whether the account is owned by the current program.
-    pub fn is_owned_by_program(&self) -> bool {
-        self.info.owner == self.context.program_id()
-    }
-
-    /// Whether the account is uninitialized or not.
-    pub fn is_uninitialized(&self) -> bool {
-        self.context.is_account_uninitialized(self.info)
     }
 }
 

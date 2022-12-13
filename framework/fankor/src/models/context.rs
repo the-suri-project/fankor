@@ -39,10 +39,6 @@ struct FankorContextAccountData<'info> {
 /// The action to perform at the end of the instruction for a specific account.
 #[derive(Clone)]
 pub enum FankorContextExitAction<'info> {
-    /// Ignores the account and does nothing. This is useful to avoid writing
-    /// twice an account.
-    Ignore,
-
     /// Indicates the account has already process the exit action.
     /// It is used to detect duplicated actions.
     Processed,

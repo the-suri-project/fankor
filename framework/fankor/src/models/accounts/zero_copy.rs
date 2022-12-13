@@ -157,11 +157,6 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
         self.context().get_exit_action(self.info)
     }
 
-    /// Whether the account is uninitialized or not.
-    pub fn is_uninitialized(&self) -> bool {
-        self.info.owner == &system_program::ID && self.info.lamports() == 0
-    }
-
     /// Whether the account is owned by the current program.
     pub fn is_owned_by_program(&self) -> bool {
         self.info.owner == self.context.program_id()
@@ -319,15 +314,6 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
     /// Invalidates the exit action for this account.
     pub fn remove_exit_action(&self) {
         self.context().remove_exit_action(self.info);
-    }
-
-    /// Ignores the account in the exit of the instruction. This is useful to avoid writing
-    /// twice the same account.
-    ///
-    /// This replaces other exit actions associated with this account.
-    pub fn ignore_at_exit(&self) {
-        self.context()
-            .set_exit_action(self.info, FankorContextExitAction::Ignore);
     }
 
     /// Makes the account be rent-exempt at exit.
@@ -510,7 +496,6 @@ fn drop_aux<'info, T: AccountType + CopyType<'info>>(
 
     match account.context.get_exit_action(account.info) {
         None => {}
-        Some(FankorContextExitAction::Ignore) => {}
         Some(FankorContextExitAction::Processed) => {
             return Err(FankorErrorCode::DuplicatedWritableAccounts {
                 address: *account.address(),

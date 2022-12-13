@@ -27,7 +27,7 @@ pub struct InstructionStructAccounts<'info> {
 
     pub account3: Option<Account<'info, StructAccountData>>,
 
-    pub optional_account: OptionalAccount<'info, StructAccountData>,
+    pub optional_account: MaybeDefaultAccount<'info, Account<'info, StructAccountData>>,
 
     pub unchecked_account: UncheckedAccount<'info>,
 
@@ -111,7 +111,8 @@ pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
 
     #[account(data::x = self.account.address())]
     #[account(metadata_pda = Metadata::get_metadata_pda_seeds(x) @ Errors::A)]
-    pub optional_zc_account: OptionalZcAccount<'info, ZeroCopyStructAccountData>,
+    pub optional_zc_account:
+        MaybeDefaultAccount<'info, ZcAccount<'info, ZeroCopyStructAccountData>>,
 
     pub option_zc_account: Option<ZcAccount<'info, ZeroCopyStructAccountData>>,
 
