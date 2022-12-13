@@ -11,7 +11,7 @@ use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::system_program;
 use solana_program::sysvar::Sysvar;
-use std::cell::{Ref, RefCell};
+use std::cell::{Ref, RefCell, RefMut};
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::io::Write;
@@ -146,6 +146,11 @@ impl<'info, T: AccountType + 'static> RefAccount<'info, T> {
     #[inline(always)]
     pub fn data(&self) -> Ref<T> {
         self.data.borrow()
+    }
+
+    #[inline(always)]
+    pub fn data_mut(&self) -> RefMut<T> {
+        RefCell::borrow_mut(&self.data)
     }
 
     #[inline(always)]
@@ -562,6 +567,11 @@ impl<'info, T: AccountType> Debug for RefAccount<'info, T> {
 /// Execute the last actions over the account.
 impl<'info, T: AccountType + 'static> Drop for RefAccount<'info, T> {
     fn drop(&mut self) {
+        // Ignore if not owned by program.
+        if !self.is_owned_by_program() {
+            return;
+        }
+
         // Ignore already dropped accounts.
         if self.dropped {
             return;
@@ -574,8 +584,11 @@ impl<'info, T: AccountType + 'static> Drop for RefAccount<'info, T> {
 }
 
 fn drop_aux<T: AccountType + 'static>(account: &mut RefAccount<T>) -> FankorResult<()> {
-    // Ignore if not owned by program.
-    if !account.is_owned_by_program() {
+    let rc_count = Rc::strong_count(&account.data);
+
+    // Ignore if not the last time.
+    // 2 because of the reference at the context and at the current account.
+    if rc_count > 2 {
         return Ok(());
     }
 

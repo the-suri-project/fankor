@@ -571,6 +571,11 @@ impl<'info, T: AccountType> Debug for Account<'info, T> {
 /// Execute the last actions over the account.
 impl<'info, T: AccountType> Drop for Account<'info, T> {
     fn drop(&mut self) {
+        // Ignore if not owned by program.
+        if !self.is_owned_by_program() {
+            return;
+        }
+
         // Ignore already dropped accounts.
         if self.dropped {
             return;
@@ -583,11 +588,6 @@ impl<'info, T: AccountType> Drop for Account<'info, T> {
 }
 
 fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
-    // Ignore if not owned by program.
-    if !account.is_owned_by_program() {
-        return Ok(());
-    }
-
     match account.context.get_exit_action(account.info) {
         None => {
             // Ignore if not writable or non from current program.
