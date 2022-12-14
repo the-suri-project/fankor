@@ -64,7 +64,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     let last_ty = &last.ty;
 
                     zc_unsafe_field_methods.push(quote! {
-                        pub unsafe fn #unsafe_field_name(&self, last: Zc<'info, #last_ty>) -> FankorResult<Zc<'info, #field_ty>> {
+                        pub unsafe fn #unsafe_field_name(&self, last: &Zc<'info, #last_ty>) -> FankorResult<Zc<'info, #field_ty>> {
                             let size = last.byte_size()?;
 
                             Ok(unsafe { Zc::new(last.info(), last.offset() + size) })
