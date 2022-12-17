@@ -152,6 +152,36 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[automatically_derived]
         impl #name {
             #(#discriminants)*
+
+            #[cfg(feature = "test")]
+            pub fn new_program_test<'info>() -> ::solana_program_test::ProgramTest {
+                ::solana_program_test::ProgramTest::new(
+                    #name_str,
+                    crate::ID,
+                    Some(
+                        |first_instruction_account: usize,
+                            invoke_context: &mut ::solana_program_test::InvokeContext| {
+                            ::solana_program_test::builtin_process_instruction(
+                                |program_id: &::fankor::prelude::Pubkey,
+                                    accounts: &[::fankor::prelude::AccountInfo],
+                                    data: &[u8]| {
+                                    // Hacks to change the lifetime to 'info.
+                                    let program_id = unsafe {
+                                        std::mem::transmute::<&::fankor::prelude::Pubkey, &'info ::fankor::prelude::Pubkey>(program_id)
+                                    };
+                                    let accounts = unsafe {
+                                        std::mem::transmute::<&[::fankor::prelude::AccountInfo], &'info [::fankor::prelude::AccountInfo<'info>]>(accounts)
+                                    };
+
+                                    #program_entry_name(program_id, accounts, data)
+                                },
+                                first_instruction_account,
+                                invoke_context,
+                            )
+                        },
+                    )
+                )
+            }
         }
 
         #[automatically_derived]
