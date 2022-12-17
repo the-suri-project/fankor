@@ -20,22 +20,12 @@ use spl_associated_token_account::instruction::create_associated_token_account;
 pub trait ClientExtensions {
     /// Assemble the given instructions into a transaction and sign it.
     /// All transactions created with this method are signed and payed for by the payer.
-    async fn transaction_from_instructions(
+    async fn create_transaction_from_instructions(
         &mut self,
         _ixs: &[Instruction],
         _payer: &Keypair,
         _signers: Vec<&Keypair>,
     ) -> Result<Transaction, Box<dyn std::error::Error>> {
-        unimplemented!();
-    }
-
-    /// Return and deserialize a Borsh account at the given address at the time of
-    /// the most recent root slot.
-    /// If the account is not `found`, None is returned.
-    async fn get_account_value<T: BorshDeserialize>(
-        &mut self,
-        _address: Pubkey,
-    ) -> Result<Option<T>, Box<dyn std::error::Error>> {
         unimplemented!();
     }
 
@@ -91,7 +81,7 @@ pub trait ClientExtensions {
 
 #[async_trait]
 impl ClientExtensions for BanksClient {
-    async fn transaction_from_instructions(
+    async fn create_transaction_from_instructions(
         &mut self,
         ixs: &[Instruction],
         payer: &Keypair,
@@ -105,25 +95,6 @@ impl ClientExtensions for BanksClient {
             &signers,
             latest_blockhash,
         ))
-    }
-
-    async fn get_account_value<T: BorshDeserialize>(
-        &mut self,
-        address: Pubkey,
-    ) -> Result<Option<T>, Box<dyn std::error::Error>> {
-        self.get_account(address)
-            .await
-            .and_then(|result| match result {
-                Some(account) => {
-                    let result = T::deserialize(&mut account.data.as_ref()).map_err(|_| {
-                        BanksClientError::ClientError("Failed to deserialize account")
-                    })?;
-
-                    Ok(Some(result))
-                }
-                None => Ok(None),
-            })
-            .map_err(Into::into)
     }
 
     async fn create_account(
