@@ -102,8 +102,7 @@ impl<'info> FankorContext<'info> {
             .borrow()
             .account_data
             .get(&index)
-            .map(|v| v.bump_seed.clone())
-            .flatten()
+            .and_then(|v| v.bump_seed)
     }
 
     pub(crate) fn get_index_for_account(&self, account: &AccountInfo<'info>) -> u8 {
@@ -132,8 +131,7 @@ impl<'info> FankorContext<'info> {
             .borrow()
             .account_data
             .get(&index)
-            .map(|v| v.exit_action.clone())
-            .flatten()
+            .and_then(|v| v.exit_action.clone())
     }
 
     pub(crate) fn set_exit_action(
@@ -200,11 +198,14 @@ impl<'info> FankorContext<'info> {
             .borrow()
             .account_data
             .get(&index)
-            .map(|v| v.deserialized_data.clone())
-            .flatten()
+            .and_then(|v| v.deserialized_data.clone())
     }
 
     /// Sets the bump seed associated with an account.
+    ///
+    /// # Safety
+    ///
+    /// This method is intended to be used only by the framework.
     pub unsafe fn set_bump_seed(&self, account: &AccountInfo<'info>, bump_seed: u8) {
         let index = self.get_index_for_account(account);
         let mut inner = (*self.inner).borrow_mut();
@@ -254,8 +255,7 @@ impl<'info> FankorContext<'info> {
             .borrow()
             .account_data
             .get(&index)
-            .map(|v| v.bump_seed)
-            .flatten();
+            .and_then(|v| v.bump_seed);
 
         match saved_bump_seed {
             Some(expected_bump_seed) => {

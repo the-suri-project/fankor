@@ -909,7 +909,7 @@ impl Parse for CustomMetaWithError {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         let name = input.parse::<Ident>()?;
 
-        let sub_name = if name.to_string() == "data" {
+        let sub_name = if name == "data" {
             let token_colon1 = input.parse::<Token![:]>()?;
             let token_colon2 = input.parse::<Token![:]>()?;
             let sub_name = input.parse::<Ident>()?;

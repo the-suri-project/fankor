@@ -11,15 +11,18 @@ edition = "2021"
 library = []
 token-program = ["spl-token", "spl-associated-token-account"]
 metadata-program = ["mpl-token-metadata"]
-test = ["lazy_static", "parking_lot"]
+test = ["token-program", "async-trait", "solana-banks-client", "solana-program-test", "solana-program-runtime", "solana-sdk"]
 
 [dependencies]
+async-trait = { version = "0.1.56", optional = true }
 borsh = "0.9.3"
 bs58 = "0.4.0"
-lazy_static = { version = "1.4.0", optional = true }
-parking_lot = { version = "0.12.1", optional = true }
 sha2 = "0.10.6"
-solana-program = "1.14.8"
+solana-banks-client = { version = "1.14.10", optional = true }
+solana-program = "1.14.10"
+solana-program-test = { version = "1.14.10", optional = true }
+solana-program-runtime = { version = "1.14.10", optional = true }
+solana-sdk = { version = "1.14.10", optional = true }
 spl-associated-token-account = { version = "1.1.1", optional = true, features = ["no-entrypoint"] }
 spl-token = { version = "3.5.0", optional = true, features = ["no-entrypoint"] }
 mpl-token-metadata = { version = "1.4.3", optional = true, features = ["no-entrypoint"] }

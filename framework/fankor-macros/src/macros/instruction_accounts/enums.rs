@@ -16,7 +16,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
         .args
         .clone()
         .map(|args| quote! { args: &#args })
-        .unwrap_or(quote! {});
+        .unwrap_or_default();
 
     let verify_fn_fields = item.variants.iter().map(|v| {
         let variant_name = &v.ident;
@@ -80,12 +80,10 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                         }
                     }
                 }),
-                FieldKind::Vec(v) => {
-                    return Err(Error::new(
-                        v.span(),
-                        "Vec is not supported for instruction enums",
-                    ));
-                }
+                FieldKind::Vec(v) => Err(Error::new(
+                    v.span(),
+                    "Vec is not supported for instruction enums",
+                )),
             }
         })
         .collect::<Result<Vec<_>>>()?;

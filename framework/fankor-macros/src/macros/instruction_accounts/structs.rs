@@ -15,7 +15,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         .args
         .clone()
         .map(|args| quote! { args: &#args })
-        .unwrap_or(quote! {});
+        .unwrap_or_default();
 
     let verify_fn_fields = item.fields.iter().map(|v| {
         let name = v.ident.as_ref().unwrap();

@@ -28,6 +28,13 @@ pub use spl_associated_token_account;
 #[cfg(feature = "token-program")]
 pub use spl_token;
 
+#[cfg(feature = "test")]
+pub use solana_program_runtime;
+#[cfg(feature = "test")]
+pub use solana_program_test;
+#[cfg(feature = "test")]
+pub use solana_sdk;
+
 pub mod sysvar {
     pub use solana_program::sysvar::*;
 }
