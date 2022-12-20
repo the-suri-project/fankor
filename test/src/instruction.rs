@@ -72,6 +72,7 @@ pub struct InstructionStructAccounts<'info> {
     pub rest: Rest<'info>,
 }
 
+#[allow(dead_code)]
 impl<'info> InstructionStructAccounts<'info> {
     // METHODS ----------------------------------------------------------------
 
@@ -124,6 +125,7 @@ pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
     pub instructions_sysvar: SysvarAccount<'info, Instructions>,
 }
 
+#[allow(dead_code)]
 impl<'info> InstructionStructAccountsWithoutAssociatedType<'info> {
     // METHODS ----------------------------------------------------------------
 

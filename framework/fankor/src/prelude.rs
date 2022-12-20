@@ -23,6 +23,8 @@ pub use solana_program::sysvar::rewards::Rewards;
 pub use solana_program::sysvar::slot_hashes::SlotHashes;
 pub use solana_program::sysvar::slot_history::SlotHistory;
 pub use solana_program::sysvar::stake_history::StakeHistory;
+#[cfg(not(feature = "library"))]
+pub use solana_security_txt::security_txt;
 #[cfg(feature = "token-program")]
 pub use spl_associated_token_account;
 #[cfg(feature = "token-program")]
