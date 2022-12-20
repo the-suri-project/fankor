@@ -196,7 +196,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
 
         #[automatically_derived]
-        #[cfg(not(feature = "library"))]
+        #[cfg(not(feature = "no-entrypoint"))]
         ::fankor::prelude::solana_program::entrypoint!(#program_entry_name);
 
         #[allow(non_snake_case)]
@@ -250,7 +250,10 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             }
         }
 
+        #[cfg(not(feature = "no-entrypoint"))]
         #cpi_mod
+
+        #[cfg(feature = "library")]
         #lpi_mod
     };
 

@@ -13,7 +13,6 @@ mod tests;
 
 setup!("7JKciYMdWKBo1yPhjVe5eDDjoxYfB8YhkAL7DRpJj3xE");
 
-#[cfg(not(feature = "library"))]
 security_txt! {
     // Required fields
     name: "Example",

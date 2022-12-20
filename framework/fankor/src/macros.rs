@@ -29,6 +29,14 @@ macro_rules! require_not {
     };
 }
 
+#[cfg(feature = "no-entrypoint")]
+#[macro_export]
+macro_rules! security_txt {
+    ($($name:ident: $value:expr),*) => {};
+}
+
 pub use panic_error;
 pub use require;
 pub use require_not;
+#[cfg(feature = "no-entrypoint")]
+pub use security_txt;

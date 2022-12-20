@@ -1,9 +1,8 @@
 //! Code based on https://github.com/halbornteam/solana-test-framework
 
 use async_trait::async_trait;
-use borsh::BorshDeserialize;
 use solana_program::program_pack::Pack;
-use solana_program_test::{BanksClient, BanksClientError};
+use solana_program_test::BanksClient;
 use solana_sdk::{
     instruction::Instruction,
     pubkey::Pubkey,

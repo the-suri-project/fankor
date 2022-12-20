@@ -8,10 +8,12 @@ description = "Fankor framework to build Solana programs"
 edition = "2021"
 
 [features]
-library = []
+no-entrypoint = []
+library = ["no-entrypoint"]
 metadata-program = ["mpl-token-metadata"]
 test = ["token-program", "async-trait", "solana-banks-client", "solana-program-test", "solana-program-runtime", "solana-sdk"]
 token-program = ["spl-token", "spl-associated-token-account"]
+token-program-2022 = ["spl-token-2022", "spl-associated-token-account"]
 
 [dependencies]
 async-trait = { version = "0.1.56", optional = true }

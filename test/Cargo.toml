@@ -11,6 +11,7 @@ edition = "2021"
 crate-type = ["cdylib", "lib"]
 
 [features]
+no-entrypoint = ["fankor/no-entrypoint"]
 library = ["fankor/library"]
 test = ["fankor/test"]
 
