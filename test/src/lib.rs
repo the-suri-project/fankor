@@ -8,6 +8,7 @@ mod errors;
 mod instruction;
 mod program;
 
+mod serialization;
 #[cfg(all(test, feature = "test"))]
 mod tests;
 

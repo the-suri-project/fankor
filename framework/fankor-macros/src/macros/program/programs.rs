@@ -53,7 +53,7 @@ impl Program {
 
         let snake_name = format_ident!(
             "{}",
-            case_converter.convert(&name.to_string()),
+            case_converter.convert(name.to_string()),
             span = name.span()
         );
 
@@ -405,7 +405,7 @@ impl Program {
                     self.methods.push(ProgramMethod {
                         pascal_name: format_ident!(
                             "{}",
-                            case_converter.convert(&method_name.to_string()),
+                            case_converter.convert(method_name.to_string()),
                             span = method_name.span()
                         ),
                         name: method_name,
@@ -548,7 +548,7 @@ impl Program {
                     let method = ProgramMethod {
                         pascal_name: format_ident!(
                             "{}",
-                            case_converter.convert(&method_name.to_string()),
+                            case_converter.convert(method_name.to_string()),
                             span = method_name.span()
                         ),
                         name: method_name,

@@ -1,13 +1,10 @@
-use crate::Result;
 use std::collections::HashSet;
 
+use crate::macros::serialize::{get_discriminant, is_deprecated};
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{quote, ToTokens};
 use syn::spanned::Spanned;
-use syn::{
-    parse_macro_input, Attribute, Error, Fields, Ident, ItemEnum, Lit, Meta, MetaList, NestedMeta,
-    Path, WhereClause,
-};
+use syn::{Attribute, Error, Fields, Ident, ItemEnum, Meta, NestedMeta, Path, WhereClause};
 
 pub fn enum_de(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2> {
     let name = &input.ident;
@@ -30,7 +27,7 @@ pub fn enum_de(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2>
         let mut variant_header = TokenStream2::new();
 
         let is_deprecated = is_deprecated(&variant.attrs);
-        let discriminant = get_discriminant(&variant.attrs)?;
+        let discriminant = get_discriminant(variant)?;
 
         // Calculate the discriminant.
         if let Some(v) = discriminant {
@@ -39,7 +36,7 @@ pub fn enum_de(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2>
             return Err(Error::new(
                 variant.span(),
                 format!(
-                    "After a deprecated entity you must explicitly define the variant discriminant #[discriminant(u8)]: {}",
+                    "After a deprecated entity you must explicitly define the variant discriminant: = {}",
                     variant_idx
                 ),
             ));
@@ -186,71 +183,4 @@ pub fn contains_initialize_with(attrs: &[Attribute]) -> syn::Result<Option<Path>
         }
     }
     Ok(None)
-}
-
-pub fn is_deprecated(attrs: &[Attribute]) -> bool {
-    for attr in attrs.iter() {
-        if let Ok(Meta::Path(path)) = attr.parse_meta() {
-            if path.is_ident("deprecated") {
-                return true;
-            }
-        }
-    }
-    false
-}
-
-pub fn get_discriminant(attrs: &[Attribute]) -> Result<Option<u8>> {
-    let mut discriminant: Option<u8> = None;
-
-    for attr in attrs.iter() {
-        if attr.path.is_ident("discriminant") {
-            let attr_span = attr.span();
-
-            if discriminant.is_some() {
-                return Err(Error::new(
-                    attr_span,
-                    "The discriminant attribute can only be used once",
-                ));
-            }
-
-            let path = &attr.path;
-            let tokens = &attr.tokens;
-            let tokens = quote! {#path #tokens};
-
-            let args = match parse_macro_input::parse::<MetaList>(tokens.into()) {
-                Ok(v) => v,
-                Err(_) => {
-                    return Err(Error::new(
-                        attr_span,
-                        "The discriminant attribute expects one integer literal as arguments",
-                    ));
-                }
-            };
-
-            if args.nested.len() != 1 {
-                return Err(Error::new(
-                    attr_span,
-                    "The discriminant attribute expects only one argument",
-                ));
-            }
-
-            // Check first argument is a literal string.
-            let first_argument = args.nested.first().unwrap();
-            match first_argument {
-                NestedMeta::Lit(v) => match v {
-                    Lit::Int(v) => {
-                        discriminant = Some(v.base10_parse()?);
-                    }
-                    v => {
-                        return Err(Error::new(v.span(), "This must be a literal string"));
-                    }
-                },
-                NestedMeta::Meta(v) => {
-                    return Err(Error::new(v.span(), "This must be a literal string"));
-                }
-            }
-        }
-    }
-
-    Ok(discriminant)
 }

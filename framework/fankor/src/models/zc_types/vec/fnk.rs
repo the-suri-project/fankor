@@ -84,7 +84,7 @@ impl<'info, T: CopyType<'info>> ZcFnkVec<'info, T> {
         let len = FnkUInt::deserialize(&mut bytes)?;
 
         let index = index as u64;
-        if index as u64 >= len.0 {
+        if index >= len.0 {
             return Ok(None);
         }
 

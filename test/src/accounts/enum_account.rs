@@ -4,12 +4,13 @@ use fankor::prelude::*;
 #[account(base = "ProgramAccount")]
 #[derive(AccountSize, AccountOffsets)]
 pub enum EnumAccountData {
-    #[discriminant(5)]
-    A,
+    A = 5,
     #[deprecated]
     B(u32, u64),
-    #[discriminant(3)]
-    C { value1: u32, value2: String },
+    C {
+        value1: u32,
+        value2: String,
+    } = 3,
 }
 
 #[account(base = "ProgramAccount")]

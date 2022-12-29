@@ -3,6 +3,7 @@ pub mod account_offset;
 pub mod account_size;
 pub mod accounts;
 pub mod deserialize;
+pub mod enum_discriminants;
 pub mod error;
 pub mod instruction_accounts;
 pub mod program;

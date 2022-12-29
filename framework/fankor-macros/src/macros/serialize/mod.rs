@@ -1,4 +1,6 @@
 mod enums;
+pub use enums::get_discriminant;
+pub use enums::is_deprecated;
 
 use crate::macros::serialize::enums::enum_ser;
 use crate::Result;

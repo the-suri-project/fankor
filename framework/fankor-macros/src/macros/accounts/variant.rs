@@ -1,14 +1,14 @@
+use crate::macros::serialize::get_discriminant;
 use proc_macro2::Ident;
-use quote::quote;
 use syn::spanned::Spanned;
-use syn::{parse_macro_input, Attribute, Error, Lit, LitInt, MetaList, NestedMeta, Variant};
+use syn::{Attribute, Error, Variant};
 
 use crate::Result;
 
 pub struct AccountVariant {
     pub name: Ident,
     pub attributes: Vec<Attribute>,
-    pub discriminant: Option<LitInt>,
+    pub discriminant: Option<u8>,
     pub deprecated: bool,
 }
 
@@ -17,12 +17,7 @@ impl AccountVariant {
 
     /// Creates a new instance of the ErrorAttributes struct from the given attributes.
     pub fn from(variant: Variant) -> Result<AccountVariant> {
-        if let Some((_, discriminant)) = variant.discriminant {
-            return Err(Error::new(
-                discriminant.span(),
-                "Discriminants are not supported",
-            ));
-        }
+        let discriminant = get_discriminant(&variant)?;
 
         if !variant.fields.is_empty() {
             return Err(Error::new(variant.span(), "Fields are not supported"));
@@ -31,7 +26,7 @@ impl AccountVariant {
         let mut account_variant = AccountVariant {
             name: variant.ident,
             attributes: variant.attrs,
-            discriminant: None,
+            discriminant,
             deprecated: false,
         };
 
@@ -46,54 +41,7 @@ impl AccountVariant {
         while index < self.attributes.len() {
             let attribute = &self.attributes[index];
 
-            if attribute.path.is_ident("discriminant") {
-                let attribute = self.attributes.remove(index);
-                let attribute_span = attribute.span();
-
-                if self.discriminant.is_some() {
-                    return Err(Error::new(
-                        attribute_span,
-                        "The discriminant attribute can only be used once",
-                    ));
-                }
-
-                let path = &attribute.path;
-                let tokens = &attribute.tokens;
-                let tokens = quote! {#path #tokens};
-
-                let args = match parse_macro_input::parse::<MetaList>(tokens.into()) {
-                    Ok(v) => v,
-                    Err(_) => {
-                        return Err(Error::new(
-                            attribute_span,
-                            "The discriminant attribute expects one integer literal as arguments",
-                        ));
-                    }
-                };
-
-                if args.nested.len() != 1 {
-                    return Err(Error::new(
-                        attribute_span,
-                        "The discriminant attribute expects only one argument",
-                    ));
-                }
-
-                // Check first argument is a literal string.
-                let first_argument = args.nested.first().unwrap();
-                match first_argument {
-                    NestedMeta::Lit(v) => match v {
-                        Lit::Int(v) => {
-                            self.discriminant = Some(v.clone());
-                        }
-                        v => {
-                            return Err(Error::new(v.span(), "This must be a literal string"));
-                        }
-                    },
-                    NestedMeta::Meta(v) => {
-                        return Err(Error::new(v.span(), "This must be a literal string"));
-                    }
-                }
-            } else if attribute.path.is_ident("deprecated") {
+            if attribute.path.is_ident("deprecated") {
                 let attribute_span = attribute.span();
 
                 if self.deprecated {

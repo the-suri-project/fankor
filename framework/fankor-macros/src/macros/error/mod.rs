@@ -109,9 +109,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             } = &v;
             let discriminant = {
                 if let Some(v) = code {
-                    let new_value = v.base10_parse::<u32>()?;
-
-                    u32_index = new_value;
+                    u32_index = *v;
                 }
 
                 if used_codes.contains(&u32_index) {

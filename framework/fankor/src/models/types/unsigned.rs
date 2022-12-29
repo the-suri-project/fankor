@@ -170,7 +170,7 @@ impl BorshSerialize for FnkUInt {
             let bytes = &bytes.as_slice()[..byte_length as usize];
             let byte_length = byte_length as u8 | 0x80;
 
-            writer.write_all(&[byte_length as u8])?;
+            writer.write_all(&[byte_length])?;
             writer.write_all(bytes)?;
         }
 

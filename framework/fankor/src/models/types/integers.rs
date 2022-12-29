@@ -283,7 +283,7 @@ impl BorshSerialize for FnkInt {
                 byte_length |= 0x40;
             }
 
-            writer.write_all(&[byte_length as u8])?;
+            writer.write_all(&[byte_length])?;
             writer.write_all(bytes)?;
         }
 

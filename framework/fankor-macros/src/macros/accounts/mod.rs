@@ -103,7 +103,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 #variant_name(#variant_name)
             });
 
-            let method_name = case_converter.convert(&variant_name.to_string());
+            let method_name = case_converter.convert(variant_name.to_string());
 
             unwrap_methods.push({
                 let method_name =
@@ -172,9 +172,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
             // Calculate the discriminant.
             if let Some(v) = discriminant {
-                let new_value = v.base10_parse::<u8>()?;
-
-                u8_index = new_value;
+                u8_index = *v;
             }
 
             if u8_index == 0 {

@@ -29,8 +29,15 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let accounts_name = &arguments.accounts_type_name;
     let account_discriminants_name = format_ident!("{}Discriminant", accounts_name);
 
+    let repr_argument = if matches!(input, Item::Enum(_)) {
+        quote! { #[repr(u8)] }
+    } else {
+        quote! {}
+    };
+
     let result = quote! {
         #[derive(FankorSerialize, FankorDeserialize)]
+        #repr_argument
         #item
 
         #[automatically_derived]

@@ -22,7 +22,7 @@ pub fn setup(args: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 
 /// A custom implementation of BorshSerialize that fix an issue with the where clause.
-#[proc_macro_derive(FankorSerialize, attributes(borsh_skip, discriminant))]
+#[proc_macro_derive(FankorSerialize, attributes(borsh_skip))]
 pub fn serialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 
@@ -37,7 +37,7 @@ pub fn serialize(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 
 /// A custom implementation of BorshDeserialize that fix an issue with the where clause.
-#[proc_macro_derive(FankorDeserialize, attributes(borsh_skip, borsh_init, discriminant))]
+#[proc_macro_derive(FankorDeserialize, attributes(borsh_skip, borsh_init))]
 pub fn deserialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 
@@ -141,6 +141,21 @@ pub fn account_offsets(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 
     match macros::account_offset::processor(input) {
+        Ok(v) => v,
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/// Generates a secondary enumeration that sets the discriminant of an enum.
+#[proc_macro_derive(EnumDiscriminants)]
+pub fn enum_discriminants(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as Item);
+
+    match macros::enum_discriminants::processor(input) {
         Ok(v) => v,
         Err(e) => e.to_compile_error().into(),
     }

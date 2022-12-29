@@ -11,7 +11,7 @@ pub enum ProgramAccount {
     StructAccountData,
     ZeroCopyStructAccountData,
     EnumAccountData,
-    ZeroCopyEnumAccountData,
+    ZeroCopyEnumAccountData = 10,
 }
 
 #[accounts(base = "ProgramAccount")]
