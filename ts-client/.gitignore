@@ -1,0 +1,6 @@
+# Build
+dist
+.rollup.cache
+
+# Yarn
+node_modules
