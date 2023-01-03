@@ -144,6 +144,7 @@ impl<'info> InstructionStructAccountsWithoutAssociatedType<'info> {
 
 #[derive(InstructionAccounts)]
 #[account(args = InstructionArgs)]
+#[non_exhaustive]
 pub enum InstructionEnumAccounts<'info> {
     Struct1(InstructionStructAccounts<'info>),
 
@@ -157,6 +158,7 @@ pub enum InstructionEnumAccounts<'info> {
 // ----------------------------------------------------------------------------
 
 #[derive(InstructionAccounts)]
+#[non_exhaustive]
 pub enum InstructionEnumAccountsWithoutArgs<'info> {
     Struct1(InstructionStructAccountsWithoutAssociatedType<'info>),
 

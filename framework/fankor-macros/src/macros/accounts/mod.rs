@@ -247,6 +247,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let result = if arguments.accounts_type_name.is_some() {
         quote! {
             #(#attrs)*
+            #[non_exhaustive]
             #visibility enum #name #ty_generics #where_clause {
                 #(#final_enum_variants,)*
             }
@@ -347,6 +348,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
         quote! {
             #(#attrs)*
+            #[non_exhaustive]
             #visibility enum #name #ty_generics #where_clause {
                 #(#final_enum_variants,)*
             }
@@ -443,6 +445,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 }
             }
 
+            #[non_exhaustive]
             #visibility enum #discriminant_name {
                 #(#final_enum_variant_discriminants,)*
             }

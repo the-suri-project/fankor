@@ -193,6 +193,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[derive(::std::fmt::Debug, ::std::clone::Clone)]
         #[repr(u32)]
         #(#attrs)*
+        #[non_exhaustive]
         #visibility enum #name #ty_generics #where_clause {
             #(#final_enum_variants,)*
         }
