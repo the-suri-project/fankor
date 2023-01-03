@@ -1,1 +1,1 @@
-export * as models from './models';
+export * as serde from './serde';
