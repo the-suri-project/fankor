@@ -1,7 +1,7 @@
-import {FnkBorshReader} from '../deserializer';
-import {FnkBorshWriter} from '../serializer';
-import {FnkBorshError} from '../errors';
-import {FnkBorshSchema} from '../index';
+import { FnkBorshReader } from '../deserializer';
+import { FnkBorshWriter } from '../serializer';
+import { FnkBorshError } from '../errors';
+import { FnkBorshSchema } from '../index';
 
 export class BoolSchema implements FnkBorshSchema<boolean> {
     // METHODS ----------------------------------------------------------------
@@ -22,7 +22,9 @@ export class BoolSchema implements FnkBorshSchema<boolean> {
         } else if (discriminant === 1) {
             return true;
         } else {
-            throw new FnkBorshError(`Invalid discriminant for bool: ${discriminant}`);
+            throw new FnkBorshError(
+                `Invalid discriminant for bool: ${discriminant}`
+            );
         }
     }
 }

@@ -1,4 +1,4 @@
-import {FnkBorshError} from './errors';
+import { FnkBorshError } from './errors';
 
 export class FnkBorshReader {
     buffer: Buffer;
@@ -13,7 +13,9 @@ export class FnkBorshReader {
 
     readByte(): number {
         if (this.offset + 1 > this.buffer.length) {
-            throw new FnkBorshError(`Expected buffer length(${1}) isn't within bounds`);
+            throw new FnkBorshError(
+                `Expected buffer length(${1}) isn't within bounds`
+            );
         }
 
         const value = this.buffer.readUInt8(this.offset);
@@ -23,7 +25,9 @@ export class FnkBorshReader {
 
     readBuffer(length: number): Buffer {
         if (this.offset + length > this.buffer.length) {
-            throw new FnkBorshError(`Expected buffer length(${length}) isn't within bounds`);
+            throw new FnkBorshError(
+                `Expected buffer length(${length}) isn't within bounds`
+            );
         }
         const result = this.buffer.slice(this.offset, this.offset + length);
         this.offset += length;
@@ -43,11 +47,18 @@ export interface FnkBorshReadSchema<T> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-export function deserialize<S extends FnkBorshReadSchema<T>, T>(schema: S, reader: FnkBorshReader): T {
+export function deserialize<S extends FnkBorshReadSchema<T>, T>(
+    schema: S,
+    reader: FnkBorshReader
+): T {
     const result = schema.deserialize(reader);
 
     if (reader.offset < reader.buffer.length) {
-        throw new FnkBorshError(`Unexpected ${reader.buffer.length - reader.offset} bytes after deserialized data`);
+        throw new FnkBorshError(
+            `Unexpected ${
+                reader.buffer.length - reader.offset
+            } bytes after deserialized data`
+        );
     }
 
     return result;

@@ -19,17 +19,25 @@ describe('Structs Tests', () => {
         const reader = new FnkBorshReader(buffer);
         let actual = schema.deserialize(reader);
         let expected = data;
-        assert(Object.keys(actual).length === Object.keys(expected).length,
-            `Keys: ${Object.keys(actual).length} != ${Object.keys(expected).length}`);
+        assert(
+            Object.keys(actual).length === Object.keys(expected).length,
+            `Keys: ${Object.keys(actual).length} != ${
+                Object.keys(expected).length
+            }`
+        );
     });
 
     it('test_serialize_deserialize_data', () => {
         const data = {
             a: 'x',
             b: 1,
-            c: true
+            c: true,
         };
-        const schema = Struct([['a', TString], ['b', U8], ['c', Bool]] as const);
+        const schema = Struct([
+            ['a', TString],
+            ['b', U8],
+            ['c', Bool],
+        ] as const);
         const writer = new FnkBorshWriter();
         schema.serialize(writer, data);
 
@@ -37,8 +45,12 @@ describe('Structs Tests', () => {
         const reader = new FnkBorshReader(buffer);
         let actual = schema.deserialize(reader);
         let expected = data;
-        assert(Object.keys(actual).length === Object.keys(expected).length,
-            `Keys: ${Object.keys(actual).length} != ${Object.keys(expected).length}`);
+        assert(
+            Object.keys(actual).length === Object.keys(expected).length,
+            `Keys: ${Object.keys(actual).length} != ${
+                Object.keys(expected).length
+            }`
+        );
         assert(actual.a === expected.a, `a: ${actual.a} != ${expected.a}`);
         assert(actual.b === expected.b, `b: ${actual.b} != ${expected.b}`);
         assert(actual.c === expected.c, `c: ${actual.c} != ${expected.c}`);
@@ -48,11 +60,15 @@ describe('Structs Tests', () => {
         const data = {
             a: 'x',
             b: {
-                c: 1
+                c: 1,
             },
-            d: true
+            d: true,
         };
-        const schema = Struct([['a', TString], ['b', Struct([['c', U8]] as const)], ['d', Bool]] as const);
+        const schema = Struct([
+            ['a', TString],
+            ['b', Struct([['c', U8]] as const)],
+            ['d', Bool],
+        ] as const);
         const writer = new FnkBorshWriter();
         schema.serialize(writer, data);
 
@@ -60,10 +76,17 @@ describe('Structs Tests', () => {
         const reader = new FnkBorshReader(buffer);
         let actual = schema.deserialize(reader);
         let expected = data;
-        assert(Object.keys(actual).length === Object.keys(expected).length,
-            `Keys: ${Object.keys(actual).length} != ${Object.keys(expected).length}`);
+        assert(
+            Object.keys(actual).length === Object.keys(expected).length,
+            `Keys: ${Object.keys(actual).length} != ${
+                Object.keys(expected).length
+            }`
+        );
         assert(actual.a === expected.a, `a: ${actual.a} != ${expected.a}`);
-        assert(actual.b.c === expected.b.c, `b.c: ${actual.b.c} != ${expected.b.c}`);
+        assert(
+            actual.b.c === expected.b.c,
+            `b.c: ${actual.b.c} != ${expected.b.c}`
+        );
         assert(actual.d === expected.d, `d: ${actual.d} != ${expected.d}`);
     });
 });

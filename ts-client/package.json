@@ -23,10 +23,7 @@
     "node": ">=11"
   },
   "scripts": {
-    "init:yarn": "yarn && yarn lint:fix && yarn build:yarn",
-    "init:npm": "npm i && npm run lint:fix && npm run build:npm",
-    "build:yarn": "rimraf dist/ && yarn build:node && yarn build:browser",
-    "build:npm": "rimraf dist/ && npm run build:node && npm run build:browser",
+    "build": "rimraf dist/ && yarn build:node && yarn build:browser",
     "build:node": "tsc && tsc -p tsconfig.cjs.json",
     "build:browser": "rollup --config",
     "lint:fix": "prettier src/** -w",

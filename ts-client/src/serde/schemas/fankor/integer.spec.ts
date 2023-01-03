@@ -1,8 +1,8 @@
 import assert from 'assert';
-import {FnkInt} from './integers';
+import { FnkInt } from './integers';
 import BN from 'bn.js';
-import {FnkBorshWriter} from '../../serializer';
-import {FnkBorshReader} from '../../deserializer';
+import { FnkBorshWriter } from '../../serializer';
+import { FnkBorshReader } from '../../deserializer';
 
 describe('FnkInt Tests', () => {
     const schema = FnkInt;
@@ -16,7 +16,10 @@ describe('FnkInt Tests', () => {
 
                 let actual = writer.buffer.slice(0, writer.length);
                 let expected = Buffer.from([number]);
-                assert(actual.equals(expected), `${actual.toString('hex')} != ${expected.toString('hex')}`);
+                assert(
+                    actual.equals(expected),
+                    `${actual.toString('hex')} != ${expected.toString('hex')}`
+                );
             }
 
             if (number == 0) {
@@ -30,7 +33,10 @@ describe('FnkInt Tests', () => {
 
                 let actual = writer.buffer.slice(0, writer.length);
                 let expected = Buffer.from([number | 0x20]);
-                assert(actual.equals(expected), `${actual.toString('hex')} != ${expected.toString('hex')}`);
+                assert(
+                    actual.equals(expected),
+                    `${actual.toString('hex')} != ${expected.toString('hex')}`
+                );
             }
         }
     });
@@ -44,7 +50,10 @@ describe('FnkInt Tests', () => {
 
             let actual = writer.buffer.slice(0, writer.length);
             let expected = Buffer.from([0b0100_1010, 0b0101_0101]);
-            assert(actual.equals(expected), `${actual.toString('hex')} != ${expected.toString('hex')}`);
+            assert(
+                actual.equals(expected),
+                `${actual.toString('hex')} != ${expected.toString('hex')}`
+            );
         }
 
         // Negative
@@ -55,7 +64,10 @@ describe('FnkInt Tests', () => {
 
             let actual = writer.buffer.slice(0, writer.length);
             let expected = Buffer.from([0b0110_1010, 0b0101_0101]);
-            assert(actual.equals(expected), `${actual.toString('hex')} != ${expected.toString('hex')}`);
+            assert(
+                actual.equals(expected),
+                `${actual.toString('hex')} != ${expected.toString('hex')}`
+            );
         }
     });
 
@@ -68,7 +80,10 @@ describe('FnkInt Tests', () => {
 
             let actual = writer.buffer.slice(0, writer.length);
             let expected = Buffer.from([2 | 0x80, 0b0101_0101, 0b1_0101]);
-            assert(actual.equals(expected), `${actual.toString('hex')} != ${expected.toString('hex')}`);
+            assert(
+                actual.equals(expected),
+                `${actual.toString('hex')} != ${expected.toString('hex')}`
+            );
         }
 
         // Negative
@@ -78,17 +93,24 @@ describe('FnkInt Tests', () => {
             schema.serialize(writer, number);
 
             let actual = writer.buffer.slice(0, writer.length);
-            let expected = Buffer.from([2 | 0x80 | 0x40, 0b0101_0101, 0b1_0101]);
-            assert(actual.equals(expected), `${actual.toString('hex')} != ${expected.toString('hex')}`);
+            let expected = Buffer.from([
+                2 | 0x80 | 0x40,
+                0b0101_0101,
+                0b1_0101,
+            ]);
+            assert(
+                actual.equals(expected),
+                `${actual.toString('hex')} != ${expected.toString('hex')}`
+            );
         }
     });
 
     it('test_serialize_as_bytes_length_format', () => {
         // Positive
         {
-            let number = new BN(0x1AA);
+            let number = new BN(0x1aa);
             for (let i = 3; i < 9; i += 1) {
-                number = number.shln(8).or(new BN(0xAA));
+                number = number.shln(8).or(new BN(0xaa));
 
                 const writer = new FnkBorshWriter();
                 schema.serialize(writer, number);
@@ -103,7 +125,12 @@ describe('FnkInt Tests', () => {
 
                 let actual = writer.buffer.slice(0, writer.length);
                 let expected = Buffer.from(bytes);
-                assert(actual.equals(expected), `For(${i}): ${actual.toString('hex')} != ${expected.toString('hex')}`);
+                assert(
+                    actual.equals(expected),
+                    `For(${i}): ${actual.toString(
+                        'hex'
+                    )} != ${expected.toString('hex')}`
+                );
             }
 
             number = new BN('9223372036854775807');
@@ -119,14 +146,19 @@ describe('FnkInt Tests', () => {
 
             let actual = writer.buffer.slice(0, writer.length);
             let expected = Buffer.from(bytes);
-            assert(actual.equals(expected), `For(MAX): ${actual.toString('hex')} != ${expected.toString('hex')}`);
+            assert(
+                actual.equals(expected),
+                `For(MAX): ${actual.toString('hex')} != ${expected.toString(
+                    'hex'
+                )}`
+            );
         }
 
         // Negative
         {
-            let number = new BN(0x1AA);
+            let number = new BN(0x1aa);
             for (let i = 3; i < 9; i += 1) {
-                number = number.shln(8).or(new BN(0xAA));
+                number = number.shln(8).or(new BN(0xaa));
 
                 const writer = new FnkBorshWriter();
                 schema.serialize(writer, number.neg());
@@ -141,7 +173,12 @@ describe('FnkInt Tests', () => {
 
                 let actual = writer.buffer.slice(0, writer.length);
                 let expected = Buffer.from(bytes);
-                assert(actual.equals(expected), `For(${i}): ${actual.toString('hex')} != ${expected.toString('hex')}`);
+                assert(
+                    actual.equals(expected),
+                    `For(${i}): ${actual.toString(
+                        'hex'
+                    )} != ${expected.toString('hex')}`
+                );
             }
 
             {
@@ -158,7 +195,12 @@ describe('FnkInt Tests', () => {
 
                 let actual = writer.buffer.slice(0, writer.length);
                 let expected = Buffer.from(bytes);
-                assert(actual.equals(expected), `For(MAX): ${actual.toString('hex')} != ${expected.toString('hex')}`);
+                assert(
+                    actual.equals(expected),
+                    `For(MAX): ${actual.toString('hex')} != ${expected.toString(
+                        'hex'
+                    )}`
+                );
             }
 
             {
@@ -175,32 +217,55 @@ describe('FnkInt Tests', () => {
 
                 let actual = writer.buffer.slice(0, writer.length);
                 let expected = Buffer.from(bytes);
-                assert(actual.equals(expected), `For(MAX): ${actual.toString('hex')} != ${expected.toString('hex')}`);
+                assert(
+                    actual.equals(expected),
+                    `For(MAX): ${actual.toString('hex')} != ${expected.toString(
+                        'hex'
+                    )}`
+                );
             }
         }
     });
 
     it('test_deserialize', () => {
-        for (let number of
-            [new BN(0), new BN(1), new BN(2).pow(new BN(8)).sub(new BN(1)), new BN(2).pow(new BN(16)).sub(new BN(1)),
-                new BN(2).pow(new BN(32)).sub(new BN(1)), new BN(2).pow(new BN(7)).neg(),
-                new BN(2).pow(new BN(7)).sub(new BN(1)), new BN(2).pow(new BN(15)).neg(),
-                new BN(2).pow(new BN(15)).sub(new BN(1)), new BN(2).pow(new BN(31)).neg(),
-                new BN(2).pow(new BN(31)).sub(new BN(1)), new BN(2).pow(new BN(63)).neg(),
-                new BN(2).pow(new BN(63)).div(new BN(2)).neg(), new BN(2).pow(new BN(63)).div(new BN(2)),
-                new BN(2).pow(new BN(63)).sub(new BN(1))]) {
+        for (let number of [
+            new BN(0),
+            new BN(1),
+            new BN(2).pow(new BN(8)).sub(new BN(1)),
+            new BN(2).pow(new BN(16)).sub(new BN(1)),
+            new BN(2).pow(new BN(32)).sub(new BN(1)),
+            new BN(2).pow(new BN(7)).neg(),
+            new BN(2).pow(new BN(7)).sub(new BN(1)),
+            new BN(2).pow(new BN(15)).neg(),
+            new BN(2).pow(new BN(15)).sub(new BN(1)),
+            new BN(2).pow(new BN(31)).neg(),
+            new BN(2).pow(new BN(31)).sub(new BN(1)),
+            new BN(2).pow(new BN(63)).neg(),
+            new BN(2).pow(new BN(63)).div(new BN(2)).neg(),
+            new BN(2).pow(new BN(63)).div(new BN(2)),
+            new BN(2).pow(new BN(63)).sub(new BN(1)),
+        ]) {
             const writer = new FnkBorshWriter();
             schema.serialize(writer, number);
 
-            const reader = new FnkBorshReader(writer.buffer.slice(0, writer.length));
+            const reader = new FnkBorshReader(
+                writer.buffer.slice(0, writer.length)
+            );
             let de_number = schema.deserialize(reader);
 
-            assert(reader.offset === reader.buffer.length,
-                `For(${number}): offset(${reader.offset}) != length(${reader.buffer.length})`);
+            assert(
+                reader.offset === reader.buffer.length,
+                `For(${number}): offset(${reader.offset}) != length(${reader.buffer.length})`
+            );
 
             let actual = number;
             let expected = de_number;
-            assert(actual.eq(expected), `For(${number}): ${actual.toString('hex')} != ${expected.toString('hex')}`);
+            assert(
+                actual.eq(expected),
+                `For(${number}): ${actual.toString(
+                    'hex'
+                )} != ${expected.toString('hex')}`
+            );
         }
     });
 
@@ -209,15 +274,24 @@ describe('FnkInt Tests', () => {
             const writer = new FnkBorshWriter();
             schema.serialize(writer, number);
 
-            const reader = new FnkBorshReader(writer.buffer.slice(0, writer.length));
+            const reader = new FnkBorshReader(
+                writer.buffer.slice(0, writer.length)
+            );
             let de_number = schema.deserialize(reader);
 
-            assert(reader.offset === reader.buffer.length,
-                `For(${number}): offset(${reader.offset}) != length(${reader.buffer.length})`);
+            assert(
+                reader.offset === reader.buffer.length,
+                `For(${number}): offset(${reader.offset}) != length(${reader.buffer.length})`
+            );
 
             let actual = new BN(number);
             let expected = de_number;
-            assert(actual.eq(expected), `For(${number}): ${actual.toString('hex')} != ${expected.toString('hex')}`);
+            assert(
+                actual.eq(expected),
+                `For(${number}): ${actual.toString(
+                    'hex'
+                )} != ${expected.toString('hex')}`
+            );
         }
     });
 });

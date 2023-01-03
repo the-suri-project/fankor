@@ -1,7 +1,7 @@
 import BN from 'bn.js';
-import {FnkBorshReader, FnkBorshReadSchema} from '../deserializer';
-import {FnkBorshWriter, FnkBorshWriteSchema} from '../serializer';
-import {FnkBorshSchema} from '../index';
+import { FnkBorshReader, FnkBorshReadSchema } from '../deserializer';
+import { FnkBorshWriter, FnkBorshWriteSchema } from '../serializer';
+import { FnkBorshSchema } from '../index';
 
 export class I8Schema implements FnkBorshSchema<number> {
     // METHODS ----------------------------------------------------------------
@@ -69,11 +69,18 @@ export const I32 = new I32Schema();
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-export class I64Schema implements FnkBorshReadSchema<BN | bigint | number>, FnkBorshWriteSchema<BN | bigint | number> {
+export class I64Schema
+    implements
+        FnkBorshReadSchema<BN | bigint | number>,
+        FnkBorshWriteSchema<BN | bigint | number>
+{
     // METHODS ----------------------------------------------------------------
 
     serialize(writer: FnkBorshWriter, value: BN | bigint | number) {
-        value = typeof value === 'bigint' ? new BN(value.toString()) : new BN(value);
+        value =
+            typeof value === 'bigint'
+                ? new BN(value.toString())
+                : new BN(value);
 
         writer.writeBuffer(Buffer.from(value.toArray('le', 8)));
     }
@@ -90,11 +97,18 @@ export const I64 = new I64Schema();
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-export class I128Schema implements FnkBorshReadSchema<BN | bigint | number>, FnkBorshWriteSchema<BN | bigint | number> {
+export class I128Schema
+    implements
+        FnkBorshReadSchema<BN | bigint | number>,
+        FnkBorshWriteSchema<BN | bigint | number>
+{
     // METHODS ----------------------------------------------------------------
 
     serialize(writer: FnkBorshWriter, value: BN | bigint | number) {
-        value = typeof value === 'bigint' ? new BN(value.toString()) : new BN(value);
+        value =
+            typeof value === 'bigint'
+                ? new BN(value.toString())
+                : new BN(value);
 
         writer.writeBuffer(Buffer.from(value.toArray('le', 16)));
     }

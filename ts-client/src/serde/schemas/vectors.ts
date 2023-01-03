@@ -1,8 +1,8 @@
-import {FnkBorshReader} from '../deserializer';
-import {FnkBorshWriter} from '../serializer';
-import {FnkBorshError} from '../errors';
-import {U32Schema} from './unsigned';
-import {FnkBorshSchema} from '../index';
+import { FnkBorshReader } from '../deserializer';
+import { FnkBorshWriter } from '../serializer';
+import { FnkBorshError } from '../errors';
+import { U32Schema } from './unsigned';
+import { FnkBorshSchema } from '../index';
 
 export class ByteVecSchema implements FnkBorshSchema<Uint8Array> {
     // METHODS ----------------------------------------------------------------
@@ -19,7 +19,9 @@ export class ByteVecSchema implements FnkBorshSchema<Uint8Array> {
         const endIndex = reader.offset + size;
 
         if (endIndex > reader.buffer.length) {
-            throw new FnkBorshError(`Expected buffer length ${size} isn't within bounds`);
+            throw new FnkBorshError(
+                `Expected buffer length ${size} isn't within bounds`
+            );
         }
 
         const buffer = reader.buffer.slice(reader.offset, endIndex);
@@ -39,7 +41,9 @@ export function Vec<T, S extends FnkBorshSchema<T>>(schema: S) {
     return new VecSchema(schema);
 }
 
-export class VecSchema<T, S extends FnkBorshSchema<T>> implements FnkBorshSchema<T[]> {
+export class VecSchema<T, S extends FnkBorshSchema<T>>
+    implements FnkBorshSchema<T[]>
+{
     readonly schema: S;
 
     // CONSTRUCTOR ------------------------------------------------------------

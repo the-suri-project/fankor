@@ -3,11 +3,15 @@ import { FnkBorshWriter } from '../serializer';
 import { FnkBorshError, FnkBorshSchema } from '../index';
 import { UnwrapSchemaType } from './structs';
 
-export function Enum<S extends ReadonlyArray<EnumVariant>>(schema: S): EnumSchema<S> {
+export function Enum<S extends ReadonlyArray<EnumVariant>>(
+    schema: S
+): EnumSchema<S> {
     return new EnumSchema<S>(schema);
 }
 
-export class EnumSchema<S extends ReadonlyArray<EnumVariant>> implements FnkBorshSchema<FromEnumSchema<S>> {
+export class EnumSchema<S extends ReadonlyArray<EnumVariant>>
+    implements FnkBorshSchema<FromEnumSchema<S>>
+{
     readonly schema: S;
 
     // CONSTRUCTOR ------------------------------------------------------------
@@ -37,12 +41,14 @@ export class EnumSchema<S extends ReadonlyArray<EnumVariant>> implements FnkBors
             if (variant[0] === discriminant) {
                 return {
                     type: variant[1],
-                    value: variant[2].deserialize(reader)
+                    value: variant[2].deserialize(reader),
                 };
             }
         }
 
-        throw new FnkBorshError(`Enum variant not found for discriminant: ${discriminant}`);
+        throw new FnkBorshError(
+            `Enum variant not found for discriminant: ${discriminant}`
+        );
     }
 }
 
@@ -53,9 +59,10 @@ export class EnumSchema<S extends ReadonlyArray<EnumVariant>> implements FnkBors
 export type EnumVariant = readonly [number, string, FnkBorshSchema<any>];
 
 export type FromEnumSchema<S extends ReadonlyArray<EnumVariant>> = {
-    type: string; value: FromEnumVariant<S>[number];
+    type: string;
+    value: FromEnumVariant<S>[number];
 };
 
 export type FromEnumVariant<S extends ReadonlyArray<EnumVariant>> = {
     [Index in keyof S]: UnwrapSchemaType<S[Index][2]>;
-}
+};

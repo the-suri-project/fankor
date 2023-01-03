@@ -1,7 +1,7 @@
 import BN from 'bn.js';
-import {FnkBorshReader} from '../deserializer';
-import {FnkBorshWriter} from '../serializer';
-import {FnkBorshSchema} from '../index';
+import { FnkBorshReader } from '../deserializer';
+import { FnkBorshWriter } from '../serializer';
+import { FnkBorshSchema } from '../index';
 
 export class U8Schema implements FnkBorshSchema<number> {
     // METHODS ----------------------------------------------------------------
@@ -69,7 +69,10 @@ export class U64Schema implements FnkBorshSchema<BN | bigint | number> {
     // METHODS ----------------------------------------------------------------
 
     serialize(writer: FnkBorshWriter, value: BN | bigint | number) {
-        value = typeof value === 'bigint' ? new BN(value.toString()) : new BN(value);
+        value =
+            typeof value === 'bigint'
+                ? new BN(value.toString())
+                : new BN(value);
 
         writer.writeBuffer(Buffer.from(value.toArray('le', 8)));
     }
@@ -90,7 +93,10 @@ export class U128Schema implements FnkBorshSchema<BN | bigint | number> {
     // METHODS ----------------------------------------------------------------
 
     serialize(writer: FnkBorshWriter, value: BN | bigint | number) {
-        value = typeof value === 'bigint' ? new BN(value.toString()) : new BN(value);
+        value =
+            typeof value === 'bigint'
+                ? new BN(value.toString())
+                : new BN(value);
 
         writer.writeBuffer(Buffer.from(value.toArray('le', 16)));
     }

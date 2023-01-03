@@ -1,17 +1,17 @@
-import {FnkBorshReader} from '../deserializer';
-import {FnkBorshWriter} from '../serializer';
-import {FnkBorshError} from '../errors';
-import {FnkBorshSchema} from '../index';
+import { FnkBorshReader } from '../deserializer';
+import { FnkBorshWriter } from '../serializer';
+import { FnkBorshError } from '../errors';
+import { FnkBorshSchema } from '../index';
 
-export type RustOption<T> =
-    { type: 'some', value: T }
-    | { type: 'none' };
+export type RustOption<T> = { type: 'some'; value: T } | { type: 'none' };
 
 export function Option<T, S extends FnkBorshSchema<T>>(schema: S) {
     return new OptionSchema(schema);
 }
 
-export class OptionSchema<T, S extends FnkBorshSchema<T>> implements FnkBorshSchema<RustOption<T>> {
+export class OptionSchema<T, S extends FnkBorshSchema<T>>
+    implements FnkBorshSchema<RustOption<T>>
+{
     readonly schema: S;
 
     // CONSTRUCTOR ------------------------------------------------------------
@@ -35,14 +35,16 @@ export class OptionSchema<T, S extends FnkBorshSchema<T>> implements FnkBorshSch
         const discriminant = reader.readByte();
 
         if (discriminant === 0) {
-            return {type: 'none'};
+            return { type: 'none' };
         } else if (discriminant === 1) {
             return {
                 type: 'some',
                 value: this.schema.deserialize(reader),
             };
         } else {
-            throw new FnkBorshError(`Invalid discriminant ${discriminant} for Option`);
+            throw new FnkBorshError(
+                `Invalid discriminant ${discriminant} for Option`
+            );
         }
     }
 }

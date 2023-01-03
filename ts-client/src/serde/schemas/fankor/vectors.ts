@@ -1,13 +1,15 @@
-import {FnkBorshWriter} from '../../serializer';
-import {FnkBorshReader} from '../../deserializer';
-import {FnkUIntSchema} from './unsigned';
-import {FnkBorshSchema} from '../../index';
+import { FnkBorshWriter } from '../../serializer';
+import { FnkBorshReader } from '../../deserializer';
+import { FnkUIntSchema } from './unsigned';
+import { FnkBorshSchema } from '../../index';
 
 export function FnkVec<T, S extends FnkBorshSchema<T>>(schema: S) {
     return new FnkVecSchema(schema);
 }
 
-export class FnkVecSchema<T, S extends FnkBorshSchema<T>> implements FnkBorshSchema<T[]> {
+export class FnkVecSchema<T, S extends FnkBorshSchema<T>>
+    implements FnkBorshSchema<T[]>
+{
     readonly schema: S;
 
     // CONSTRUCTOR ------------------------------------------------------------

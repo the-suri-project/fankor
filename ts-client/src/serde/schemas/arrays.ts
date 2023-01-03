@@ -1,7 +1,7 @@
-import {FnkBorshReader} from '../deserializer';
-import {FnkBorshWriter} from '../serializer';
-import {FnkBorshError} from '../errors';
-import {FnkBorshSchema} from '../index';
+import { FnkBorshReader } from '../deserializer';
+import { FnkBorshWriter } from '../serializer';
+import { FnkBorshError } from '../errors';
+import { FnkBorshSchema } from '../index';
 
 export const ByteArray = (size: number) => new ByteArraySchema(size);
 
@@ -18,7 +18,9 @@ export class ByteArraySchema implements FnkBorshSchema<Uint8Array> {
 
     serialize(writer: FnkBorshWriter, value: Uint8Array) {
         if (value.length !== this.size) {
-            throw new Error(`ArraySchema: expected ${this.size} items, got ${value.length}`);
+            throw new Error(
+                `ArraySchema: expected ${this.size} items, got ${value.length}`
+            );
         }
 
         const buffer = Buffer.from(value);
@@ -29,7 +31,9 @@ export class ByteArraySchema implements FnkBorshSchema<Uint8Array> {
         const endIndex = reader.offset + this.size;
 
         if (endIndex > reader.buffer.length) {
-            throw new FnkBorshError(`Expected buffer length ${this.size} isn't within bounds`);
+            throw new FnkBorshError(
+                `Expected buffer length ${this.size} isn't within bounds`
+            );
         }
 
         const buffer = reader.buffer.slice(reader.offset, endIndex);
@@ -46,11 +50,16 @@ export class ByteArraySchema implements FnkBorshSchema<Uint8Array> {
 export function TArray<T, S extends FnkBorshSchema<T>>({
     schema,
     size,
-}: { schema: S, size: number }) {
+}: {
+    schema: S;
+    size: number;
+}) {
     return new ArraySchema(schema, size);
 }
 
-export class ArraySchema<T, S extends FnkBorshSchema<T>> implements FnkBorshSchema<T[]> {
+export class ArraySchema<T, S extends FnkBorshSchema<T>>
+    implements FnkBorshSchema<T[]>
+{
     readonly schema: S;
     readonly size: number;
 
@@ -65,7 +74,9 @@ export class ArraySchema<T, S extends FnkBorshSchema<T>> implements FnkBorshSche
 
     serialize(writer: FnkBorshWriter, value: T[]) {
         if (value.length !== this.size) {
-            throw new Error(`ArraySchema: expected ${this.size} items, got ${value.length}`);
+            throw new Error(
+                `ArraySchema: expected ${this.size} items, got ${value.length}`
+            );
         }
 
         for (const item of value) {

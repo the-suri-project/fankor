@@ -1,9 +1,9 @@
 import assert from 'assert';
-import {FnkBorshWriter} from '../../serializer';
-import {FnkBorshReader} from '../../deserializer';
-import {FnkVec} from './vectors';
-import {TString} from '../strings';
-import {U8} from '../unsigned';
+import { FnkBorshWriter } from '../../serializer';
+import { FnkBorshReader } from '../../deserializer';
+import { FnkVec } from './vectors';
+import { TString } from '../strings';
+import { U8 } from '../unsigned';
 
 describe('FnkVec Tests', () => {
     it('test_serialize_deserialize_empty', () => {
@@ -19,7 +19,10 @@ describe('FnkVec Tests', () => {
         const reader = new FnkBorshReader(buffer);
         let actual = schema.deserialize(reader);
         let expected = data;
-        assert(actual.length === expected.length, `Length: ${actual} != ${expected}`);
+        assert(
+            actual.length === expected.length,
+            `Length: ${actual} != ${expected}`
+        );
     });
 
     it('test_serialize_deserialize_bytes', () => {
@@ -39,11 +42,26 @@ describe('FnkVec Tests', () => {
         const reader = new FnkBorshReader(buffer);
         let actual = schema.deserialize(reader);
         let expected = data;
-        assert(actual.length === expected.length, `Length: ${actual.length} != ${expected.length}`);
-        assert(actual[0] === expected[0], `[0]: ${actual[0]} != ${expected[0]}`);
-        assert(actual[1] === expected[1], `[1]: ${actual[1]} != ${expected[1]}`);
-        assert(actual[2] === expected[2], `[2]: ${actual[2]} != ${expected[2]}`);
-        assert(actual[3] === expected[3], `[3]: ${actual[3]} != ${expected[3]}`);
+        assert(
+            actual.length === expected.length,
+            `Length: ${actual.length} != ${expected.length}`
+        );
+        assert(
+            actual[0] === expected[0],
+            `[0]: ${actual[0]} != ${expected[0]}`
+        );
+        assert(
+            actual[1] === expected[1],
+            `[1]: ${actual[1]} != ${expected[1]}`
+        );
+        assert(
+            actual[2] === expected[2],
+            `[2]: ${actual[2]} != ${expected[2]}`
+        );
+        assert(
+            actual[3] === expected[3],
+            `[3]: ${actual[3]} != ${expected[3]}`
+        );
     });
 
     it('test_serialize_deserialize_data', () => {
@@ -64,13 +82,24 @@ describe('FnkVec Tests', () => {
         assert(buffer[8] === 0);
         assert(buffer[9] === 0);
         assert(buffer[10] === 'b'.charCodeAt(0));
-        assert(buffer.length === data.reduce((acc, s) => acc + s.length + 4, 1));
+        assert(
+            buffer.length === data.reduce((acc, s) => acc + s.length + 4, 1)
+        );
 
         const reader = new FnkBorshReader(buffer);
         let actual = schema.deserialize(reader);
         let expected = data;
-        assert(actual.length === expected.length, `Length: ${actual.length} != ${expected.length}`);
-        assert(actual[0] === expected[0], `[0]: ${actual[0]} != ${expected[0]}`);
-        assert(actual[1] === expected[1], `[1]: ${actual[1]} != ${expected[1]}`);
+        assert(
+            actual.length === expected.length,
+            `Length: ${actual.length} != ${expected.length}`
+        );
+        assert(
+            actual[0] === expected[0],
+            `[0]: ${actual[0]} != ${expected[0]}`
+        );
+        assert(
+            actual[1] === expected[1],
+            `[1]: ${actual[1]} != ${expected[1]}`
+        );
     });
 });

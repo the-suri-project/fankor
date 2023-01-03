@@ -14,7 +14,10 @@ export class FnkBorshWriter {
 
     maybeResize() {
         if (this.buffer.length < 16 + this.length) {
-            this.buffer = Buffer.concat([this.buffer, Buffer.alloc(INITIAL_LENGTH)]);
+            this.buffer = Buffer.concat([
+                this.buffer,
+                Buffer.alloc(INITIAL_LENGTH),
+            ]);
         }
     }
 
@@ -27,8 +30,11 @@ export class FnkBorshWriter {
     writeBuffer(buffer: Buffer) {
         this.maybeResize();
         // Buffer.from is needed as this.buf.subarray can return plain Uint8Array in browser
-        this.buffer =
-            Buffer.concat([Buffer.from(this.buffer.subarray(0, this.length)), buffer, Buffer.alloc(INITIAL_LENGTH)]);
+        this.buffer = Buffer.concat([
+            Buffer.from(this.buffer.subarray(0, this.length)),
+            buffer,
+            Buffer.alloc(INITIAL_LENGTH),
+        ]);
         this.length += buffer.length;
     }
 
@@ -49,6 +55,10 @@ export interface FnkBorshWriteSchema<T> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-export function serialize<S extends FnkBorshWriteSchema<T>, T>(schema: S, value: T, writer = new FnkBorshWriter()) {
+export function serialize<S extends FnkBorshWriteSchema<T>, T>(
+    schema: S,
+    value: T,
+    writer = new FnkBorshWriter()
+) {
     schema.serialize(writer, value);
 }

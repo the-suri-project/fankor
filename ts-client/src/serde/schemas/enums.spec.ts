@@ -9,12 +9,15 @@ import { Bool } from './bools';
 
 describe('Enums Tests', () => {
     it('test_serialize_deserialize_data', () => {
-        const schema = Enum([[0, 'A', TString], [1, 'B', U8]] as const);
+        const schema = Enum([
+            [0, 'A', TString],
+            [1, 'B', U8],
+        ] as const);
 
         {
             const data = {
                 type: 'A',
-                value: 'x'
+                value: 'x',
             };
             const writer = new FnkBorshWriter();
             schema.serialize(writer, data);
@@ -25,14 +28,20 @@ describe('Enums Tests', () => {
             const reader = new FnkBorshReader(buffer);
             let actual = schema.deserialize(reader);
             let expected = data;
-            assert(actual.type === expected.type, `type: ${actual.type} != ${expected.type}`);
-            assert(actual.value === expected.value, `value: ${actual.value} != ${expected.value}`);
+            assert(
+                actual.type === expected.type,
+                `type: ${actual.type} != ${expected.type}`
+            );
+            assert(
+                actual.value === expected.value,
+                `value: ${actual.value} != ${expected.value}`
+            );
         }
 
         {
             const data = {
                 type: 'B',
-                value: 2
+                value: 2,
             };
             const writer = new FnkBorshWriter();
             schema.serialize(writer, data);
@@ -43,22 +52,31 @@ describe('Enums Tests', () => {
             const reader = new FnkBorshReader(buffer);
             let actual = schema.deserialize(reader);
             let expected = data;
-            assert(actual.type === expected.type, `type: ${actual.type} != ${expected.type}`);
-            assert(actual.value === expected.value, `value: ${actual.value} != ${expected.value}`);
+            assert(
+                actual.type === expected.type,
+                `type: ${actual.type} != ${expected.type}`
+            );
+            assert(
+                actual.value === expected.value,
+                `value: ${actual.value} != ${expected.value}`
+            );
         }
     });
 
     it('test_serialize_deserialize_real', () => {
         const schemaA = Struct([['value', U8]] as const);
         const schemaB = Struct([['value', Bool]] as const);
-        const schema = Enum([[0, 'A', schemaA], [1, 'B', schemaB]] as const);
+        const schema = Enum([
+            [0, 'A', schemaA],
+            [1, 'B', schemaB],
+        ] as const);
 
         {
             const data = {
                 type: 'A',
                 value: {
-                    value: 2
-                }
+                    value: 2,
+                },
             };
             const writer = new FnkBorshWriter();
             schema.serialize(writer, data);
@@ -69,17 +87,22 @@ describe('Enums Tests', () => {
             const reader = new FnkBorshReader(buffer);
             let actual = schema.deserialize(reader);
             let expected = data;
-            assert(actual.type === expected.type, `type: ${actual.type} != ${expected.type}`);
-            assert(actual.value.value === expected.value.value,
-                `value.value: ${actual.value.value} != ${expected.value.value}`);
+            assert(
+                actual.type === expected.type,
+                `type: ${actual.type} != ${expected.type}`
+            );
+            assert(
+                actual.value.value === expected.value.value,
+                `value.value: ${actual.value.value} != ${expected.value.value}`
+            );
         }
 
         {
             const data = {
                 type: 'B',
                 value: {
-                    value: true
-                }
+                    value: true,
+                },
             };
             const writer = new FnkBorshWriter();
             schema.serialize(writer, data);
@@ -90,9 +113,14 @@ describe('Enums Tests', () => {
             const reader = new FnkBorshReader(buffer);
             let actual = schema.deserialize(reader);
             let expected = data;
-            assert(actual.type === expected.type, `type: ${actual.type} != ${expected.type}`);
-            assert(actual.value.value === expected.value.value,
-                `value.value: ${actual.value.value} != ${expected.value.value}`);
+            assert(
+                actual.type === expected.type,
+                `type: ${actual.type} != ${expected.type}`
+            );
+            assert(
+                actual.value.value === expected.value.value,
+                `value.value: ${actual.value.value} != ${expected.value.value}`
+            );
         }
     });
 });

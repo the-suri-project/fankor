@@ -1,9 +1,9 @@
 import encoding from 'text-encoding-utf-8';
-import {FnkBorshReader} from '../deserializer';
-import {FnkBorshWriter} from '../serializer';
-import {FnkBorshError} from '../errors';
-import {U32Schema} from './unsigned';
-import {FnkBorshSchema} from '../index';
+import { FnkBorshReader } from '../deserializer';
+import { FnkBorshWriter } from '../serializer';
+import { FnkBorshError } from '../errors';
+import { U32Schema } from './unsigned';
+import { FnkBorshSchema } from '../index';
 
 export class StringSchema implements FnkBorshSchema<string> {
     // METHODS ----------------------------------------------------------------
@@ -18,7 +18,9 @@ export class StringSchema implements FnkBorshSchema<string> {
         const endIndex = reader.offset + length;
 
         if (endIndex > reader.buffer.length) {
-            throw new FnkBorshError(`Expected buffer length ${length} isn't within bounds`);
+            throw new FnkBorshError(
+                `Expected buffer length ${length} isn't within bounds`
+            );
         }
 
         const buf = reader.buffer.slice(reader.offset, endIndex);
@@ -26,8 +28,13 @@ export class StringSchema implements FnkBorshSchema<string> {
 
         try {
             // NOTE: Using TextDecoder to fail on invalid UTF-8
-            const ResolvedTextDecoder = typeof TextDecoder !== 'function' ? encoding.TextDecoder : TextDecoder;
-            const textDecoder = new ResolvedTextDecoder('utf-8', {fatal: true});
+            const ResolvedTextDecoder =
+                typeof TextDecoder !== 'function'
+                    ? encoding.TextDecoder
+                    : TextDecoder;
+            const textDecoder = new ResolvedTextDecoder('utf-8', {
+                fatal: true,
+            });
             return textDecoder.decode(buf);
         } catch (e) {
             throw new FnkBorshError(`Error decoding UTF-8 string: ${e}`);

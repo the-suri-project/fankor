@@ -1,12 +1,16 @@
-import {FnkBorshReader} from '../deserializer';
-import {FnkBorshWriter} from '../serializer';
-import {FnkBorshSchema} from '../index';
+import { FnkBorshReader } from '../deserializer';
+import { FnkBorshWriter } from '../serializer';
+import { FnkBorshSchema } from '../index';
 
-export function Struct<S extends ReadonlyArray<StructField>>(schema: S): StructSchema<S> {
+export function Struct<S extends ReadonlyArray<StructField>>(
+    schema: S
+): StructSchema<S> {
     return new StructSchema<S>(schema);
 }
 
-export class StructSchema<S extends ReadonlyArray<StructField>> implements FnkBorshSchema<FromStructSchema<S>> {
+export class StructSchema<S extends ReadonlyArray<StructField>>
+    implements FnkBorshSchema<FromStructSchema<S>>
+{
     readonly schema: S;
 
     // CONSTRUCTOR ------------------------------------------------------------
@@ -41,15 +45,27 @@ export class StructSchema<S extends ReadonlyArray<StructField>> implements FnkBo
 
 export type StructField = readonly [string, FnkBorshSchema<any>];
 
-export type FromStructSchema<S extends ReadonlyArray<StructField>> = IsZero<S['length']> extends true ? {} : UnionToIntersection<ToObjectsArray<S>[number]>;
+export type FromStructSchema<S extends ReadonlyArray<StructField>> = IsZero<
+    S['length']
+> extends true
+    ? {}
+    : UnionToIntersection<ToObjectsArray<S>[number]>;
 
-type ToObject<T> = T extends readonly [infer K, infer Ty] ? K extends PropertyKey ? { [P in K]: UnwrapSchemaType<Ty> } : never : never;
+type ToObject<T> = T extends readonly [infer K, infer Ty]
+    ? K extends PropertyKey
+        ? { [P in K]: UnwrapSchemaType<Ty> }
+        : never
+    : never;
 
 type ToObjectsArray<T> = {
-    [I in keyof T]: ToObject<T[I]>
+    [I in keyof T]: ToObject<T[I]>;
 };
 
-type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never;
+type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
+    k: infer I
+) => void
+    ? I
+    : never;
 
 type IsZero<N extends number> = N extends 0 ? true : false;
 

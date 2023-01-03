@@ -1,23 +1,26 @@
 import BN from 'bn.js';
-import {FnkBorshWriter} from '../../serializer';
-import {FnkBorshReader} from '../../deserializer';
-import {FnkBorshSchema} from '../../index';
+import { FnkBorshWriter } from '../../serializer';
+import { FnkBorshReader } from '../../deserializer';
+import { FnkBorshSchema } from '../../index';
 
 const ZERO = new BN(0);
 const MIN_VALUE = new BN('-9223372036854775808'); // -2^63
 const MIN_VALUE_ABS = new BN('9223372036854775808'); // 2^63
 const MAX_VALUE = new BN('9223372036854775807'); // 2^63 - 1
-const BN_0x1F = new BN(0x1F);
+const BN_0x1F = new BN(0x1f);
 const BN_0x20 = new BN(0x20);
 const BN_0x40 = new BN(0x40);
-const BN_0x7F = new BN(0x7F);
+const BN_0x7F = new BN(0x7f);
 const BN_0x80 = new BN(0x80);
 
 export class FnkIntSchema implements FnkBorshSchema<BN | bigint | number> {
     // METHODS ----------------------------------------------------------------
 
     serialize(writer: FnkBorshWriter, value: BN | bigint | number) {
-        value = typeof value === 'bigint' ? new BN(value.toString()) : new BN(value);
+        value =
+            typeof value === 'bigint'
+                ? new BN(value.toString())
+                : new BN(value);
 
         if (value.lt(MIN_VALUE)) {
             throw new RangeError('FnkInt cannot be greater than -2^63');
@@ -30,14 +33,18 @@ export class FnkIntSchema implements FnkBorshSchema<BN | bigint | number> {
         let isNegative = value.isNeg();
         value = value.abs();
 
-        let bit_length = 64 - (value.toString(2).padStart(64, '0').match(/^0*/)?.[0]?.length || 0);
+        let bit_length =
+            64 -
+            (value.toString(2).padStart(64, '0').match(/^0*/)?.[0]?.length ||
+                0);
 
         if (bit_length <= 12) {
             // Flag encoding.
-            let byte_length = (bit_length <= 5) ? 1 : Math.floor((bit_length - 5 + 8) / 8) + 1;
+            let byte_length =
+                bit_length <= 5 ? 1 : Math.floor((bit_length - 5 + 8) / 8) + 1;
 
             // Write first.
-            let byte = (value.and(BN_0x1F));
+            let byte = value.and(BN_0x1F);
 
             // Include next flag.
             if (byte_length > 1) {
@@ -55,7 +62,7 @@ export class FnkIntSchema implements FnkBorshSchema<BN | bigint | number> {
             let offset = 5;
             let last = byte_length - 1;
             for (let i = 1; i < byte_length; i += 1) {
-                let byte = (value.shrn(offset).and(BN_0x7F)).or(BN_0x80);
+                let byte = value.shrn(offset).and(BN_0x7F).or(BN_0x80);
 
                 if (i >= last) {
                     byte = byte.and(BN_0x7F);
@@ -67,7 +74,9 @@ export class FnkIntSchema implements FnkBorshSchema<BN | bigint | number> {
         } else {
             // Length encoding.
             let byte_length = Math.min(Math.floor((bit_length + 8) / 8), 8);
-            const bytes = value.toArrayLike(Buffer, 'le', 8).slice(0, byte_length);
+            const bytes = value
+                .toArrayLike(Buffer, 'le', 8)
+                .slice(0, byte_length);
             byte_length = byte_length | 0x80;
 
             // Negative flag.
@@ -85,7 +94,7 @@ export class FnkIntSchema implements FnkBorshSchema<BN | bigint | number> {
 
         if ((first_byte & 0x80) == 0) {
             // Flag encoding.
-            let number = new BN(first_byte & 0x1F);
+            let number = new BN(first_byte & 0x1f);
 
             if ((first_byte & 0x40) != 0) {
                 // Read remaining bytes.
@@ -93,7 +102,7 @@ export class FnkIntSchema implements FnkBorshSchema<BN | bigint | number> {
 
                 while (true) {
                     let byte = reader.readByte();
-                    number = number.or(new BN(byte & 0x7F).shln(offset));
+                    number = number.or(new BN(byte & 0x7f).shln(offset));
 
                     if ((byte & 0x80) == 0) {
                         break;
@@ -111,7 +120,7 @@ export class FnkIntSchema implements FnkBorshSchema<BN | bigint | number> {
             }
         } else {
             // Length encoding.
-            let byte_length = first_byte & 0x3F;
+            let byte_length = first_byte & 0x3f;
 
             let number = ZERO;
 

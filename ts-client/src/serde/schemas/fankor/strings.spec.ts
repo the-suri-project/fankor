@@ -1,7 +1,7 @@
 import assert from 'assert';
-import {FnkString} from './strings';
-import {FnkBorshWriter} from '../../serializer';
-import {FnkBorshReader} from '../../deserializer';
+import { FnkString } from './strings';
+import { FnkBorshWriter } from '../../serializer';
+import { FnkBorshReader } from '../../deserializer';
 
 describe('FnkString Tests', () => {
     it('test_serialize_deserialize', () => {
@@ -13,8 +13,13 @@ describe('FnkString Tests', () => {
 
             let buffer = writer.buffer.slice(0, writer.length);
             assert(buffer[0] === text.length);
-            assert(buffer.slice(1).equals(Buffer.from(text, 'utf8')),
-                `${buffer.slice(1).toString('hex')} != ${Buffer.from(text, 'utf8').toString('hex')}`);
+            assert(
+                buffer.slice(1).equals(Buffer.from(text, 'utf8')),
+                `${buffer.slice(1).toString('hex')} != ${Buffer.from(
+                    text,
+                    'utf8'
+                ).toString('hex')}`
+            );
             assert(buffer.length === text.length + 1);
 
             const reader = new FnkBorshReader(buffer);

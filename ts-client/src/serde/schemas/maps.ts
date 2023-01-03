@@ -1,21 +1,26 @@
-import {FnkBorshReader} from '../deserializer';
-import {FnkBorshWriter} from '../serializer';
-import {U32Schema} from './unsigned';
-import {FnkBorshSchema} from '../index';
+import { FnkBorshReader } from '../deserializer';
+import { FnkBorshWriter } from '../serializer';
+import { U32Schema } from './unsigned';
+import { FnkBorshSchema } from '../index';
 
-export type RustMap<K, V> = { key: K, value: V }[];
+export type RustMap<K, V> = { key: K; value: V }[];
 
-export function TMap<K, V, Sk extends FnkBorshSchema<K>, Sv extends FnkBorshSchema<V>>({
-    keySchema,
-    valueSchema,
-}: {
-    keySchema: Sk; valueSchema: Sv
-}) {
+export function TMap<
+    K,
+    V,
+    Sk extends FnkBorshSchema<K>,
+    Sv extends FnkBorshSchema<V>
+>({ keySchema, valueSchema }: { keySchema: Sk; valueSchema: Sv }) {
     return new MapSchema(keySchema, valueSchema);
 }
 
-export class MapSchema<K, V, Sk extends FnkBorshSchema<K>, Sv extends FnkBorshSchema<V>>
-    implements FnkBorshSchema<RustMap<K, V>> {
+export class MapSchema<
+    K,
+    V,
+    Sk extends FnkBorshSchema<K>,
+    Sv extends FnkBorshSchema<V>
+> implements FnkBorshSchema<RustMap<K, V>>
+{
     readonly keySchema: Sk;
     readonly valueSchema: Sv;
 
