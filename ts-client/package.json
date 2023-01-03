@@ -32,10 +32,7 @@
     "test": "ts-mocha --project tsconfig.cjs.json src/**/*.spec.ts"
   },
   "dependencies": {
-    "@solana/spl-token": "^0.3.6",
-    "@solana/web3.js": "^1.73.0",
     "bn.js": "^5.2.1",
-    "borsh": "^0.7.0",
     "text-encoding-utf-8": "^1.0.2"
   },
   "devDependencies": {

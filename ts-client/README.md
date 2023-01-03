@@ -1,4 +1,9 @@
-# Suri Typescript client
+# Fankor client
 
-This folder contains the code to interact with the Suri Smart Contract from the browser or NodeJS.
-It also includes code to interact with the Suri Sell API.
+Client for the Fankor framework.
+
+## Installation
+
+```bash
+yarn add @suri-project/fankor
+```
