@@ -11,32 +11,26 @@ use solana_program::system_program;
 use solana_program::sysvar::Sysvar;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
-use std::marker::PhantomData;
 
 /// Wrapper for `AccountInfo` to explicitly define an uninitialized account.
-pub struct UninitializedAccount<'info, T: AccountType> {
+pub struct UninitializedAccount<'info> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,
-    _data: PhantomData<T>,
 }
 
-impl<'info, T: AccountType> UninitializedAccount<'info, T> {
+impl<'info> UninitializedAccount<'info> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Creates a new account with the given data.
     pub fn new(
         context: &'info FankorContext<'info>,
         info: &'info AccountInfo<'info>,
-    ) -> FankorResult<UninitializedAccount<'info, T>> {
+    ) -> FankorResult<UninitializedAccount<'info>> {
         if info.owner != &system_program::ID || info.lamports() > 0 {
             return Err(FankorErrorCode::AccountAlreadyInitialized { address: *info.key }.into());
         }
 
-        Ok(UninitializedAccount {
-            context,
-            info,
-            _data: PhantomData,
-        })
+        Ok(UninitializedAccount { context, info })
     }
 
     // GETTERS ----------------------------------------------------------------
@@ -80,14 +74,12 @@ impl<'info, T: AccountType> UninitializedAccount<'info, T> {
     pub fn context(&self) -> &'info FankorContext<'info> {
         self.context
     }
-}
 
-impl<'info, T: Default + AccountType> UninitializedAccount<'info, T> {
     // METHODS ----------------------------------------------------------------
 
     /// Initializes the account transferring the necessary lamports to cover the rent
     /// for the given `space` using `payer` as the funding account.
-    pub fn init(
+    pub fn init<T: Default + AccountType>(
         self,
         space: usize,
         payer: &AccountInfo<'info>,
@@ -117,7 +109,7 @@ impl<'info, T: Default + AccountType> UninitializedAccount<'info, T> {
 
     /// Initializes the PDA account transferring the necessary lamports to cover the rent
     /// for the given `space` using `payer` as the funding account.
-    pub fn init_pda(
+    pub fn init_pda<T: Default + AccountType>(
         self,
         space: usize,
         seeds: &[&[u8]],
@@ -145,15 +137,11 @@ impl<'info, T: Default + AccountType> UninitializedAccount<'info, T> {
             T::default(),
         ))
     }
-}
-
-impl<'info, T: Default + AccountType + AccountSize> UninitializedAccount<'info, T> {
-    // METHODS ----------------------------------------------------------------
 
     /// Initializes the account transferring the necessary lamports to cover the rent
     /// for the minimum space to contain the smallest value of `T`
     /// using `payer` as the funding account.
-    pub fn init_with_min_space(
+    pub fn init_with_min_space<T: Default + AccountType + AccountSize>(
         self,
         payer: &AccountInfo<'info>,
         system_program: &Program<System>,
@@ -164,7 +152,7 @@ impl<'info, T: Default + AccountType + AccountSize> UninitializedAccount<'info, 
     /// Initializes the PDA account transferring the necessary lamports to cover the rent
     /// for the minimum space to contain the smallest value of `T`
     /// using `payer` as the funding account.
-    pub fn init_pda_with_min_space(
+    pub fn init_pda_with_min_space<T: Default + AccountType + AccountSize>(
         self,
         seeds: &[&[u8]],
         payer: &AccountInfo<'info>,
@@ -172,14 +160,10 @@ impl<'info, T: Default + AccountType + AccountSize> UninitializedAccount<'info, 
     ) -> FankorResult<Account<'info, T>> {
         self.init_pda(T::min_account_size(), seeds, payer, system_program)
     }
-}
-
-impl<'info, T: AccountType + AccountSize> UninitializedAccount<'info, T> {
-    // METHODS ----------------------------------------------------------------
 
     /// Initializes the account transferring the necessary lamports to cover the rent
     /// for the required space to contain `value` using `payer` as the funding account.
-    pub fn init_with_value(
+    pub fn init_with_value<T: AccountType + AccountSize>(
         self,
         payer: &AccountInfo<'info>,
         value: T,
@@ -206,7 +190,7 @@ impl<'info, T: AccountType + AccountSize> UninitializedAccount<'info, T> {
 
     /// Initializes the account transferring the necessary lamports to cover the rent
     /// for the required space to contain `value` using `payer` as the funding account.
-    pub fn init_pda_with_value(
+    pub fn init_pda_with_value<T: AccountType + AccountSize>(
         self,
         value: T,
         seeds: &[&[u8]],
@@ -233,7 +217,7 @@ impl<'info, T: AccountType + AccountSize> UninitializedAccount<'info, T> {
     }
 }
 
-impl<'info, T: AccountType> InstructionAccount<'info> for UninitializedAccount<'info, T> {
+impl<'info> InstructionAccount<'info> for UninitializedAccount<'info> {
     type CPI = AccountInfo<'info>;
     type LPI = Pubkey;
 
@@ -264,13 +248,13 @@ impl<'info, T: AccountType> InstructionAccount<'info> for UninitializedAccount<'
     }
 }
 
-impl<'info, T: AccountType> PdaChecker<'info> for UninitializedAccount<'info, T> {
+impl<'info> PdaChecker<'info> for UninitializedAccount<'info> {
     fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {
         Some(self.info)
     }
 }
 
-impl<'info, T: AccountType> Debug for UninitializedAccount<'info, T> {
+impl<'info> Debug for UninitializedAccount<'info> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("UninitializedAccount")
             .field("info", &self.info)

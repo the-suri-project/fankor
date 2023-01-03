@@ -55,7 +55,7 @@ pub struct InstructionStructAccounts<'info> {
 
     pub either: Either<Account<'info, StructAccountData>, Account<'info, EnumAccountData>>,
 
-    pub uninitialized: UninitializedAccount<'info, StructAccountData>,
+    pub uninitialized: UninitializedAccount<'info>,
 
     pub maybe_uninitialized: MaybeUninitializedAccount<'info, StructAccountData>,
 
