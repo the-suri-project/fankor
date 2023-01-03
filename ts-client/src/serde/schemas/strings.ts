@@ -3,7 +3,7 @@ import { FnkBorshReader } from '../deserializer';
 import { FnkBorshWriter } from '../serializer';
 import { FnkBorshError } from '../errors';
 import { U32Schema } from './unsigned';
-import { FnkBorshSchema } from '../index';
+import { FnkBorshSchema } from '../borsh';
 
 export class StringSchema implements FnkBorshSchema<string> {
     // METHODS ----------------------------------------------------------------

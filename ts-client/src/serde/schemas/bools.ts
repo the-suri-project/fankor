@@ -1,7 +1,7 @@
 import { FnkBorshReader } from '../deserializer';
 import { FnkBorshWriter } from '../serializer';
 import { FnkBorshError } from '../errors';
-import { FnkBorshSchema } from '../index';
+import { FnkBorshSchema } from '../borsh';
 
 export class BoolSchema implements FnkBorshSchema<boolean> {
     // METHODS ----------------------------------------------------------------

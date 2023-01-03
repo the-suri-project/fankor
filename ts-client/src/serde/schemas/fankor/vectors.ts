@@ -1,7 +1,7 @@
 import { FnkBorshWriter } from '../../serializer';
 import { FnkBorshReader } from '../../deserializer';
 import { FnkUIntSchema } from './unsigned';
-import { FnkBorshSchema } from '../../index';
+import { FnkBorshSchema } from '../../borsh';
 
 export function FnkVec<T, S extends FnkBorshSchema<T>>(schema: S) {
     return new FnkVecSchema(schema);

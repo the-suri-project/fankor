@@ -3,7 +3,7 @@ import encoding from 'text-encoding-utf-8';
 import { FnkBorshReader } from '../../deserializer';
 import { FnkBorshWriter } from '../../serializer';
 import { FnkBorshError } from '../../errors';
-import { FnkBorshSchema } from '../../index';
+import { FnkBorshSchema } from '../../borsh';
 
 export class FnkStringSchema implements FnkBorshSchema<string> {
     // METHODS ----------------------------------------------------------------

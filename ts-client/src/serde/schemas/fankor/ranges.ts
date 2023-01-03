@@ -4,7 +4,7 @@ import { FnkIntSchema } from './integers';
 import { FnkBorshReader } from '../../deserializer';
 import { FnkBorshWriter } from '../../serializer';
 import { FnkBorshError } from '../../errors';
-import { FnkBorshSchema } from '../../index';
+import { FnkBorshSchema } from '../../borsh';
 
 const ZERO = new BN(0);
 const U64_MAX_VALUE = new BN('18446744073709551615'); // 2^64 - 1

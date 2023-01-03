@@ -1,7 +1,7 @@
 import { FnkBorshReader } from '../deserializer';
 import { FnkBorshWriter } from '../serializer';
 import { FnkBorshError } from '../errors';
-import { FnkBorshSchema } from '../index';
+import { FnkBorshSchema } from '../borsh';
 
 export const ByteArray = (size: number) => new ByteArraySchema(size);
 

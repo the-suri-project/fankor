@@ -1,6 +1,7 @@
 import { FnkBorshReader } from '../deserializer';
 import { FnkBorshWriter } from '../serializer';
-import { FnkBorshError, FnkBorshSchema } from '../index';
+import { FnkBorshError } from '../errors';
+import { FnkBorshSchema } from '../borsh';
 import { UnwrapSchemaType } from './structs';
 
 export function Enum<S extends ReadonlyArray<EnumVariant>>(

@@ -1,7 +1,7 @@
 import BN from 'bn.js';
 import { FnkBorshReader } from '../../deserializer';
 import { FnkBorshWriter } from '../../serializer';
-import { FnkBorshSchema } from '../../index';
+import { FnkBorshSchema } from '../../borsh';
 
 const ZERO = new BN(0);
 const MAX_VALUE = new BN('18446744073709551615'); // 2^64 - 1

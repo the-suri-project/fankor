@@ -1,6 +1,6 @@
 import { FnkBorshReader } from '../deserializer';
 import { FnkBorshWriter } from '../serializer';
-import { FnkBorshSchema } from '../index';
+import { FnkBorshSchema } from '../borsh';
 
 export function Struct<S extends ReadonlyArray<StructField>>(
     schema: S

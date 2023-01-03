@@ -1,7 +1,7 @@
 import BN from 'bn.js';
 import { FnkBorshWriter } from '../../serializer';
 import { FnkBorshReader } from '../../deserializer';
-import { FnkBorshSchema } from '../../index';
+import { FnkBorshSchema } from '../../borsh';
 
 const ZERO = new BN(0);
 const MIN_VALUE = new BN('-9223372036854775808'); // -2^63

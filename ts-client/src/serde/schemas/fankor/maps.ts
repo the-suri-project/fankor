@@ -2,7 +2,7 @@ import { FnkBorshWriter, FnkBorshWriteSchema } from '../../serializer';
 import { FnkBorshReader, FnkBorshReadSchema } from '../../deserializer';
 import { FnkUIntSchema } from './unsigned';
 import { RustMap } from '../maps';
-import { FnkBorshSchema } from '../../index';
+import { FnkBorshSchema } from '../../borsh';
 
 export function FnkMap<
     K,

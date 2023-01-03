@@ -1,7 +1,7 @@
 import BN from 'bn.js';
 import { FnkBorshReader } from '../deserializer';
 import { FnkBorshWriter } from '../serializer';
-import { FnkBorshSchema } from '../index';
+import { FnkBorshSchema } from '../borsh';
 
 export class U8Schema implements FnkBorshSchema<number> {
     // METHODS ----------------------------------------------------------------
