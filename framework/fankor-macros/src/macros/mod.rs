@@ -10,3 +10,4 @@ pub mod program;
 pub mod serialize;
 pub mod setup;
 pub mod zero_copy;
+pub mod const_pubkey;

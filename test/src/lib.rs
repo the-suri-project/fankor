@@ -14,6 +14,9 @@ mod tests;
 
 setup!("7JKciYMdWKBo1yPhjVe5eDDjoxYfB8YhkAL7DRpJj3xE");
 
+pub static PUBKEY_FROM_CONSTANT: Pubkey =
+    const_pubkey!("7JKciYMdWKBo1yPhjVe5eDDjoxYfB8YhkAL7DRpJj3xE");
+
 security_txt! {
     // Required fields
     name: "Example",

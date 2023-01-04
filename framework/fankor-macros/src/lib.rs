@@ -21,6 +21,21 @@ pub fn setup(args: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
+/// This macro creates a pubkey from a string.
+#[proc_macro]
+pub fn const_pubkey(args: TokenStream) -> TokenStream {
+    let pubkey = parse_macro_input!(args as LitStr);
+
+    match macros::const_pubkey::processor(pubkey) {
+        Ok(v) => v,
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
 /// A custom implementation of BorshSerialize that fix an issue with the where clause.
 #[proc_macro_derive(FankorSerialize, attributes(borsh_skip))]
 pub fn serialize(input: TokenStream) -> TokenStream {
