@@ -187,6 +187,7 @@ impl MetadataAccount {
     /// Initializes a Mint account.
     #[allow(clippy::too_many_arguments)]
     pub fn init<'info>(
+        account_to_init: UninitializedAccount<'info>,
         name: String,
         symbol: String,
         uri: String,
@@ -200,7 +201,6 @@ impl MetadataAccount {
         mint: AccountInfo<'info>,
         mint_authority: AccountInfo<'info>,
         update_authority: AccountInfo<'info>,
-        account: UninitializedAccount<'info>,
         payer: AccountInfo<'info>,
         system_program: &Program<'info, System>,
         metadata_program: &Program<'info, Metadata>,
@@ -209,13 +209,13 @@ impl MetadataAccount {
         let rent = Rent::get()?;
         let space = mpl_token_metadata::state::Metadata::size();
         let lamports = rent.minimum_balance(space);
-        let account_info = account.info();
+        let account_to_init_info = account_to_init.info();
 
         cpi::system_program::create_account(
             system_program,
             CpiCreateAccount {
                 from: payer.clone(),
-                to: account_info.clone(),
+                to: account_to_init_info.clone(),
             },
             lamports,
             space as u64,
@@ -226,7 +226,7 @@ impl MetadataAccount {
         cpi::metadata::create_metadata_accounts_v3(
             metadata_program,
             CpiCreateMetadataAccountV3 {
-                metadata: account_info.clone(),
+                metadata: account_to_init_info.clone(),
                 mint,
                 mint_authority,
                 payer,
@@ -247,16 +247,18 @@ impl MetadataAccount {
             &[],
         )?;
 
-        let mut data: &[u8] = &account_info.try_borrow_data()?;
+        let mut data: &[u8] = &account_to_init_info.try_borrow_data()?;
         Account::new(
-            account.context(),
-            account_info,
+            account_to_init.context(),
+            account_to_init_info,
             MetadataAccount::try_deserialize(&mut data)?,
         )
     }
 
     /// Initializes a Mint account in a PDA.
+    #[allow(clippy::too_many_arguments)]
     pub fn init_pda<'info>(
+        account_to_init: UninitializedAccount<'info>,
         name: String,
         symbol: String,
         uri: String,
@@ -270,7 +272,6 @@ impl MetadataAccount {
         mint: AccountInfo<'info>,
         mint_authority: AccountInfo<'info>,
         update_authority: AccountInfo<'info>,
-        account: UninitializedAccount<'info>,
         payer: AccountInfo<'info>,
         system_program: &Program<'info, System>,
         metadata_program: &Program<'info, Metadata>,
@@ -280,13 +281,13 @@ impl MetadataAccount {
         let rent = Rent::get()?;
         let space = mpl_token_metadata::state::Metadata::size();
         let lamports = rent.minimum_balance(space);
-        let account_info = account.info();
+        let account_to_init_info = account_to_init.info();
 
         cpi::system_program::create_account(
             system_program,
             CpiCreateAccount {
                 from: payer.clone(),
-                to: account_info.clone(),
+                to: account_to_init_info.clone(),
             },
             lamports,
             space as u64,
@@ -297,7 +298,7 @@ impl MetadataAccount {
         cpi::metadata::create_metadata_accounts_v3(
             metadata_program,
             CpiCreateMetadataAccountV3 {
-                metadata: account_info.clone(),
+                metadata: account_to_init_info.clone(),
                 mint,
                 mint_authority,
                 payer,
@@ -318,10 +319,10 @@ impl MetadataAccount {
             &[],
         )?;
 
-        let mut data: &[u8] = &account_info.try_borrow_data()?;
+        let mut data: &[u8] = &account_to_init_info.try_borrow_data()?;
         Account::new(
-            account.context(),
-            account_info,
+            account_to_init.context(),
+            account_to_init_info,
             MetadataAccount::try_deserialize(&mut data)?,
         )
     }
@@ -333,12 +334,12 @@ impl MasterEditionV2 {
     /// Initializes a Mint account.
     #[allow(clippy::too_many_arguments)]
     pub fn init<'info>(
+        account_to_init: UninitializedAccount<'info>,
         max_supply: Option<u64>,
         mint: AccountInfo<'info>,
         update_authority: AccountInfo<'info>,
         mint_authority: AccountInfo<'info>,
         metadata: AccountInfo<'info>,
-        account: UninitializedAccount<'info>,
         payer: AccountInfo<'info>,
         system_program: &Program<'info, System>,
         token_program: &Program<'info, Token>,
@@ -348,13 +349,13 @@ impl MasterEditionV2 {
         let rent = Rent::get()?;
         let space = mpl_token_metadata::state::MasterEditionV2::size();
         let lamports = rent.minimum_balance(space);
-        let account_info = account.info();
+        let account_to_init_info = account_to_init.info();
 
         cpi::system_program::create_account(
             system_program,
             CpiCreateAccount {
                 from: payer.clone(),
-                to: account_info.clone(),
+                to: account_to_init_info.clone(),
             },
             lamports,
             space as u64,
@@ -365,7 +366,7 @@ impl MasterEditionV2 {
         cpi::metadata::create_master_edition_v3(
             metadata_program,
             CpiCreateMasterEditionV3 {
-                edition: account_info.clone(),
+                edition: account_to_init_info.clone(),
                 mint,
                 update_authority,
                 mint_authority,
@@ -379,22 +380,23 @@ impl MasterEditionV2 {
             &[],
         )?;
 
-        let mut data: &[u8] = &account_info.try_borrow_data()?;
+        let mut data: &[u8] = &account_to_init_info.try_borrow_data()?;
         Account::new(
-            account.context(),
-            account_info,
+            account_to_init.context(),
+            account_to_init_info,
             MasterEditionV2::try_deserialize(&mut data)?,
         )
     }
 
     /// Initializes a Mint account in a PDA.
+    #[allow(clippy::too_many_arguments)]
     pub fn init_pda<'info>(
+        account_to_init: UninitializedAccount<'info>,
         max_supply: Option<u64>,
         mint: AccountInfo<'info>,
         update_authority: AccountInfo<'info>,
         mint_authority: AccountInfo<'info>,
         metadata: AccountInfo<'info>,
-        account: UninitializedAccount<'info>,
         payer: AccountInfo<'info>,
         system_program: &Program<'info, System>,
         token_program: &Program<'info, Token>,
@@ -405,13 +407,13 @@ impl MasterEditionV2 {
         let rent = Rent::get()?;
         let space = mpl_token_metadata::state::MasterEditionV2::size();
         let lamports = rent.minimum_balance(space);
-        let account_info = account.info();
+        let account_to_init_info = account_to_init.info();
 
         cpi::system_program::create_account(
             system_program,
             CpiCreateAccount {
                 from: payer.clone(),
-                to: account_info.clone(),
+                to: account_to_init_info.clone(),
             },
             lamports,
             space as u64,
@@ -422,7 +424,7 @@ impl MasterEditionV2 {
         cpi::metadata::create_master_edition_v3(
             metadata_program,
             CpiCreateMasterEditionV3 {
-                edition: account_info.clone(),
+                edition: account_to_init_info.clone(),
                 mint,
                 update_authority,
                 mint_authority,
@@ -436,10 +438,10 @@ impl MasterEditionV2 {
             &[],
         )?;
 
-        let mut data: &[u8] = &account_info.try_borrow_data()?;
+        let mut data: &[u8] = &account_to_init_info.try_borrow_data()?;
         Account::new(
-            account.context(),
-            account_info,
+            account_to_init.context(),
+            account_to_init_info,
             MasterEditionV2::try_deserialize(&mut data)?,
         )
     }
