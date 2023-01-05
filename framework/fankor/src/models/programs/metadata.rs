@@ -1,11 +1,19 @@
+use crate::cpi;
+use crate::cpi::metadata::{CpiCreateMasterEditionV3, CpiCreateMetadataAccountV3};
+use crate::cpi::system_program::CpiCreateAccount;
 use crate::errors::FankorResult;
 use crate::models::programs::macros::impl_account;
+use crate::models::{Account, Program, System, Token, UninitializedAccount};
 use crate::traits::{AccountDeserialize, AccountSerialize, ProgramType};
 use borsh::{BorshDeserialize, BorshSerialize};
 use mpl_token_metadata::state::{
-    TokenMetadataAccount, BURN, COLLECTION_AUTHORITY, EDITION, PREFIX, USER,
+    Collection, CollectionDetails, Creator, TokenMetadataAccount, Uses, BURN, COLLECTION_AUTHORITY,
+    EDITION, PREFIX, USER,
 };
+use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
+use solana_program::rent::Rent;
+use solana_program::sysvar::Sysvar;
 use std::io::{ErrorKind, Write};
 use std::ops::Deref;
 
@@ -168,3 +176,271 @@ impl_account!(
     safe_deserialize,
     [Eq]
 );
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+impl MetadataAccount {
+    // STATIC METHODS ---------------------------------------------------------
+
+    /// Initializes a Mint account.
+    #[allow(clippy::too_many_arguments)]
+    pub fn init<'info>(
+        name: String,
+        symbol: String,
+        uri: String,
+        creators: Option<Vec<Creator>>,
+        seller_fee_basis_points: u16,
+        update_authority_is_signer: bool,
+        is_mutable: bool,
+        collection: Option<Collection>,
+        uses: Option<Uses>,
+        collection_details: Option<CollectionDetails>,
+        mint: AccountInfo<'info>,
+        mint_authority: AccountInfo<'info>,
+        update_authority: AccountInfo<'info>,
+        account: UninitializedAccount<'info>,
+        payer: AccountInfo<'info>,
+        system_program: &Program<'info, System>,
+        metadata_program: &Program<'info, Metadata>,
+        rent_sysvar: AccountInfo<'info>,
+    ) -> FankorResult<Account<'info, MetadataAccount>> {
+        let rent = Rent::get()?;
+        let space = mpl_token_metadata::state::Metadata::size();
+        let lamports = rent.minimum_balance(space);
+        let account_info = account.info();
+
+        cpi::system_program::create_account(
+            system_program,
+            CpiCreateAccount {
+                from: payer.clone(),
+                to: account_info.clone(),
+            },
+            lamports,
+            space as u64,
+            metadata_program.address(),
+            &[],
+        )?;
+
+        cpi::metadata::create_metadata_accounts_v3(
+            metadata_program,
+            CpiCreateMetadataAccountV3 {
+                metadata: account_info.clone(),
+                mint,
+                mint_authority,
+                payer,
+                update_authority,
+                system_program: system_program.info().clone(),
+                rent_sysvar,
+            },
+            name,
+            symbol,
+            uri,
+            creators,
+            seller_fee_basis_points,
+            update_authority_is_signer,
+            is_mutable,
+            collection,
+            uses,
+            collection_details,
+            &[],
+        )?;
+
+        let mut data: &[u8] = &account_info.try_borrow_data()?;
+        Account::new(
+            account.context(),
+            account_info,
+            MetadataAccount::try_deserialize(&mut data)?,
+        )
+    }
+
+    /// Initializes a Mint account in a PDA.
+    pub fn init_pda<'info>(
+        name: String,
+        symbol: String,
+        uri: String,
+        creators: Option<Vec<Creator>>,
+        seller_fee_basis_points: u16,
+        update_authority_is_signer: bool,
+        is_mutable: bool,
+        collection: Option<Collection>,
+        uses: Option<Uses>,
+        collection_details: Option<CollectionDetails>,
+        mint: AccountInfo<'info>,
+        mint_authority: AccountInfo<'info>,
+        update_authority: AccountInfo<'info>,
+        account: UninitializedAccount<'info>,
+        payer: AccountInfo<'info>,
+        system_program: &Program<'info, System>,
+        metadata_program: &Program<'info, Metadata>,
+        rent_sysvar: AccountInfo<'info>,
+        seeds: &[&[u8]],
+    ) -> FankorResult<Account<'info, MetadataAccount>> {
+        let rent = Rent::get()?;
+        let space = mpl_token_metadata::state::Metadata::size();
+        let lamports = rent.minimum_balance(space);
+        let account_info = account.info();
+
+        cpi::system_program::create_account(
+            system_program,
+            CpiCreateAccount {
+                from: payer.clone(),
+                to: account_info.clone(),
+            },
+            lamports,
+            space as u64,
+            metadata_program.address(),
+            &[seeds],
+        )?;
+
+        cpi::metadata::create_metadata_accounts_v3(
+            metadata_program,
+            CpiCreateMetadataAccountV3 {
+                metadata: account_info.clone(),
+                mint,
+                mint_authority,
+                payer,
+                update_authority,
+                system_program: system_program.info().clone(),
+                rent_sysvar,
+            },
+            name,
+            symbol,
+            uri,
+            creators,
+            seller_fee_basis_points,
+            update_authority_is_signer,
+            is_mutable,
+            collection,
+            uses,
+            collection_details,
+            &[],
+        )?;
+
+        let mut data: &[u8] = &account_info.try_borrow_data()?;
+        Account::new(
+            account.context(),
+            account_info,
+            MetadataAccount::try_deserialize(&mut data)?,
+        )
+    }
+}
+
+impl MasterEditionV2 {
+    // STATIC METHODS ---------------------------------------------------------
+
+    /// Initializes a Mint account.
+    #[allow(clippy::too_many_arguments)]
+    pub fn init<'info>(
+        max_supply: Option<u64>,
+        mint: AccountInfo<'info>,
+        update_authority: AccountInfo<'info>,
+        mint_authority: AccountInfo<'info>,
+        metadata: AccountInfo<'info>,
+        account: UninitializedAccount<'info>,
+        payer: AccountInfo<'info>,
+        system_program: &Program<'info, System>,
+        token_program: &Program<'info, Token>,
+        metadata_program: &Program<'info, Metadata>,
+        rent_sysvar: AccountInfo<'info>,
+    ) -> FankorResult<Account<'info, MasterEditionV2>> {
+        let rent = Rent::get()?;
+        let space = mpl_token_metadata::state::MasterEditionV2::size();
+        let lamports = rent.minimum_balance(space);
+        let account_info = account.info();
+
+        cpi::system_program::create_account(
+            system_program,
+            CpiCreateAccount {
+                from: payer.clone(),
+                to: account_info.clone(),
+            },
+            lamports,
+            space as u64,
+            metadata_program.address(),
+            &[],
+        )?;
+
+        cpi::metadata::create_master_edition_v3(
+            metadata_program,
+            CpiCreateMasterEditionV3 {
+                edition: account_info.clone(),
+                mint,
+                update_authority,
+                mint_authority,
+                metadata,
+                payer,
+                token_program: token_program.info().clone(),
+                system_program: system_program.info().clone(),
+                rent_sysvar,
+            },
+            max_supply,
+            &[],
+        )?;
+
+        let mut data: &[u8] = &account_info.try_borrow_data()?;
+        Account::new(
+            account.context(),
+            account_info,
+            MasterEditionV2::try_deserialize(&mut data)?,
+        )
+    }
+
+    /// Initializes a Mint account in a PDA.
+    pub fn init_pda<'info>(
+        max_supply: Option<u64>,
+        mint: AccountInfo<'info>,
+        update_authority: AccountInfo<'info>,
+        mint_authority: AccountInfo<'info>,
+        metadata: AccountInfo<'info>,
+        account: UninitializedAccount<'info>,
+        payer: AccountInfo<'info>,
+        system_program: &Program<'info, System>,
+        token_program: &Program<'info, Token>,
+        metadata_program: &Program<'info, Metadata>,
+        rent_sysvar: AccountInfo<'info>,
+        seeds: &[&[u8]],
+    ) -> FankorResult<Account<'info, MasterEditionV2>> {
+        let rent = Rent::get()?;
+        let space = mpl_token_metadata::state::MasterEditionV2::size();
+        let lamports = rent.minimum_balance(space);
+        let account_info = account.info();
+
+        cpi::system_program::create_account(
+            system_program,
+            CpiCreateAccount {
+                from: payer.clone(),
+                to: account_info.clone(),
+            },
+            lamports,
+            space as u64,
+            metadata_program.address(),
+            &[seeds],
+        )?;
+
+        cpi::metadata::create_master_edition_v3(
+            metadata_program,
+            CpiCreateMasterEditionV3 {
+                edition: account_info.clone(),
+                mint,
+                update_authority,
+                mint_authority,
+                metadata,
+                payer,
+                token_program: token_program.info().clone(),
+                system_program: system_program.info().clone(),
+                rent_sysvar,
+            },
+            max_supply,
+            &[],
+        )?;
+
+        let mut data: &[u8] = &account_info.try_borrow_data()?;
+        Account::new(
+            account.context(),
+            account_info,
+            MasterEditionV2::try_deserialize(&mut data)?,
+        )
+    }
+}
