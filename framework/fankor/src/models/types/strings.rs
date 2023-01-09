@@ -2,6 +2,7 @@ use crate::models::types::unsigned::FnkUInt;
 use crate::traits::AccountSize;
 use borsh::{BorshDeserialize, BorshSerialize};
 use std::borrow::Cow;
+use std::fmt::Display;
 use std::io::{ErrorKind, Write};
 use std::ops::{Deref, DerefMut};
 
@@ -40,6 +41,12 @@ impl<'a> Deref for FnkString<'a> {
 impl<'a> DerefMut for FnkString<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl<'a> Display for FnkString<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 

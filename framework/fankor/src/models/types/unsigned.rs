@@ -1,5 +1,6 @@
 use crate::traits::AccountSize;
 use borsh::{BorshDeserialize, BorshSerialize};
+use std::fmt::Display;
 use std::io::{ErrorKind, Write};
 use std::ops::{Deref, DerefMut};
 
@@ -95,6 +96,12 @@ impl Deref for FnkUInt {
 impl DerefMut for FnkUInt {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl Display for FnkUInt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
