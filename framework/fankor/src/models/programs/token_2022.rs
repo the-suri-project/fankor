@@ -112,6 +112,7 @@ impl Mint2022 {
     }
 
     /// Initializes a Mint account in a PDA.
+    #[allow(clippy::too_many_arguments)]
     pub fn init_pda<'info>(
         account_to_init: UninitializedAccount<'info>,
         decimals: u8,

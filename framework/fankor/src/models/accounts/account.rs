@@ -19,7 +19,7 @@ use std::io::Write;
 pub struct Account<'info, T: AccountType> {
     context: &'info FankorContext<'info>,
     info: &'info AccountInfo<'info>,
-    data: T,
+    data: Box<T>,
     dropped: bool,
 }
 
@@ -53,7 +53,7 @@ impl<'info, T: AccountType> Account<'info, T> {
         Ok(Account {
             context,
             info,
-            data,
+            data: Box::new(data),
             dropped: false,
         })
     }
@@ -66,7 +66,7 @@ impl<'info, T: AccountType> Account<'info, T> {
         Account {
             context,
             info,
-            data,
+            data: Box::new(data),
             dropped: false,
         }
     }
@@ -159,7 +159,7 @@ impl<'info, T: AccountType> Account<'info, T> {
             let mut data: &[u8] = &info.try_borrow_data()?;
             T::try_deserialize(&mut data)?
         };
-        self.data = result;
+        self.data = Box::new(result);
 
         Ok(())
     }

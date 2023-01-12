@@ -23,7 +23,7 @@ pub struct InstructionStructAccounts<'info> {
     #[account(signer = false)]
     #[account(pda = [crate::ID.as_ref(), &self.account2.data().value1.to_le_bytes(), &args.arg2.to_le_bytes()])]
     #[account(pda_program_id = &crate::ID)]
-    pub account2: Box<Account<'info, StructAccountData>>,
+    pub account2: Account<'info, StructAccountData>,
 
     pub account3: Option<Account<'info, StructAccountData>>,
 
@@ -108,7 +108,7 @@ pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
 
     #[account(constraint = (1 + 1).cmp(&2) == Ordering::Equal @ Errors::A)]
     #[account(associated_token_pda = (self.account.address(), self.boxed_zc_account.address()))]
-    pub boxed_zc_account: Box<ZcAccount<'info, ZeroCopyStructAccountData>>,
+    pub boxed_zc_account: ZcAccount<'info, ZeroCopyStructAccountData>,
 
     #[account(data::x = self.account.address())]
     #[account(metadata_pda = Metadata::get_metadata_pda_seeds(x) @ Errors::A)]
@@ -148,7 +148,7 @@ impl<'info> InstructionStructAccountsWithoutAssociatedType<'info> {
 pub enum InstructionEnumAccounts<'info> {
     Struct1(InstructionStructAccounts<'info>),
 
-    Struct2(Box<InstructionStructAccounts<'info>>),
+    Struct2(InstructionStructAccounts<'info>),
 
     OptionalAccount(Option<InstructionStructAccounts<'info>>),
 }
@@ -162,7 +162,7 @@ pub enum InstructionEnumAccounts<'info> {
 pub enum InstructionEnumAccountsWithoutArgs<'info> {
     Struct1(InstructionStructAccountsWithoutAssociatedType<'info>),
 
-    Struct2(Box<InstructionStructAccountsWithoutAssociatedType<'info>>),
+    Struct2(InstructionStructAccountsWithoutAssociatedType<'info>),
 
     OptionalAccount(Option<InstructionStructAccountsWithoutAssociatedType<'info>>),
 }
