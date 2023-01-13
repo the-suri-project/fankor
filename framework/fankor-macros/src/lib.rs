@@ -66,7 +66,7 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-/// Implements the trait Account for the given struct.
+/// Implements the ZeroCopyType and CopyType traits for the given struct.
 #[proc_macro_derive(FankorZeroCopy)]
 pub fn zero_copy(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
@@ -81,10 +81,10 @@ pub fn zero_copy(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-/// This macro marks defines a new account implementing the traits:
+/// This macro marks defines a new account list implementing the traits:
 /// - `Accounts`
-/// - `FankorSerialize`
-/// - `FankorDeserialize`
+/// - `BorshSerialize`
+/// - `BorshDeserialize`
 #[proc_macro_attribute]
 pub fn accounts(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
@@ -102,8 +102,8 @@ pub fn accounts(args: TokenStream, input: TokenStream) -> TokenStream {
 
 /// This macro marks defines a new account implementing the traits:
 /// - `Account`
-/// - `FankorSerialize`
-/// - `FankorDeserialize`
+/// - `BorshSerialize`
+/// - `BorshDeserialize`
 #[proc_macro_attribute]
 pub fn account(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
@@ -240,4 +240,43 @@ pub fn program(args: TokenStream, input: TokenStream) -> TokenStream {
         Ok(v) => v,
         Err(e) => e.to_compile_error().into(),
     }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/// This macro executes following macros over the given type:
+/// - `EnumDiscriminants` if the type is an enum.
+/// - `FankorSerialize`
+/// - `FankorDeserialize`
+/// - `FankorZeroCopy`
+#[proc_macro_derive(FankorBase, attributes(discriminant))]
+pub fn fankor_base(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as Item);
+    let mut result = TokenStream::new();
+
+    if matches!(input, Item::Enum(_)) {
+        match macros::enum_discriminants::processor(input.clone()) {
+            Ok(v) => result.extend(v),
+            Err(e) => return e.to_compile_error().into(),
+        }
+    }
+
+    match macros::serialize::processor(input.clone()) {
+        Ok(v) => result.extend(v),
+        Err(e) => return e.to_compile_error().into(),
+    }
+
+    match macros::deserialize::processor(input.clone()) {
+        Ok(v) => result.extend(v),
+        Err(e) => return e.to_compile_error().into(),
+    }
+
+    match macros::zero_copy::processor(input) {
+        Ok(v) => result.extend(v),
+        Err(e) => return e.to_compile_error().into(),
+    }
+
+    result
 }
