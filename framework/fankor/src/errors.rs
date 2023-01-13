@@ -29,7 +29,8 @@ pub enum FankorErrorCode {
     // ------------------------------------------------------------------------
     /// The id of the program does not match the one defined in the code
     #[msg("The id of the program does not match the one defined in the code")]
-    DeclaredProgramIdMismatch = 1000,
+    #[discriminant = 1000]
+    DeclaredProgramIdMismatch,
 
     /// The instruction discriminant is missing
     #[msg("The instruction discriminant is missing")]
@@ -75,7 +76,8 @@ pub enum FankorErrorCode {
     // ------------------------------------------------------------------------
     /// The instruction contains duplicated writable accounts
     #[msg("The instruction contains duplicated writable accounts: {}", address)]
-    DuplicatedWritableAccounts { address: Pubkey } = 1500,
+    #[discriminant = 1500]
+    DuplicatedWritableAccounts { address: Pubkey } ,
 
     /// No 8 byte discriminant was found on the account
     #[msg("No 8 byte discriminant was found on the account: {}", account)]
@@ -301,7 +303,8 @@ pub enum FankorErrorCode {
     // ------------------------------------------------------------------------
     /// The intermediate buffer is empty
     #[msg("The intermediate buffer is empty")]
-    EmptyIntermediateBuffer = 2000,
+    #[discriminant = 2000]
+    EmptyIntermediateBuffer,
 
     /// The result of the intermediate buffer is expected to belong to one program but it belongs to another program instead
     #[msg(
@@ -316,7 +319,8 @@ pub enum FankorErrorCode {
     // ------------------------------------------------------------------------
     /// Cannot deserialize the zero copy type
     #[msg("Cannot deserialize the zero copy type: '{}'", type_name)]
-    ZeroCopyCannotDeserialize { type_name: &'static str } = 2500,
+    #[discriminant = 2500]
+    ZeroCopyCannotDeserialize { type_name: &'static str } ,
 
     /// Not enough length to deserialize the zero copy type
     #[msg("Not enough length to deserialize the zero copy type: '{}'", type_name)]

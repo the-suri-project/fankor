@@ -42,24 +42,10 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     );
 
     // Parse fields taking into account whether any variant is deprecated or not.
-    let mut last_deprecated = false;
     let variants = enum_item
         .variants
         .into_iter()
-        .map(|v| {
-            let result = AccountVariant::from(v)?;
-
-            if last_deprecated && result.discriminant.is_none() {
-                return Err(Error::new(
-                    result.name.span(),
-                    "The next error after a deprecated one must have the #[discriminant] attribute",
-                ));
-            }
-
-            last_deprecated = result.deprecated;
-
-            Ok(result)
-        })
+        .map(AccountVariant::from)
         .collect::<Result<Vec<_>>>()?;
 
     let visibility = enum_item.vis;
@@ -67,396 +53,256 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let (impl_generics, ty_generics, where_clause) = enum_item.generics.split_for_impl();
 
     // Generate code.
-    let mut u8_index = 1u8;
     let mut used_discriminants = HashSet::new();
-
     let mut final_enum_variants = Vec::with_capacity(variants.len());
     let mut unwrap_methods = Vec::with_capacity(variants.len());
     let mut as_ref_methods = Vec::with_capacity(variants.len());
     let mut as_mut_methods = Vec::with_capacity(variants.len());
     let mut discriminant_variants = Vec::with_capacity(variants.len());
-    let mut discriminant_code_variants = Vec::with_capacity(variants.len());
-    let mut final_enum_variant_discriminants = Vec::with_capacity(variants.len());
     let mut from_methods = Vec::with_capacity(variants.len());
     let mut serialize_entries = Vec::with_capacity(variants.len());
     let mut deserialize_entries = Vec::with_capacity(variants.len());
     let mut discriminants_as_list = Vec::with_capacity(variants.len());
-    let code_variants = variants
-        .iter()
-        .map(|v| {
-            let span = v.name.span();
-            let AccountVariant {
-                name: variant_name,
-                attributes,
-                discriminant,
-                ..
-            } = &v;
+    let mut variant_consts = Vec::with_capacity(variants.len());
+    for variant in variants {
+        let AccountVariant {
+            name: variant_name,
+            attributes,
+            ..
+        } = &variant;
 
-            let case_converter = Converter::new()
-                .from_case(Case::Pascal)
-                .to_case(Case::Snake)
-                .remove_boundary(Boundary::LowerDigit)
-                .remove_boundary(Boundary::UpperDigit);
+        let const_name = format_ident!("{}Discriminant", variant_name);
 
-            final_enum_variants.push(quote! {
-                #(#attributes)*
-                #variant_name(#variant_name)
-            });
+        let case_converter = Converter::new()
+            .from_case(Case::Pascal)
+            .to_case(Case::Snake)
+            .remove_boundary(Boundary::LowerDigit)
+            .remove_boundary(Boundary::UpperDigit);
 
-            let method_name = case_converter.convert(variant_name.to_string());
+        final_enum_variants.push(quote! {
+            #(#attributes)*
+            #variant_name(#variant_name)
+        });
 
-            unwrap_methods.push({
-                let method_name =
-                    format_ident!("unwrap_{}", method_name, span = variant_name.span());
+        let method_name = case_converter.convert(variant_name.to_string());
 
-                quote! {
-                    fn #method_name(self) -> Option<#variant_name> {
-                        match self {
-                            #name::#variant_name(v) => Some(v),
-                            _ => None,
-                        }
+        unwrap_methods.push({
+            let method_name = format_ident!("unwrap_{}", method_name, span = variant_name.span());
+
+            quote! {
+                pub fn #method_name(self) -> Option<#variant_name> {
+                    match self {
+                        #name::#variant_name(v) => Some(v),
+                        _ => None,
                     }
                 }
-            });
+            }
+        });
 
-            as_ref_methods.push({
-                let method_name =
-                    format_ident!("{}_as_ref", method_name, span = variant_name.span());
+        as_ref_methods.push({
+            let method_name = format_ident!("{}_as_ref", method_name, span = variant_name.span());
 
-                quote! {
-                    fn #method_name(&self) -> Option<&#variant_name> {
-                        match self {
-                            #name::#variant_name(v) => Some(v),
-                            _ => None,
-                        }
+            quote! {
+                pub fn #method_name(&self) -> Option<&#variant_name> {
+                    match self {
+                        #name::#variant_name(v) => Some(v),
+                        _ => None,
                     }
                 }
-            });
+            }
+        });
 
-            as_mut_methods.push({
-                let method_name =
-                    format_ident!("{}_as_mut", method_name, span = variant_name.span());
+        as_mut_methods.push({
+            let method_name = format_ident!("{}_as_mut", method_name, span = variant_name.span());
 
-                quote! {
-                    fn #method_name(&mut self) -> Option<&mut #variant_name> {
-                        match self {
-                            #name::#variant_name(v) => Some(v),
-                            _ => None,
-                        }
+            quote! {
+                pub fn #method_name(&mut self) -> Option<&mut #variant_name> {
+                    match self {
+                        #name::#variant_name(v) => Some(v),
+                        _ => None,
                     }
                 }
-            });
+            }
+        });
 
-            discriminant_variants.push(quote! {
-                #name::#variant_name(..) => #discriminant_name::#variant_name
-            });
+        discriminant_variants.push(quote! {
+            #name::#variant_name(..) => #discriminant_name::#variant_name
+        });
 
-            from_methods.push(quote! {
-                impl From<#variant_name> for #name {
-                    fn from(v: #variant_name) -> Self {
-                        #name::#variant_name(v)
+        from_methods.push(quote! {
+            impl From<#variant_name> for #name {
+                fn from(v: #variant_name) -> Self {
+                    #name::#variant_name(v)
+                }
+            }
+
+            impl TryFrom<#name> for #variant_name {
+                type Error = ();
+
+                fn try_from(v: #name) -> Result<Self, Self::Error> {
+                    match v {
+                        #name::#variant_name(v) => Ok(v),
+                        _ => Err(()),
                     }
                 }
+            }
+        });
 
-                impl TryFrom<#name> for #variant_name {
-                    type Error = ();
+        serialize_entries.push(quote! {
+            #name::#variant_name(v) => {
+                borsh::BorshSerialize::serialize(v, writer)?;
+            }
+        });
 
-                    fn try_from(v: #name) -> Result<Self, Self::Error> {
-                        match v {
-                            #name::#variant_name(v) => Ok(v),
-                            _ => Err(()),
-                        }
-                    }
-                }
+        variant_consts.push(quote! {
+            pub const #const_name: u8 = #discriminant_name::#variant_name.code();
+        });
+
+        deserialize_entries.push(quote! {
+            #const_name => {
+                let v = borsh::BorshDeserialize::deserialize(buf)?;
+                Ok(#name::#variant_name(v))
+            }
+        });
+
+        if arguments.accounts_type_name.is_some() {
+            discriminants_as_list.push(quote! {
+                #discriminant_name::#variant_name.code()
             });
+        }
 
-            // Calculate the discriminant.
-            if let Some(v) = discriminant {
-                u8_index = *v;
-            }
+        // Insert discriminant.
+        used_discriminants.insert(const_name);
+    }
 
-            if u8_index == 0 {
-                return Err(Error::new(
-                    span,
-                    "Zero discriminant is reserved for uninitialized accounts, please provide another one".to_string(),
-                ));
-            }
-
-            if used_discriminants.contains(&u8_index) {
-                return Err(Error::new(
-                    span,
-                    format!("The discriminant attribute is already in use: {}", u8_index),
-                ));
-            }
-
-            used_discriminants.insert(u8_index);
-
-            if arguments.contains_removed_discriminant(u8_index) {
-                return Err(Error::new(
-                    name.span(),
-                    format!("The discriminant '{}' is marked as removed", u8_index),
-                ));
-            }
-
-            discriminant_code_variants.push(quote! {
-                #name::#variant_name(..) => #u8_index
-            });
-
-            final_enum_variant_discriminants.push(quote! {
-                #variant_name
-            });
-
-                serialize_entries.push(quote! {
-                    #name::#variant_name(v) => {
-                        borsh::BorshSerialize::serialize(v, writer)?;
-                    }
-                });
-
-            if arguments.accounts_type_name.is_some() {
-                deserialize_entries.push(quote! {
-                    x if x == #discriminant_name::#variant_name.code() => {
-                        let v = borsh::BorshDeserialize::deserialize(buf)?;
-                        Ok(#name::#variant_name(v))
-                    }
-                });
-            } else {
-                deserialize_entries.push(quote! {
-                    #u8_index => {
-                        let v = borsh::BorshDeserialize::deserialize(buf)?;
-                        Ok(#name::#variant_name(v))
-                    }
-                });
-            }
-
-            if arguments.accounts_type_name.is_some() {
-                discriminants_as_list.push(quote! {
-                    #discriminant_name::#variant_name.code()
-                });
-            }
-
-            let res = Ok(quote! {
-                #discriminant_name::#variant_name => #u8_index
-            });
-
-            u8_index += 1;
-
-            res
-        })
-        .collect::<Result<Vec<_>>>()?;
-
-    let result = if arguments.accounts_type_name.is_some() {
+    let derive_enum_discriminants = if arguments.accounts_type_name.is_none() {
         quote! {
-            #(#attrs)*
-            #[non_exhaustive]
-            #visibility enum #name #ty_generics #where_clause {
-                #(#final_enum_variants,)*
-            }
+            #[derive(EnumDiscriminants)]
+        }
+    } else {
+        quote! {}
+    };
 
-            #[automatically_derived]
-            impl #impl_generics #name #ty_generics #where_clause {
-                #(#unwrap_methods)*
-
-                #(#as_ref_methods)*
-
-                #(#as_mut_methods)*
-
-                pub fn discriminant(&self) -> #discriminant_name {
-                    match self {
-                        #(#discriminant_variants,)*
-                    }
-                }
-
-                pub fn discriminant_code(&self) -> u8 {
-                    self.discriminant().code()
-                }
-            }
-
-            #(#from_methods)*
-
-            impl #impl_generics borsh::BorshSerialize for #name #ty_generics #where_clause {
-                fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-                    match self {
-                        #(#serialize_entries)*
-                    }
-
-                    Ok(())
-                }
-            }
-
-            impl #impl_generics borsh::BorshDeserialize for #name #ty_generics #where_clause {
-                fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
-                    // buf_aux exists to not move the original buf for getting the discriminant
-                    // due to account deserializers will handle them too.
-                    let mut buf_aux = *buf;
-                    let discriminant: u8 = borsh::BorshDeserialize::deserialize(&mut buf_aux)?;
-
-                    match discriminant {
-                        #(#deserialize_entries)*
-                        _ => Err(std::io::Error::new(
-                            std::io::ErrorKind::InvalidData,
-                            "Invalid discriminant value",
-                        )),
-                    }
-                }
-            }
-
-            #[automatically_derived]
-            impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
-                fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
-                    if ::fankor::prelude::borsh::BorshSerialize::serialize(self, writer).is_err() {
-                        return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize {
-                            account: #name_str.to_string()
-                        }.into());
-                    }
-                    Ok(())
-                }
-            }
-
-            #[automatically_derived]
-            impl #impl_generics ::fankor::traits::AccountDeserialize for #name #ty_generics #where_clause {
-                fn try_deserialize(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
-                    unsafe { Self::try_deserialize_unchecked(buf) }
-                }
-
-                unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
-                    ::fankor::prelude::borsh::BorshDeserialize::deserialize(buf)
-                        .map_err(|_| ::fankor::errors::FankorErrorCode::AccountDidNotDeserialize {
-                        account: #name_str.to_string()
-                    }.into())
-                }
-            }
-
-            #[automatically_derived]
-            impl #impl_generics ::fankor::traits::AccountType for #name #ty_generics #where_clause {
-                fn discriminant() -> u8 {
-                    0
-                }
-
-                fn owner() -> &'static Pubkey {
-                    &crate::ID
-                }
-
-                fn check_discriminant(discriminant: u8) -> bool {
-                    const discriminants: &[u8] = &[#(#discriminants_as_list),*];
-                    discriminants.contains(&discriminant)
+    let discriminant_method = if arguments.accounts_type_name.is_some() {
+        quote! {
+            pub const fn discriminant(&self) -> #discriminant_name {
+                match self {
+                    #(#discriminant_variants,)*
                 }
             }
         }
     } else {
-        let mut sorted_discriminants = used_discriminants.iter().copied().collect::<Vec<_>>();
-        sorted_discriminants.sort();
+        quote! {}
+    };
 
-        quote! {
-            #(#attrs)*
-            #[non_exhaustive]
-            #visibility enum #name #ty_generics #where_clause {
-                #(#final_enum_variants,)*
+    let const_asserts = if arguments.accounts_type_name.is_some() {
+        discriminants_as_list
+            .windows(2)
+            .map(|v| {
+                let prev = &v[0];
+                let next = &v[1];
+
+                quote! {
+                    const_assert!(#prev < #next);
+                }
+            })
+            .collect::<Vec<_>>()
+    } else {
+        Vec::new()
+    };
+
+    let result = quote! {
+        #(#const_asserts)*
+
+        #(#attrs)*
+        #derive_enum_discriminants
+        #[non_exhaustive]
+        #[repr(u8)]
+        #visibility enum #name #ty_generics #where_clause {
+            #(#final_enum_variants,)*
+        }
+
+        #[automatically_derived]
+        impl #impl_generics #name #ty_generics #where_clause {
+            #(#unwrap_methods)*
+
+            #(#as_ref_methods)*
+
+            #(#as_mut_methods)*
+
+            #discriminant_method
+        }
+
+        #(#from_methods)*
+
+        impl #impl_generics borsh::BorshSerialize for #name #ty_generics #where_clause {
+            fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+                match self {
+                    #(#serialize_entries)*
+                }
+
+                Ok(())
             }
+        }
 
-            #[automatically_derived]
-            impl #impl_generics #name #ty_generics #where_clause {
-                #(#unwrap_methods)*
+        #[allow(non_upper_case_globals)]
+        impl #impl_generics borsh::BorshDeserialize for #name #ty_generics #where_clause {
+            fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
+                // buf_aux exists to not move the original buf for getting the discriminant
+                // due to account deserializers will handle them too.
+                let mut buf_aux = *buf;
+                let discriminant: u8 = borsh::BorshDeserialize::deserialize(&mut buf_aux)?;
 
-                #(#as_ref_methods)*
-
-                #(#as_mut_methods)*
-
-                pub fn discriminant(&self) -> #discriminant_name {
-                    match self {
-                        #(#discriminant_variants,)*
-                    }
-                }
-
-                pub const fn discriminant_code(&self) -> u8 {
-                    match self {
-                        #(#discriminant_code_variants,)*
-                    }
+                #(#variant_consts)*
+                match discriminant {
+                    #(#deserialize_entries)*
+                    _ => Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidData,
+                        "Invalid discriminant value",
+                    )),
                 }
             }
+        }
 
-            #(#from_methods)*
-
-            impl #impl_generics borsh::BorshSerialize for #name #ty_generics #where_clause {
-                fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-                    match self {
-                        #(#serialize_entries)*
-                    }
-
-                    Ok(())
-                }
-            }
-
-            impl #impl_generics borsh::BorshDeserialize for #name #ty_generics #where_clause {
-                fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
-                    // buf_aux exists to not move the original buf for getting the discriminant
-                    // due to account deserializers will handle them too.
-                    let mut buf_aux = *buf;
-                    let discriminant: u8 = borsh::BorshDeserialize::deserialize(&mut buf_aux)?;
-
-                    match discriminant {
-                        #(#deserialize_entries)*
-                        _ => Err(std::io::Error::new(
-                            std::io::ErrorKind::InvalidData,
-                            "Invalid discriminant value",
-                        )),
-                    }
-                }
-            }
-
-            #[automatically_derived]
-            impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
-                fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
-                    if ::fankor::prelude::borsh::BorshSerialize::serialize(self, writer).is_err() {
-                        return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize {
-                            account: #name_str.to_string()
-                        }.into());
-                    }
-                    Ok(())
-                }
-            }
-
-            #[automatically_derived]
-            impl #impl_generics ::fankor::traits::AccountDeserialize for #name #ty_generics #where_clause {
-                fn try_deserialize(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
-                    unsafe { Self::try_deserialize_unchecked(buf) }
-                }
-
-                unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
-                    ::fankor::prelude::borsh::BorshDeserialize::deserialize(buf)
-                        .map_err(|_| ::fankor::errors::FankorErrorCode::AccountDidNotDeserialize {
+        #[automatically_derived]
+        impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
+            fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
+                if ::fankor::prelude::borsh::BorshSerialize::serialize(self, writer).is_err() {
+                    return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize {
                         account: #name_str.to_string()
-                    }.into())
+                    }.into());
                 }
+                Ok(())
+            }
+        }
+
+        #[automatically_derived]
+        impl #impl_generics ::fankor::traits::AccountDeserialize for #name #ty_generics #where_clause {
+            fn try_deserialize(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
+                unsafe { Self::try_deserialize_unchecked(buf) }
             }
 
-            #[automatically_derived]
-            impl #impl_generics ::fankor::traits::AccountType for #name #ty_generics #where_clause {
-                fn discriminant() -> u8 {
-                    0
-                }
+            unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
+                ::fankor::prelude::borsh::BorshDeserialize::deserialize(buf)
+                    .map_err(|_| ::fankor::errors::FankorErrorCode::AccountDidNotDeserialize {
+                    account: #name_str.to_string()
+                }.into())
+            }
+        }
 
-                fn owner() -> &'static Pubkey {
-                    &crate::ID
-                }
-
-                fn check_discriminant(discriminant: u8) -> bool {
-                    const discriminants: &[u8] = &[#(#sorted_discriminants),*];
-                    discriminants.binary_search(&discriminant).is_ok()
-                }
+        #[automatically_derived]
+        impl #impl_generics ::fankor::traits::AccountType for #name #ty_generics #where_clause {
+            fn discriminant() -> u8 {
+                0
             }
 
-            #[non_exhaustive]
-            #visibility enum #discriminant_name {
-                #(#final_enum_variant_discriminants,)*
+            fn owner() -> &'static Pubkey {
+                &crate::ID
             }
 
-            #[automatically_derived]
-            impl #discriminant_name {
-                pub const fn code(&self) -> u8 {
-                    match self {
-                        #(#code_variants,)*
-                    }
-                }
+            fn check_discriminant(discriminant: u8) -> bool {
+                const discriminants: &[u8] = &[#(#discriminants_as_list),*];
+                discriminants.binary_search(&discriminant).is_ok()
             }
         }
     };

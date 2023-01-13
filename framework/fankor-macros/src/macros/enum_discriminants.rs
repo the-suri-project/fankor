@@ -1,9 +1,11 @@
 use quote::{format_ident, quote};
 use std::collections::HashSet;
+use std::fmt::Display;
+use std::str::FromStr;
 use syn::spanned::Spanned;
-use syn::{Error, Fields, Item};
+use syn::{Attribute, Error, Fields, Item, Meta, Variant};
 
-use crate::macros::serialize::{get_discriminant, is_deprecated};
+use crate::utils::unwrap_int_from_literal;
 use crate::Result;
 
 pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
@@ -12,7 +14,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
         Item::Enum(item) => {
             let visibility = &item.vis;
             let name = &item.ident;
-            let discriminant_name = format_ident!("{}Discriminants", item.ident);
+            let discriminant_name = format_ident!("{}Discriminant", item.ident);
 
             let (impl_generics, ty_generics, where_clause) = item.generics.split_for_impl();
 
@@ -35,6 +37,13 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                 // Calculate the discriminant.
                 if let Some(v) = discriminant {
+                    if v < variant_idx {
+                        return Err(Error::new(
+                            variant.span(),
+                            "Variants must always be sorted from lowest to highest discriminant",
+                        ));
+                    }
+
                     variant_idx = v;
                 } else if is_last_deprecated {
                     return Err(Error::new(
@@ -88,13 +97,16 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 #[allow(dead_code)]
                 #[automatically_derived]
                 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+                #[non_exhaustive]
+                #[repr(u8)]
                 #visibility enum #discriminant_name {
                     #(#fields,)*
                 }
 
                 #[automatically_derived]
                 impl #discriminant_name {
-                    pub fn code(&self) -> u8 {
+                    #[inline(always)]
+                    pub const fn code(&self) -> u8 {
                         match self {
                             #(#codes,)*
                         }
@@ -103,7 +115,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                 #[automatically_derived]
                 impl #impl_generics #name #ty_generics #where_clause {
-                    pub fn discriminant(&self) -> #discriminant_name {
+                    #[inline(always)]
+                    pub const fn discriminant(&self) -> #discriminant_name {
                         match self {
                             #(#discriminants,)*
                         }
@@ -120,4 +133,55 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
     };
 
     Ok(result.into())
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+pub fn is_deprecated(attrs: &[Attribute]) -> bool {
+    for attr in attrs.iter() {
+        if let Ok(Meta::Path(path)) = attr.parse_meta() {
+            if path.is_ident("deprecated") {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+pub fn get_discriminant<N>(variant: &Variant) -> Result<Option<N>>
+where
+    N: FromStr,
+    N::Err: Display,
+{
+    if variant.discriminant.is_some() {
+        return Err(Error::new(
+            variant.span(),
+            "Native discriminants not yet supported in BPF compiler",
+        ));
+    }
+
+    let mut discriminant = None;
+    for attr in variant.attrs.iter() {
+        if let Ok(Meta::NameValue(name_value)) = attr.parse_meta() {
+            if name_value.path.is_ident("discriminant") {
+                if discriminant.is_some() {
+                    return Err(Error::new(
+                        variant.span(),
+                        "Only one discriminant attribute is allowed",
+                    ));
+                }
+
+                let literal = unwrap_int_from_literal(name_value.lit.clone())?;
+                discriminant = Some(literal.base10_parse()?);
+            }
+        }
+    }
+
+    Ok(discriminant)
 }

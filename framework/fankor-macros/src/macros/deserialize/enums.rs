@@ -1,13 +1,11 @@
-use std::collections::HashSet;
-
-use crate::macros::serialize::{get_discriminant, is_deprecated};
 use proc_macro2::TokenStream as TokenStream2;
-use quote::{quote, ToTokens};
+use quote::{format_ident, quote, ToTokens};
 use syn::spanned::Spanned;
 use syn::{Attribute, Error, Fields, Ident, ItemEnum, Meta, NestedMeta, Path, WhereClause};
 
 pub fn enum_de(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2> {
     let name = &input.ident;
+    let discriminant_name = format_ident!("{}Discriminant", name);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut where_clause = where_clause.map_or_else(
         || WhereClause {
@@ -18,41 +16,17 @@ pub fn enum_de(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2>
     );
     let init_method = contains_initialize_with(&input.attrs)?;
     let mut variant_arms = TokenStream2::new();
-    let mut variant_idx = 0u8;
-    let mut used_discriminants = HashSet::new();
-    let mut is_last_deprecated = false;
+    let mut variant_consts = TokenStream2::new();
 
     for variant in input.variants.iter() {
         let variant_ident = &variant.ident;
         let mut variant_header = TokenStream2::new();
 
-        let is_deprecated = is_deprecated(&variant.attrs);
-        let discriminant = get_discriminant(variant)?;
+        let const_name = format_ident!("{}Discriminant", variant_ident);
 
-        // Calculate the discriminant.
-        if let Some(v) = discriminant {
-            variant_idx = v;
-        } else if is_last_deprecated {
-            return Err(Error::new(
-                variant.span(),
-                format!(
-                    "After a deprecated entity you must explicitly define the variant discriminant: = {}",
-                    variant_idx
-                ),
-            ));
-        }
-
-        if used_discriminants.contains(&variant_idx) {
-            return Err(Error::new(
-                variant.span(),
-                format!(
-                    "The discriminant attribute is already in use: {}",
-                    variant_idx
-                ),
-            ));
-        }
-
-        used_discriminants.insert(variant_idx);
+        variant_consts.extend(quote! {
+            const #const_name: u8 = #discriminant_name::#variant_ident.code();
+        });
 
         match &variant.fields {
             Fields::Named(fields) => {
@@ -101,20 +75,17 @@ pub fn enum_de(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2>
         }
 
         variant_arms.extend(quote! {
-            #variant_idx => #name::#variant_ident #variant_header ,
+            #const_name => #name::#variant_ident #variant_header ,
         });
-
-        variant_idx += 1;
-        is_last_deprecated = is_deprecated;
     }
-    let variant_idx = quote! {
-        let variant_idx: u8 = #crate_name::BorshDeserialize::deserialize(buf)?;
-    };
+
     if let Some(method_ident) = init_method {
         Ok(quote! {
+            #[automatically_derived]
             impl #impl_generics #crate_name::de::BorshDeserialize for #name #ty_generics #where_clause {
                 fn deserialize(buf: &mut &[u8]) -> core::result::Result<Self, #crate_name::maybestd::io::Error> {
-                    #variant_idx
+                    #variant_consts
+                    let variant_idx: u8 = #crate_name::BorshDeserialize::deserialize(buf)?;
                     let mut return_value = match variant_idx {
                         #variant_arms
                         _ => {
@@ -133,9 +104,12 @@ pub fn enum_de(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2>
         })
     } else {
         Ok(quote! {
+            #[automatically_derived]
+            #[allow(non_upper_case_globals)]
             impl #impl_generics #crate_name::de::BorshDeserialize for #name #ty_generics #where_clause {
                 fn deserialize(buf: &mut &[u8]) -> core::result::Result<Self, #crate_name::maybestd::io::Error> {
-                    #variant_idx
+                    #variant_consts
+                    let variant_idx: u8 = #crate_name::BorshDeserialize::deserialize(buf)?;
                     let return_value = match variant_idx {
                         #variant_arms
                         _ => {

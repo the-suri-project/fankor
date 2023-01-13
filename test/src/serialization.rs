@@ -1,21 +1,27 @@
 use fankor::prelude::*;
 
-#[derive(Debug, Eq, PartialEq, FankorSerialize, FankorDeserialize, EnumDiscriminants)]
+#[derive(Debug, Eq, PartialEq, EnumDiscriminants, FankorSerialize, FankorDeserialize)]
 #[repr(u8)]
 enum X {
     A,
     #[deprecated]
     B,
-    C = 5,
+
+    #[discriminant = 5]
+    C,
     #[deprecated]
     D,
-    E(u64) = 20,
+
+    #[discriminant = 20]
+    E(u64),
     #[deprecated]
     F,
+
+    #[discriminant = 120]
     G {
         a: u64,
         b: u64,
-    } = 120,
+    },
 }
 
 #[cfg(test)]

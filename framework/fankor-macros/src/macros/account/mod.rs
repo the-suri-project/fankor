@@ -31,6 +31,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
     let repr_argument = if matches!(input, Item::Enum(_)) {
         quote! {
+            #[derive(EnumDiscriminants)]
             #[non_exhaustive]
             #[repr(u8)]
         }

@@ -1,18 +1,13 @@
+use crate::Result;
 use convert_case::{Boundary, Case, Converter};
 use proc_macro2::Ident;
 use quote::{format_ident, quote};
 use std::collections::HashSet;
-use std::ops::RangeInclusive;
-use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
 use syn::{
-    parse_macro_input, parse_quote, Attribute, Error, Expr, ExprParen, ExprTuple, FnArg,
-    GenericArgument, ImplItem, ItemImpl, Lit, MetaList, NestedMeta, PathArguments, RangeLimits,
-    ReturnType, Type,
+    parse_macro_input, parse_quote, Attribute, Error, FnArg, GenericArgument, ImplItem, ItemImpl,
+    Lit, MetaList, NestedMeta, PathArguments, ReturnType, Type,
 };
-
-use crate::utils::unwrap_int_from_literal;
-use crate::Result;
 
 pub struct Program {
     pub name: Ident,
@@ -20,9 +15,6 @@ pub struct Program {
     pub item: ItemImpl,
     pub methods: Vec<ProgramMethod>,
     pub fallback_method: Option<ProgramMethod>,
-
-    /// Discriminants that cannot be used in the account list.
-    pub removed_discriminants: Vec<RangeInclusive<u8>>,
 
     /// List of attributes to apply to the enum.
     pub attrs: Vec<Attribute>,
@@ -60,127 +52,11 @@ impl Program {
         let mut program = Program {
             name,
             snake_name,
-            item: item.clone(),
+            item,
             methods: vec![],
             fallback_method: None,
-            removed_discriminants: Vec::new(),
             attrs: Vec::new(),
         };
-
-        // Process attributes.
-        for attr in &item.attrs {
-            if attr.path.is_ident("removed_discriminants") {
-                let elems = match parse_macro_input::parse::<ExprTuple>(attr.tokens.clone().into())
-                {
-                    Ok(v) => v.elems,
-                    Err(e) => {
-                        match parse_macro_input::parse::<ExprParen>(attr.tokens.clone().into()) {
-                            Ok(v) => {
-                                let mut res = Punctuated::new();
-                                res.push(*v.expr);
-                                res
-                            }
-                            Err(_) => return Err(Error::new(attr.span(), e.to_string())),
-                        }
-                    }
-                };
-
-                for el in elems {
-                    match el {
-                        Expr::Lit(v) => {
-                            let value = unwrap_int_from_literal(v.lit)?.base10_parse()?;
-                            program.removed_discriminants.push(value..=value);
-                        }
-                        Expr::Range(v) => {
-                            if v.from.is_none() {
-                                return Err(Error::new(v.span(), "Range must have a start value"));
-                            }
-
-                            if v.to.is_none() {
-                                return Err(Error::new(v.span(), "Range must have an end value"));
-                            }
-
-                            let half_open = matches!(v.limits, RangeLimits::HalfOpen(_));
-
-                            let span = v.span();
-                            let from = match *v.from.unwrap() {
-                                Expr::Lit(v) => unwrap_int_from_literal(v.lit)?.base10_parse()?,
-                                _ => {
-                                    return Err(Error::new(
-                                        span,
-                                        "Only literal values are allowed in ranges",
-                                    ));
-                                }
-                            };
-
-                            let to = match *v.to.unwrap() {
-                                Expr::Lit(v) => unwrap_int_from_literal(v.lit)?.base10_parse()?,
-                                _ => {
-                                    return Err(Error::new(
-                                        span,
-                                        "Only literal values are allowed in ranges",
-                                    ));
-                                }
-                            };
-
-                            if half_open {
-                                program.removed_discriminants.push(from..=to - 1);
-                            } else {
-                                program.removed_discriminants.push(from..=to);
-                            }
-                        }
-                        _ => {
-                            return Err(Error::new(el.span(), "Unknown argument"));
-                        }
-                    }
-                }
-
-                continue;
-            }
-
-            program.attrs.push(attr.clone());
-        }
-
-        // Validate removed_codes attribute.
-        if !program.removed_discriminants.is_empty() {
-            let mut prev = program.removed_discriminants.first().unwrap();
-
-            assert!(
-                prev.start() <= prev.end(),
-                "Ranges must be defined in ascending order. {}..={} is not valid",
-                prev.start(),
-                prev.end()
-            );
-
-            for el in program.removed_discriminants.iter().skip(1) {
-                assert!(
-                    el.start() <= el.end(),
-                    "Ranges must be defined in ascending order. {}..={} is not valid",
-                    el.start(),
-                    el.end()
-                );
-                assert!(
-                    prev.end() < el.start(),
-                    "Ranges cannot collide. {}..={} and {}..={} are colliding",
-                    prev.start(),
-                    prev.end(),
-                    el.start(),
-                    el.end()
-                );
-                assert_ne!(
-                    prev.end() + 1,
-                    *el.start(),
-                    "Ranges can be collided. Replace {}..={} and {}..={} by {}..={}",
-                    prev.start(),
-                    prev.end(),
-                    el.start(),
-                    el.end(),
-                    prev.start(),
-                    el.end()
-                );
-                prev = el;
-            }
-        }
 
         program.parse_methods()?;
 

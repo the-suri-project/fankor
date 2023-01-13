@@ -1,17 +1,11 @@
-use crate::Result;
 use core::convert::TryFrom;
-use std::collections::HashSet;
-use std::fmt::Display;
-use std::str::FromStr;
-
-use crate::utils::unwrap_int_from_literal;
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use quote::quote;
-use syn::spanned::Spanned;
-use syn::{Attribute, Error, Expr, Fields, Ident, ItemEnum, Meta, Variant, WhereClause};
+use quote::{format_ident, quote};
+use syn::{Attribute, Fields, Ident, ItemEnum, Meta, WhereClause};
 
 pub fn enum_ser(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2> {
     let name = &input.ident;
+    let discriminant_name = format_ident!("{}Discriminant", name);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut where_clause = where_clause.map_or_else(
         || WhereClause {
@@ -23,42 +17,11 @@ pub fn enum_ser(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2
 
     let mut variant_idx_body = TokenStream2::new();
     let mut fields_body = TokenStream2::new();
-    let mut variant_idx = 0u8;
-    let mut used_discriminants = HashSet::new();
-    let mut is_last_deprecated = false;
 
     for variant in input.variants.iter() {
         let variant_ident = &variant.ident;
         let mut variant_header = TokenStream2::new();
         let mut variant_body = TokenStream2::new();
-
-        let is_deprecated = is_deprecated(&variant.attrs);
-        let discriminant = get_discriminant(variant)?;
-
-        // Calculate the discriminant.
-        if let Some(v) = discriminant {
-            variant_idx = v;
-        } else if is_last_deprecated {
-            return Err(Error::new(
-                variant.span(),
-                format!(
-                    "After a deprecated entity you must explicitly define the variant discriminant: = {}",
-                    variant_idx
-                ),
-            ));
-        }
-
-        if used_discriminants.contains(&variant_idx) {
-            return Err(Error::new(
-                variant.span(),
-                format!(
-                    "The discriminant attribute is already in use: {}",
-                    variant_idx
-                ),
-            ));
-        }
-
-        used_discriminants.insert(variant_idx);
 
         match &variant.fields {
             Fields::Named(fields) => {
@@ -83,7 +46,7 @@ pub fn enum_ser(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2
                 }
                 variant_header = quote! { { #variant_header }};
                 variant_idx_body.extend(quote!(
-                    #name::#variant_ident { .. } => #variant_idx,
+                    #name::#variant_ident { .. } => #discriminant_name::#variant_ident.code(),
                 ));
             }
             Fields::Unnamed(fields) => {
@@ -114,12 +77,12 @@ pub fn enum_ser(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2
                 }
                 variant_header = quote! { ( #variant_header )};
                 variant_idx_body.extend(quote!(
-                    #name::#variant_ident(..) => #variant_idx,
+                    #name::#variant_ident(..) => #discriminant_name::#variant_ident.code(),
                 ));
             }
             Fields::Unit => {
                 variant_idx_body.extend(quote!(
-                    #name::#variant_ident => #variant_idx,
+                    #name::#variant_ident => #discriminant_name::#variant_ident.code(),
                 ));
             }
         }
@@ -129,12 +92,10 @@ pub fn enum_ser(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2
                 #variant_body
             }
         ));
-
-        variant_idx += 1;
-        is_last_deprecated = is_deprecated;
     }
 
     Ok(quote! {
+        #[automatically_derived]
         impl #impl_generics #crate_name::ser::BorshSerialize for #name #ty_generics #where_clause {
             fn serialize<W: #crate_name::maybestd::io::Write>(&self, writer: &mut W) -> core::result::Result<(), #crate_name::maybestd::io::Error> {
                 let variant_idx: u8 = match self {
@@ -160,37 +121,4 @@ pub fn contains_skip(attrs: &[Attribute]) -> bool {
         }
     }
     false
-}
-
-pub fn is_deprecated(attrs: &[Attribute]) -> bool {
-    for attr in attrs.iter() {
-        if let Ok(Meta::Path(path)) = attr.parse_meta() {
-            if path.is_ident("deprecated") {
-                return true;
-            }
-        }
-    }
-    false
-}
-
-pub fn get_discriminant<N>(variant: &Variant) -> Result<Option<N>>
-where
-    N: FromStr,
-    N::Err: Display,
-{
-    let (_, expr) = match &variant.discriminant {
-        Some(v) => v,
-        None => return Ok(None),
-    };
-
-    match expr {
-        Expr::Lit(v) => {
-            let literal = unwrap_int_from_literal(v.lit.clone())?;
-            Ok(Some(literal.base10_parse()?))
-        }
-        _ => Err(Error::new(
-            variant.span(),
-            "Discriminant must be a literal number",
-        )),
-    }
 }

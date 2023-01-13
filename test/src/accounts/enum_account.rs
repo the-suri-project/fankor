@@ -4,13 +4,15 @@ use fankor::prelude::*;
 #[account(base = "ProgramAccount")]
 #[derive(AccountSize, AccountOffsets)]
 pub enum EnumAccountData {
-    A = 5,
-    #[deprecated]
+    #[discriminant = 3]
+    A ,
     B(u32, u64),
+    
+    #[discriminant = 5]
     C {
         value1: u32,
         value2: String,
-    } = 3,
+    } ,
 }
 
 #[account(base = "ProgramAccount")]
@@ -21,7 +23,7 @@ pub enum ZeroCopyEnumAccountData {
     C { value1: u32, value2: String },
 }
 
-#[derive(FankorZeroCopy)]
+#[derive(EnumDiscriminants, FankorZeroCopy)]
 pub enum ZeroCopyEnumWithoutValues {
     A,
     B,

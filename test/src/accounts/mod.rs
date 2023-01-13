@@ -9,6 +9,7 @@ mod struct_account;
 #[accounts]
 pub enum ProgramAccount {
     StructAccountData,
+    StructAccountData2,
     ZeroCopyStructAccountData,
     EnumAccountData,
     ZeroCopyEnumAccountData = 10,

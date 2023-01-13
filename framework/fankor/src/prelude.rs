@@ -23,6 +23,7 @@ pub use solana_program::sysvar::rewards::Rewards;
 pub use solana_program::sysvar::slot_hashes::SlotHashes;
 pub use solana_program::sysvar::slot_history::SlotHistory;
 pub use solana_program::sysvar::stake_history::StakeHistory;
+pub use static_assertions::const_assert;
 #[cfg(not(feature = "no-entrypoint"))]
 pub use solana_security_txt::security_txt;
 #[cfg(feature = "token-program")]

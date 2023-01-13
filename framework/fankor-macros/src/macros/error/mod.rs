@@ -109,6 +109,13 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             } = &v;
             let discriminant = {
                 if let Some(v) = code {
+                    if *v < u32_index {
+                        return Err(Error::new(
+                            span,
+                            "Errors must always be sorted from lowest to highest discriminant",
+                        ));
+                    }
+
                     u32_index = *v;
                 }
 

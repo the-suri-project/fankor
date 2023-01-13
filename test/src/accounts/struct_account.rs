@@ -9,6 +9,12 @@ pub struct StructAccountData {
 }
 
 #[account(base = "ProgramAccount")]
+#[derive(AccountSize, AccountOffsets)]
+pub struct StructAccountData2 {
+    pub value: String,
+}
+
+#[account(base = "ProgramAccount")]
 #[derive(AccountSize, AccountOffsets, FankorZeroCopy)]
 pub struct ZeroCopyStructAccountData {
     pub value1: u32,

@@ -6,14 +6,14 @@ pub enum Errors {
     A,
 
     #[msg("D: {}", a)]
-    D {
-        a: u64,
-        b: u64,
-    } = 50,
+    #[discriminant = 50]
+    D { a: u64, b: u64 },
 
-    C = 78,
+    #[discriminant = 77]
+    C,
 
     #[msg("A: {}", v0)]
     #[deprecated]
-    B(u64, u64, u64) = 77,
+    #[discriminant = 78]
+    B(u64, u64, u64),
 }

@@ -166,7 +166,7 @@ pub fn account_offsets(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 
 /// Generates a secondary enumeration that sets the discriminant of an enum.
-#[proc_macro_derive(EnumDiscriminants)]
+#[proc_macro_derive(EnumDiscriminants, attributes(discriminant))]
 pub fn enum_discriminants(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 

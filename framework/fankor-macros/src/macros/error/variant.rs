@@ -1,4 +1,4 @@
-use crate::macros::serialize::get_discriminant;
+use crate::macros::enum_discriminants::get_discriminant;
 use proc_macro2::Ident;
 use quote::quote;
 use syn::punctuated::Punctuated;
@@ -20,8 +20,12 @@ impl ErrorVariant {
     // CONSTRUCTORS -----------------------------------------------------------
 
     /// Creates a new instance of the ErrorAttributes struct from the given attributes.
-    pub fn from(variant: Variant) -> Result<ErrorVariant> {
+    pub fn from(mut variant: Variant) -> Result<ErrorVariant> {
         let code = get_discriminant(&variant)?;
+        variant
+            .attrs
+            .retain(|attr| !attr.path.is_ident("discriminant"));
+
         let mut error_variant = ErrorVariant {
             name: variant.ident,
             message: None,
