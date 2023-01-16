@@ -1,6 +1,6 @@
 {
   "name": "@suri-project/fankor",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "The TypeScript client for the Fankor Framework",
   "author": "Julio Treviño Páez <julio@treviware.com>",
   "license": "(MIT OR Apache-2.0)",
@@ -32,9 +32,9 @@
     "test": "ts-mocha --project tsconfig.cjs.json src/**/*.spec.ts"
   },
   "dependencies": {
+    "@solana/web3.js": "^1.73.0",
     "bn.js": "^5.2.1",
-    "text-encoding-utf-8": "^1.0.2",
-    "@solana/web3.js": "^1.73.0"
+    "text-encoding-utf-8": "^1.0.2"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^22.0.2",
