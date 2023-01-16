@@ -9,3 +9,5 @@ export * from './strings';
 export * from './structs';
 export * from './unsigned';
 export * from './vectors';
+export * from './public_keys';
+export * from './keypairs';

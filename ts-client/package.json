@@ -33,7 +33,8 @@
   },
   "dependencies": {
     "bn.js": "^5.2.1",
-    "text-encoding-utf-8": "^1.0.2"
+    "text-encoding-utf-8": "^1.0.2",
+    "@solana/web3.js": "^1.73.0"
   },
   "devDependencies": {
     "@rollup/plugin-commonjs": "^22.0.2",
