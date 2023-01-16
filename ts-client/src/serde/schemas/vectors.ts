@@ -3,6 +3,7 @@ import { FnkBorshWriter } from '../serializer';
 import { FnkBorshError } from '../errors';
 import { U32Schema } from './unsigned';
 import { FnkBorshSchema } from '../borsh';
+import { InferFnkBorshSchemaInner } from './maps';
 
 export class ByteVecSchema implements FnkBorshSchema<Uint8Array> {
     // METHODS ----------------------------------------------------------------
@@ -37,12 +38,12 @@ export const ByteVec = new ByteVecSchema();
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-export function Vec<T, S extends FnkBorshSchema<T>>(schema: S) {
+export function Vec<S extends FnkBorshSchema<any>>(schema: S) {
     return new VecSchema(schema);
 }
 
-export class VecSchema<T, S extends FnkBorshSchema<T>>
-    implements FnkBorshSchema<T[]>
+export class VecSchema<S extends FnkBorshSchema<any>>
+    implements FnkBorshSchema<InferFnkBorshSchemaInner<S>[]>
 {
     readonly schema: S;
 
@@ -54,7 +55,7 @@ export class VecSchema<T, S extends FnkBorshSchema<T>>
 
     // METHODS ----------------------------------------------------------------
 
-    serialize(writer: FnkBorshWriter, value: T[]) {
+    serialize(writer: FnkBorshWriter, value: InferFnkBorshSchemaInner<S>[]) {
         new U32Schema().serialize(writer, value.length);
 
         for (const item of value) {
@@ -62,9 +63,9 @@ export class VecSchema<T, S extends FnkBorshSchema<T>>
         }
     }
 
-    deserialize(reader: FnkBorshReader): T[] {
+    deserialize(reader: FnkBorshReader): InferFnkBorshSchemaInner<S>[] {
         const size = new U32Schema().deserialize(reader);
-        const result: T[] = [];
+        const result: InferFnkBorshSchemaInner<S>[] = [];
 
         for (let i = 0; i < size; i++) {
             result.push(this.schema.deserialize(reader));

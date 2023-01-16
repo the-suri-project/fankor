@@ -2,15 +2,16 @@ import { FnkBorshReader } from '../deserializer';
 import { FnkBorshWriter } from '../serializer';
 import { FnkBorshError } from '../errors';
 import { FnkBorshSchema } from '../borsh';
+import { InferFnkBorshSchemaInner } from './maps';
 
 export type RustOption<T> = { type: 'some'; value: T } | { type: 'none' };
 
-export function Option<T, S extends FnkBorshSchema<T>>(schema: S) {
+export function Option<S extends FnkBorshSchema<any>>(schema: S) {
     return new OptionSchema(schema);
 }
 
-export class OptionSchema<T, S extends FnkBorshSchema<T>>
-    implements FnkBorshSchema<RustOption<T>>
+export class OptionSchema<S extends FnkBorshSchema<any>>
+    implements FnkBorshSchema<RustOption<InferFnkBorshSchemaInner<S>>>
 {
     readonly schema: S;
 
@@ -22,7 +23,10 @@ export class OptionSchema<T, S extends FnkBorshSchema<T>>
 
     // METHODS ----------------------------------------------------------------
 
-    serialize(writer: FnkBorshWriter, value: RustOption<T>) {
+    serialize(
+        writer: FnkBorshWriter,
+        value: RustOption<InferFnkBorshSchemaInner<S>>
+    ) {
         if (value.type === 'none') {
             writer.writeByte(0);
         } else {
@@ -31,7 +35,9 @@ export class OptionSchema<T, S extends FnkBorshSchema<T>>
         }
     }
 
-    deserialize(reader: FnkBorshReader): RustOption<T> {
+    deserialize(
+        reader: FnkBorshReader
+    ): RustOption<InferFnkBorshSchemaInner<S>> {
         const discriminant = reader.readByte();
 
         if (discriminant === 0) {
