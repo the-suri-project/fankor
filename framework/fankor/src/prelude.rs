@@ -4,6 +4,8 @@ pub use crate::macros::*;
 pub use crate::models::types::*;
 pub use crate::models::*;
 pub use crate::traits::*;
+#[cfg(feature = "ts-gen")]
+pub use crate::ts_gen::*;
 pub use borsh;
 pub use bs58;
 pub use fankor_macros::*;
@@ -23,16 +25,18 @@ pub use solana_program::sysvar::rewards::Rewards;
 pub use solana_program::sysvar::slot_hashes::SlotHashes;
 pub use solana_program::sysvar::slot_history::SlotHistory;
 pub use solana_program::sysvar::stake_history::StakeHistory;
-pub use static_assertions::const_assert;
 #[cfg(not(feature = "no-entrypoint"))]
 pub use solana_security_txt::security_txt;
 #[cfg(feature = "token-program")]
 pub use spl_associated_token_account;
 #[cfg(feature = "token-program")]
 pub use spl_token;
+pub use static_assertions::const_assert;
 
 #[cfg(feature = "test")]
 pub use crate::tests::*;
+#[cfg(feature = "ts-gen")]
+pub use lazy_static::lazy_static;
 #[cfg(feature = "test")]
 pub use solana_program_runtime;
 #[cfg(feature = "test")]

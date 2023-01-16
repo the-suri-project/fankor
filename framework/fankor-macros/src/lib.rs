@@ -280,3 +280,21 @@ pub fn fankor_base(input: TokenStream) -> TokenStream {
 
     result
 }
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/// This macro defines a constant in the program. This is used to map it to
+/// the TypeScript generated code.
+#[proc_macro_attribute]
+pub fn constant(args: TokenStream, input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as Item);
+
+    assert!(args.is_empty(), "This macro does not accept arguments");
+
+    match macros::constant::processor(input) {
+        Ok(v) => v,
+        Err(e) => e.to_compile_error().into(),
+    }
+}

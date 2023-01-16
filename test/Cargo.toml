@@ -14,6 +14,7 @@ crate-type = ["cdylib", "lib"]
 no-entrypoint = ["fankor/no-entrypoint"]
 library = ["fankor/library"]
 test = ["fankor/test"]
+ts-gen = ["fankor/ts-gen"]
 
 [dependencies]
 fankor = { path = "../framework/fankor", features = ["token-program", "metadata-program"] }

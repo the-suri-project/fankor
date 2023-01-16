@@ -6,4 +6,6 @@ pub mod prelude;
 #[cfg(feature = "test")]
 pub mod tests;
 pub mod traits;
+#[cfg(feature = "ts-gen")]
+pub mod ts_gen;
 mod utils;
