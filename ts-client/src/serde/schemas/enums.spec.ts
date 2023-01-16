@@ -1,15 +1,15 @@
 import assert from 'assert';
-import { Struct } from './structs';
+import { TStruct } from './structs';
 import { FnkBorshWriter } from '../serializer';
 import { FnkBorshReader } from '../deserializer';
 import { TString } from './strings';
 import { U8 } from './unsigned';
-import { Enum } from './enums';
+import { TEnum } from './enums';
 import { Bool } from './bools';
 
 describe('Enums Tests', () => {
     it('test_serialize_deserialize_data', () => {
-        const schema = Enum([
+        const schema = TEnum([
             [0, 'A', TString],
             [1, 'B', U8],
         ] as const);
@@ -64,9 +64,9 @@ describe('Enums Tests', () => {
     });
 
     it('test_serialize_deserialize_real', () => {
-        const schemaA = Struct([['value', U8]] as const);
-        const schemaB = Struct([['value', Bool]] as const);
-        const schema = Enum([
+        const schemaA = TStruct([['value', U8]] as const);
+        const schemaB = TStruct([['value', Bool]] as const);
+        const schema = TEnum([
             [0, 'A', schemaA],
             [1, 'B', schemaB],
         ] as const);

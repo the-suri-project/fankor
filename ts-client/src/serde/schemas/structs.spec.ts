@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { Struct } from './structs';
+import { TStruct } from './structs';
 import { FnkBorshWriter } from '../serializer';
 import { FnkBorshReader } from '../deserializer';
 import { TString } from './strings';
@@ -9,7 +9,7 @@ import { Bool } from './bools';
 describe('Structs Tests', () => {
     it('test_serialize_deserialize_empty', () => {
         const data = {};
-        const schema = Struct([] as const);
+        const schema = TStruct([] as const);
         const writer = new FnkBorshWriter();
         schema.serialize(writer, data);
 
@@ -33,7 +33,7 @@ describe('Structs Tests', () => {
             b: 1,
             c: true,
         };
-        const schema = Struct([
+        const schema = TStruct([
             ['a', TString],
             ['b', U8],
             ['c', Bool],
@@ -64,9 +64,9 @@ describe('Structs Tests', () => {
             },
             d: true,
         };
-        const schema = Struct([
+        const schema = TStruct([
             ['a', TString],
-            ['b', Struct([['c', U8]] as const)],
+            ['b', TStruct([['c', U8]] as const)],
             ['d', Bool],
         ] as const);
         const writer = new FnkBorshWriter();

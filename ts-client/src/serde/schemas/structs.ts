@@ -2,7 +2,7 @@ import { FnkBorshReader } from '../deserializer';
 import { FnkBorshWriter } from '../serializer';
 import { FnkBorshSchema } from '../borsh';
 
-export function Struct<S extends ReadonlyArray<StructField>>(
+export function TStruct<S extends ReadonlyArray<StructField>>(
     schema: S
 ): StructSchema<S> {
     return new StructSchema<S>(schema);

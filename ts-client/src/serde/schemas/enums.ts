@@ -4,7 +4,7 @@ import { FnkBorshError } from '../errors';
 import { FnkBorshSchema } from '../borsh';
 import { UnwrapSchemaType } from './structs';
 
-export function Enum<S extends ReadonlyArray<EnumVariant>>(
+export function TEnum<S extends ReadonlyArray<EnumVariant>>(
     schema: S
 ): EnumSchema<S> {
     return new EnumSchema<S>(schema);
