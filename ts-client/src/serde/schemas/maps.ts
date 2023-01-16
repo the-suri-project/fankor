@@ -6,20 +6,19 @@ import { FnkBorshSchema } from '../borsh';
 export type RustMap<K, V> = { key: K; value: V }[];
 
 export function TMap<
-    K,
-    V,
-    Sk extends FnkBorshSchema<K>,
-    Sv extends FnkBorshSchema<V>
+    Sk extends FnkBorshSchema<any>,
+    Sv extends FnkBorshSchema<any>
 >({ keySchema, valueSchema }: { keySchema: Sk; valueSchema: Sv }) {
     return new MapSchema(keySchema, valueSchema);
 }
 
 export class MapSchema<
-    K,
-    V,
-    Sk extends FnkBorshSchema<K>,
-    Sv extends FnkBorshSchema<V>
-> implements FnkBorshSchema<RustMap<K, V>>
+    Sk extends FnkBorshSchema<any>,
+    Sv extends FnkBorshSchema<any>
+> implements
+        FnkBorshSchema<
+            RustMap<InferFnkBorshSchemaInner<Sk>, InferFnkBorshSchemaInner<Sv>>
+        >
 {
     readonly keySchema: Sk;
     readonly valueSchema: Sv;
@@ -33,7 +32,13 @@ export class MapSchema<
 
     // METHODS ----------------------------------------------------------------
 
-    serialize(writer: FnkBorshWriter, value: RustMap<K, V>) {
+    serialize(
+        writer: FnkBorshWriter,
+        value: RustMap<
+            InferFnkBorshSchemaInner<Sk>,
+            InferFnkBorshSchemaInner<Sv>
+        >
+    ) {
         new U32Schema().serialize(writer, value.length);
 
         for (const item of value) {
@@ -42,9 +47,14 @@ export class MapSchema<
         }
     }
 
-    deserialize(reader: FnkBorshReader): RustMap<K, V> {
+    deserialize(
+        reader: FnkBorshReader
+    ): RustMap<InferFnkBorshSchemaInner<Sk>, InferFnkBorshSchemaInner<Sv>> {
         const size = new U32Schema().deserialize(reader);
-        const result: RustMap<K, V> = [];
+        const result: RustMap<
+            InferFnkBorshSchemaInner<Sk>,
+            InferFnkBorshSchemaInner<Sv>
+        > = [];
 
         for (let i = 0; i < size; i++) {
             const key = this.keySchema.deserialize(reader);
@@ -59,3 +69,7 @@ export class MapSchema<
         return result;
     }
 }
+
+export type InferFnkBorshSchemaInner<T> = T extends FnkBorshSchema<infer T2>
+    ? T2
+    : unknown;
