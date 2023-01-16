@@ -57,8 +57,6 @@ export class FnkURange {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-export const TFnkURange = () => new FnkURangeSchema();
-
 export class FnkURangeSchema implements FnkBorshSchema<FnkURange> {
     // METHODS ----------------------------------------------------------------
 
@@ -111,6 +109,8 @@ export class FnkURangeSchema implements FnkBorshSchema<FnkURange> {
     }
 }
 
+export const TFnkURange = () => new FnkURangeSchema();
+
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
@@ -161,10 +161,9 @@ export class FnkRange {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-export const TFnkRange = () => new FnkRangeSchema();
-
 export class FnkRangeSchema implements FnkBorshSchema<FnkRange> {
     // METHODS ----------------------------------------------------------------
+
     serialize(writer: FnkBorshWriter, value: FnkRange) {
         const fnkIntSchema = new FnkIntSchema();
         fnkIntSchema.serialize(writer, value.from);
@@ -179,3 +178,5 @@ export class FnkRangeSchema implements FnkBorshSchema<FnkRange> {
         return new FnkRange(from, to);
     }
 }
+
+export const TFnkRange = () => new FnkRangeSchema();

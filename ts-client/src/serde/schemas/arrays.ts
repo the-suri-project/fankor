@@ -2,6 +2,7 @@ import { FnkBorshReader } from '../deserializer';
 import { FnkBorshWriter } from '../serializer';
 import { FnkBorshError } from '../errors';
 import { FnkBorshSchema } from '../borsh';
+import { InferFnkBorshSchemaInner } from './maps';
 
 export const ByteArray = (size: number) => new ByteArraySchema(size);
 
@@ -47,7 +48,7 @@ export class ByteArraySchema implements FnkBorshSchema<Uint8Array> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-export function TArray<T, S extends FnkBorshSchema<T>>({
+export function TArray<S extends FnkBorshSchema<any>>({
     schema,
     size,
 }: {
@@ -57,8 +58,8 @@ export function TArray<T, S extends FnkBorshSchema<T>>({
     return new ArraySchema(schema, size);
 }
 
-export class ArraySchema<T, S extends FnkBorshSchema<T>>
-    implements FnkBorshSchema<T[]>
+export class ArraySchema<S extends FnkBorshSchema<any>>
+    implements FnkBorshSchema<InferFnkBorshSchemaInner<S>[]>
 {
     readonly schema: S;
     readonly size: number;
@@ -72,7 +73,7 @@ export class ArraySchema<T, S extends FnkBorshSchema<T>>
 
     // METHODS ----------------------------------------------------------------
 
-    serialize(writer: FnkBorshWriter, value: T[]) {
+    serialize(writer: FnkBorshWriter, value: InferFnkBorshSchemaInner<S>[]) {
         if (value.length !== this.size) {
             throw new Error(
                 `ArraySchema: expected ${this.size} items, got ${value.length}`
@@ -84,8 +85,8 @@ export class ArraySchema<T, S extends FnkBorshSchema<T>>
         }
     }
 
-    deserialize(reader: FnkBorshReader): T[] {
-        const result: T[] = new Array(this.size);
+    deserialize(reader: FnkBorshReader): InferFnkBorshSchemaInner<S>[] {
+        const result: InferFnkBorshSchemaInner<S>[] = new Array(this.size);
 
         for (let i = 0; i < this.size; i++) {
             result.push(this.schema.deserialize(reader));
