@@ -3,6 +3,40 @@ import { FnkBorshReader } from '../../deserializer';
 import { FnkUIntSchema } from './unsigned';
 import { FnkBorshSchema } from '../../borsh';
 import { InferFnkBorshSchemaInner } from '../maps';
+import { FnkBorshError } from '../../errors';
+
+export class FnkByteVecSchema implements FnkBorshSchema<Uint8Array> {
+    // METHODS ----------------------------------------------------------------
+
+    serialize(writer: FnkBorshWriter, value: Uint8Array) {
+        new FnkUIntSchema().serialize(writer, value.length);
+
+        const buffer = Buffer.from(value);
+        writer.writeBuffer(buffer);
+    }
+
+    deserialize(reader: FnkBorshReader): Uint8Array {
+        const size = new FnkUIntSchema().deserialize(reader).toNumber();
+        const endIndex = reader.offset + size;
+
+        if (endIndex > reader.buffer.length) {
+            throw new FnkBorshError(
+                `Expected buffer length ${size} isn't within bounds`
+            );
+        }
+
+        const buffer = reader.buffer.slice(reader.offset, endIndex);
+        reader.offset += size;
+
+        return buffer.subarray();
+    }
+}
+
+export const FnkByteVec = new FnkByteVecSchema();
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 export function FnkVec<S extends FnkBorshSchema<any>>(schema: S) {
     return new FnkVecSchema(schema);

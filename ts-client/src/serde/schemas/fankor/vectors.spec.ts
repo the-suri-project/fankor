@@ -1,7 +1,7 @@
 import assert from 'assert';
 import { FnkBorshWriter } from '../../serializer';
 import { FnkBorshReader } from '../../deserializer';
-import { FnkVec } from './vectors';
+import { FnkByteVec, FnkVec } from './vectors';
 import { TString } from '../strings';
 import { U8 } from '../unsigned';
 
@@ -101,5 +101,35 @@ describe('FnkVec Tests', () => {
             actual[1] === expected[1],
             `[1]: ${actual[1]} != ${expected[1]}`
         );
+    });
+
+    it('test_serialize_deserialize_bytes', () => {
+        const schema = FnkByteVec;
+        const data = new Uint8Array([0, 1, 2, 3]);
+        const writer = new FnkBorshWriter();
+        schema.serialize(writer, data);
+
+        let buffer = writer.buffer.slice(0, writer.length);
+        assert(buffer[0] === 4);
+        assert(buffer[1] === 0);
+        assert(buffer[2] === 1);
+        assert(buffer[3] === 2);
+        assert(buffer[4] === 3);
+        assert(buffer.length === data.length + 1);
+
+        const reader = new FnkBorshReader(buffer);
+        let actual = schema.deserialize(reader);
+        let expected = data;
+        assert(
+            actual.length === expected.length,
+            `Length: ${actual.length} != ${expected.length}`
+        );
+
+        for (let i = 0; i < expected.length; i++) {
+            assert(
+                actual[i] === expected[i],
+                `[${i}]: ${actual[i]} != ${expected[i]}`
+            );
+        }
     });
 });
