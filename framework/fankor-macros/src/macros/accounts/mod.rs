@@ -1,9 +1,8 @@
 use convert_case::{Boundary, Case, Converter};
 use quote::{format_ident, quote};
 use std::collections::HashSet;
-use syn::parse_quote::ParseQuote;
 use syn::spanned::Spanned;
-use syn::{parse_quote, Attribute, AttributeArgs, Error, Item};
+use syn::{parse_quote, AttributeArgs, Error, Item};
 
 use crate::Result;
 
@@ -31,11 +30,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
     let name = enum_item.ident;
     let name_str = name.to_string();
-    let discriminant_name = if let Some(accounts_type_name) = &arguments.accounts_type_name {
-        format_ident!("{}Discriminant", accounts_type_name)
-    } else {
-        format_ident!("{}Discriminant", name)
-    };
+    let discriminant_name = format_ident!("{}Discriminant", name);
     let attrs = &arguments.attrs;
 
     assert!(
@@ -82,13 +77,12 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let mut unwrap_methods = Vec::with_capacity(variants.len());
     let mut as_ref_methods = Vec::with_capacity(variants.len());
     let mut as_mut_methods = Vec::with_capacity(variants.len());
-    let mut discriminant_variants = Vec::with_capacity(variants.len());
     let mut from_methods = Vec::with_capacity(variants.len());
     let mut serialize_entries = Vec::with_capacity(variants.len());
     let mut deserialize_entries = Vec::with_capacity(variants.len());
     let mut discriminants_as_list = Vec::with_capacity(variants.len());
     let mut variant_consts = Vec::with_capacity(variants.len());
-    for variant in variants {
+    for variant in &variants {
         let AccountVariant {
             name: variant_name,
             attributes,
@@ -149,10 +143,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             }
         });
 
-        discriminant_variants.push(quote! {
-            #name::#variant_name(..) => #discriminant_name::#variant_name
-        });
-
         from_methods.push(quote! {
             impl From<#variant_name> for #name {
                 fn from(v: #variant_name) -> Self {
@@ -189,11 +179,9 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             }
         });
 
-        if arguments.accounts_type_name.is_some() {
-            discriminants_as_list.push(quote! {
-                #discriminant_name::#variant_name.code()
-            });
-        }
+        discriminants_as_list.push(quote! {
+            #discriminant_name::#variant_name.code()
+        });
 
         // Insert discriminant.
         used_discriminants.insert(const_name);
@@ -207,11 +195,55 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         quote! {}
     };
 
-    let discriminant_method = if arguments.accounts_type_name.is_some() {
+    let enum_discriminants = if let Some(accounts_type_name) = &arguments.accounts_type_name {
+        let mut fields = Vec::new();
+        let mut codes = Vec::new();
+        let mut discriminants = Vec::new();
+        let accounts_type_discriminant_name = format_ident!("{}Discriminant", accounts_type_name);
+
+        for variant in &variants {
+            let variant_ident = &variant.name;
+
+            fields.push(quote! {
+                #variant_ident
+            });
+
+            discriminants.push(quote!(
+                Self::#variant_ident{..} => #discriminant_name::#variant_ident
+            ));
+
+            codes.push(quote!(
+                Self::#variant_ident => #accounts_type_discriminant_name::#variant_ident.code()
+            ));
+        }
+
         quote! {
-            pub const fn discriminant(&self) -> #discriminant_name {
-                match self {
-                    #(#discriminant_variants,)*
+            #[allow(dead_code)]
+            #[automatically_derived]
+            #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+            #[non_exhaustive]
+            #[repr(u8)]
+            #visibility enum #discriminant_name {
+                #(#fields,)*
+            }
+
+            #[automatically_derived]
+            impl #discriminant_name {
+                #[inline(always)]
+                pub const fn code(&self) -> u8 {
+                    match self {
+                        #(#codes,)*
+                    }
+                }
+            }
+
+            #[automatically_derived]
+            impl #impl_generics #name #ty_generics #where_clause {
+                #[inline(always)]
+                pub const fn discriminant(&self) -> #discriminant_name {
+                    match self {
+                        #(#discriminants,)*
+                    }
                 }
             }
         }
@@ -240,6 +272,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
         #(#attrs)*
         #derive_enum_discriminants
+        #[derive(FankorSerialize, FankorDeserialize, TsGen)]
         #[non_exhaustive]
         #[repr(u8)]
         #visibility enum #name #ty_generics #where_clause {
@@ -253,40 +286,9 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             #(#as_ref_methods)*
 
             #(#as_mut_methods)*
-
-            #discriminant_method
         }
 
         #(#from_methods)*
-
-        impl #impl_generics borsh::BorshSerialize for #name #ty_generics #where_clause {
-            fn serialize<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-                match self {
-                    #(#serialize_entries)*
-                }
-
-                Ok(())
-            }
-        }
-
-        #[allow(non_upper_case_globals)]
-        impl #impl_generics borsh::BorshDeserialize for #name #ty_generics #where_clause {
-            fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
-                // buf_aux exists to not move the original buf for getting the discriminant
-                // due to account deserializers will handle them too.
-                let mut buf_aux = *buf;
-                let discriminant: u8 = borsh::BorshDeserialize::deserialize(&mut buf_aux)?;
-
-                #(#variant_consts)*
-                match discriminant {
-                    #(#deserialize_entries)*
-                    _ => Err(std::io::Error::new(
-                        std::io::ErrorKind::InvalidData,
-                        "Invalid discriminant value",
-                    )),
-                }
-            }
-        }
 
         #[automatically_derived]
         impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
@@ -329,6 +331,8 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 discriminants.binary_search(&discriminant).is_ok()
             }
         }
+
+        #enum_discriminants
     };
 
     Ok(result.into())
