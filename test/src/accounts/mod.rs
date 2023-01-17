@@ -20,5 +20,6 @@ pub enum ProgramAccountSubSet {
 
 #[accounts(base = "ProgramAccount")]
 pub enum ProgramAccountZeroSubSet {
+    StructAccountData,
     ZeroCopyStructAccountData,
 }

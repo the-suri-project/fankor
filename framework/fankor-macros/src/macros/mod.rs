@@ -12,4 +12,5 @@ pub mod instruction_accounts;
 pub mod program;
 pub mod serialize;
 pub mod setup;
+pub mod ts_gen;
 pub mod zero_copy;

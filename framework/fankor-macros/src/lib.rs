@@ -85,6 +85,7 @@ pub fn zero_copy(input: TokenStream) -> TokenStream {
 /// - `Accounts`
 /// - `BorshSerialize`
 /// - `BorshDeserialize`
+/// - `TsGen`
 #[proc_macro_attribute]
 pub fn accounts(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
@@ -276,6 +277,22 @@ pub fn constant(args: TokenStream, input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 
     match macros::constant::processor(args, input) {
+        Ok(v) => v,
+        Err(e) => e.to_compile_error().into(),
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+/// This macro defines a constant in the program. This is used to map it to
+/// the TypeScript generated code.
+#[proc_macro_derive(TsGen)]
+pub fn ts_gen(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as Item);
+
+    match macros::ts_gen::processor(input) {
         Ok(v) => v,
         Err(e) => e.to_compile_error().into(),
     }

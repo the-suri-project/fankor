@@ -20,10 +20,9 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         quote! {}
     };
 
-    // TODO add TsGen
     let result = quote! {
         #enum_discriminant_attr
-        #[derive(FankorSerialize, FankorDeserialize, FankorZeroCopy)]
+        #[derive(FankorSerialize, FankorDeserialize, FankorZeroCopy, TsGen)]
         #input
     };
 
