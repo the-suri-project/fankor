@@ -1,9 +1,17 @@
 use crate::Result;
 use quote::{format_ident, quote};
 use syn::spanned::Spanned;
-use syn::{Error, Item};
+use syn::{AttributeArgs, Error, Item};
 
-pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
+pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenStream> {
+    // Process arguments.
+    if !args.is_empty() {
+        return Err(Error::new(
+            input.span(),
+            "constant macro does not accept arguments",
+        ));
+    }
+
     let (constant_name, constant_value) = match &input {
         Item::Const(v) => (&v.ident, &v.expr),
         _ => {

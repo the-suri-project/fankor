@@ -1,13 +1,15 @@
 use convert_case::{Boundary, Case, Converter};
 use quote::{format_ident, quote};
 use std::collections::HashSet;
+use syn::parse_quote::ParseQuote;
 use syn::spanned::Spanned;
-use syn::{AttributeArgs, Error, Item};
+use syn::{parse_quote, Attribute, AttributeArgs, Error, Item};
 
 use crate::Result;
 
 use crate::macros::accounts::arguments::AccountsArguments;
 use crate::macros::accounts::variant::AccountVariant;
+use crate::macros::enum_discriminants::get_discriminant;
 
 mod arguments;
 mod variant;
@@ -41,12 +43,34 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         "Accounts enum must have at least one variant"
     );
 
+    // Ensure first variant has discriminant >= 1.
+    let discriminant = get_discriminant::<u8>(&enum_item.variants[0])?;
+
     // Parse fields taking into account whether any variant is deprecated or not.
-    let variants = enum_item
+    let mut variants = enum_item
         .variants
         .into_iter()
         .map(AccountVariant::from)
         .collect::<Result<Vec<_>>>()?;
+
+    match discriminant {
+        Some(v) => {
+            if v == 0 {
+                return Err(Error::new(
+                    variants[0].name.span(),
+                    "First variant must have discriminant >= 1",
+                ));
+            }
+        }
+        None => {
+            // Add initial discriminant.
+            if !arguments.accounts_type_name.is_some() {
+                variants[0]
+                    .attributes
+                    .push(parse_quote!(#[discriminant = 1]));
+            }
+        }
+    }
 
     let visibility = enum_item.vis;
 

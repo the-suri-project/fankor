@@ -9,7 +9,7 @@ pub fn processor(pubkey: LitStr) -> Result<proc_macro::TokenStream> {
 
         #[cfg(all(test, feature = "ts-gen"))]
         pub mod __ts_gen_test__setup {
-            use ::fankor::prelude::BuildContext;
+            use ::fankor::prelude::ts_gen::BuildContext;
             use ::std::sync::Arc;
 
             // Helper to execute the tests in sequence.

@@ -71,7 +71,7 @@ impl<'a> TsTypeGen for FnkString<'a> {
     fn value(&self) -> Cow<'static, str> {
         Cow::Owned(format!("{:?}", self))
     }
-    
+
     fn value_type() -> Cow<'static, str> {
         Cow::Borrowed("string")
     }
@@ -91,7 +91,7 @@ impl<T: TsTypeGen + Any> TsTypeGen for FnkVec<T> {
             Cow::Owned(format!("[{}]", values.join(",")))
         }
     }
-    
+
     fn value_type() -> Cow<'static, str> {
         if TypeId::of::<u8>() == TypeId::of::<T>() {
             Cow::Borrowed("Uint8Array")
@@ -123,7 +123,7 @@ impl<T: TsTypeGen> TsTypeGen for FnkSet<T> {
         let values = self.iter().map(|v| v.value()).collect::<Vec<_>>();
         Cow::Owned(format!("[{}]", values.join(",")))
     }
-    
+
     fn value_type() -> Cow<'static, str> {
         Cow::Owned(format!("{}[]", T::value_type()))
     }
@@ -147,7 +147,7 @@ impl<K: TsTypeGen, V: TsTypeGen> TsTypeGen for FnkMap<K, V> {
 
         Cow::Owned(format!("[{}]", values.join(",")))
     }
-    
+
     fn value_type() -> Cow<'static, str> {
         Cow::Owned(format!("RustMap<{}, {}>", K::value_type(), V::value_type()))
     }

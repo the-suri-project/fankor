@@ -81,7 +81,11 @@ impl TsTypeGen for i32 {
 
 impl TsTypeGen for i64 {
     fn value(&self) -> Cow<'static, str> {
-        Cow::Owned(format!("new BN(\"{}\")", self))
+        if *self < i32::MIN as i64 || *self > i32::MAX as i64 {
+            Cow::Owned(format!("new BN(\"{}\")", self))
+        } else {
+            Cow::Owned(format!("{}", self))
+        }
     }
 
     fn value_type() -> Cow<'static, str> {
@@ -95,7 +99,11 @@ impl TsTypeGen for i64 {
 
 impl TsTypeGen for i128 {
     fn value(&self) -> Cow<'static, str> {
-        Cow::Owned(format!("new BN(\"{}\")", self))
+        if *self < i32::MIN as i128 || *self > i32::MAX as i128 {
+            Cow::Owned(format!("new BN(\"{}\")", self))
+        } else {
+            Cow::Owned(format!("{}", self))
+        }
     }
 
     fn value_type() -> Cow<'static, str> {
@@ -151,7 +159,11 @@ impl TsTypeGen for u32 {
 
 impl TsTypeGen for u64 {
     fn value(&self) -> Cow<'static, str> {
-        Cow::Owned(format!("new BN(\"{}\")", self))
+        if *self > u32::MAX as u64 {
+            Cow::Owned(format!("new BN(\"{}\")", self))
+        } else {
+            Cow::Owned(format!("{}", self))
+        }
     }
 
     fn value_type() -> Cow<'static, str> {
@@ -165,7 +177,11 @@ impl TsTypeGen for u64 {
 
 impl TsTypeGen for u128 {
     fn value(&self) -> Cow<'static, str> {
-        Cow::Owned(format!("new BN(\"{}\")", self))
+        if *self > u32::MAX as u128 {
+            Cow::Owned(format!("new BN(\"{}\")", self))
+        } else {
+            Cow::Owned(format!("{}", self))
+        }
     }
 
     fn value_type() -> Cow<'static, str> {

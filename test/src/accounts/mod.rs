@@ -11,18 +11,14 @@ pub enum ProgramAccount {
     StructAccountData,
     StructAccountData2,
     ZeroCopyStructAccountData,
-    EnumAccountData,
-    ZeroCopyEnumAccountData = 10,
 }
 
 #[accounts(base = "ProgramAccount")]
 pub enum ProgramAccountSubSet {
     StructAccountData,
-    EnumAccountData,
 }
 
 #[accounts(base = "ProgramAccount")]
 pub enum ProgramAccountZeroSubSet {
     ZeroCopyStructAccountData,
-    ZeroCopyEnumAccountData,
 }

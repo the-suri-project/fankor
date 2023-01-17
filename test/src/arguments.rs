@@ -7,14 +7,16 @@ pub struct InstructionArgs {
     pub arg3: u64,
 }
 
-#[derive(Clone, FankorBase)]
+#[fankor_base]
+#[derive(Clone)]
 pub struct InstructionArgs2 {
     pub arg1: bool,
     pub arg2: u32,
     pub arg3: u64,
 }
 
-#[derive(Clone, FankorBase)]
+#[fankor_base]
+#[derive(Clone)]
 pub enum InstructionArgs3 {
     Arg1(bool),
     Arg2(u32),

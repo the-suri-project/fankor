@@ -9,6 +9,12 @@ mod fankor;
 pub struct TsTypesCache(pub Vec<(Cow<'static, str>, Cow<'static, str>)>);
 
 impl TsTypesCache {
+    // CONSTRUCTORS -----------------------------------------------------------
+
+    pub fn new() -> TsTypesCache {
+        TsTypesCache(Vec::new())
+    }
+
     // METHODS ----------------------------------------------------------------
 
     pub fn contains_key(&self, key: &str) -> bool {
@@ -45,6 +51,12 @@ impl Deref for TsTypesCache {
 impl DerefMut for TsTypesCache {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
+    }
+}
+
+impl Default for TsTypesCache {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

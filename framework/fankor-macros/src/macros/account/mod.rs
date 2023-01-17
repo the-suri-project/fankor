@@ -1,10 +1,12 @@
 mod arguments;
+mod ts_gen;
 
 use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{AttributeArgs, Error, Item};
 
 use crate::macros::account::arguments::AccountArguments;
+use crate::macros::account::ts_gen::ts_gen;
 use crate::Result;
 
 pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenStream> {
@@ -14,11 +16,10 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     // Process input.
     let (name, generics, item) = match &input {
         Item::Struct(item) => (&item.ident, &item.generics, quote! { #item }),
-        Item::Enum(item) => (&item.ident, &item.generics, quote! { #item }),
         _ => {
             return Err(Error::new(
                 input.span(),
-                "account macro can only be applied to struct or enum declarations",
+                "account macro can only be applied to struct declarations",
             ));
         }
     };
@@ -28,20 +29,10 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let name_str = name.to_string();
     let accounts_name = &arguments.accounts_type_name;
     let account_discriminants_name = format_ident!("{}Discriminant", accounts_name);
-
-    let repr_argument = if matches!(input, Item::Enum(_)) {
-        quote! {
-            #[derive(EnumDiscriminants)]
-            #[non_exhaustive]
-            #[repr(u8)]
-        }
-    } else {
-        quote! {}
-    };
+    let ts_gen = ts_gen(&input)?;
 
     let result = quote! {
         #[derive(FankorSerialize, FankorDeserialize)]
-        #repr_argument
         #item
 
         #[automatically_derived]
@@ -58,6 +49,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                         account: #name_str.to_string()
                     }.into());
                 }
+
                 Ok(())
             }
         }
@@ -101,6 +93,8 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 &crate::ID
             }
         }
+
+        #ts_gen
     };
 
     Ok(result.into())

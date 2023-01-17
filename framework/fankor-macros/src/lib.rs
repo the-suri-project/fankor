@@ -104,6 +104,7 @@ pub fn accounts(args: TokenStream, input: TokenStream) -> TokenStream {
 /// - `Account`
 /// - `BorshSerialize`
 /// - `BorshDeserialize`
+/// - `TsGen`
 #[proc_macro_attribute]
 pub fn account(args: TokenStream, input: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
@@ -251,34 +252,16 @@ pub fn program(args: TokenStream, input: TokenStream) -> TokenStream {
 /// - `FankorSerialize`
 /// - `FankorDeserialize`
 /// - `FankorZeroCopy`
-#[proc_macro_derive(FankorBase, attributes(discriminant))]
-pub fn fankor_base(input: TokenStream) -> TokenStream {
+/// - `TsGen`
+#[proc_macro_attribute]
+pub fn fankor_base(args: TokenStream, input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(args as AttributeArgs);
     let input = parse_macro_input!(input as Item);
-    let mut result = TokenStream::new();
 
-    if matches!(input, Item::Enum(_)) {
-        match macros::enum_discriminants::processor(input.clone()) {
-            Ok(v) => result.extend(v),
-            Err(e) => return e.to_compile_error().into(),
-        }
+    match macros::base::processor(args, input) {
+        Ok(v) => v,
+        Err(e) => e.to_compile_error().into(),
     }
-
-    match macros::serialize::processor(input.clone()) {
-        Ok(v) => result.extend(v),
-        Err(e) => return e.to_compile_error().into(),
-    }
-
-    match macros::deserialize::processor(input.clone()) {
-        Ok(v) => result.extend(v),
-        Err(e) => return e.to_compile_error().into(),
-    }
-
-    match macros::zero_copy::processor(input) {
-        Ok(v) => result.extend(v),
-        Err(e) => return e.to_compile_error().into(),
-    }
-
-    result
 }
 
 // ----------------------------------------------------------------------------
@@ -289,11 +272,10 @@ pub fn fankor_base(input: TokenStream) -> TokenStream {
 /// the TypeScript generated code.
 #[proc_macro_attribute]
 pub fn constant(args: TokenStream, input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(args as AttributeArgs);
     let input = parse_macro_input!(input as Item);
 
-    assert!(args.is_empty(), "This macro does not accept arguments");
-
-    match macros::constant::processor(input) {
+    match macros::constant::processor(args, input) {
         Ok(v) => v,
         Err(e) => e.to_compile_error().into(),
     }

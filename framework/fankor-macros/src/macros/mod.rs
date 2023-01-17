@@ -2,6 +2,7 @@ pub mod account;
 pub mod account_offset;
 pub mod account_size;
 pub mod accounts;
+pub mod base;
 pub mod const_pubkey;
 pub mod constant;
 pub mod deserialize;

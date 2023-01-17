@@ -33,8 +33,6 @@ pub struct InstructionStructAccounts<'info> {
 
     pub zero_copy_account: ZcAccount<'info, ZeroCopyStructAccountData>,
 
-    pub zero_copy_enum_account: ZcAccount<'info, ZeroCopyEnumAccountData>,
-
     #[account(address = &crate::ID)]
     pub program: Program<'info, System>,
 
@@ -53,7 +51,7 @@ pub struct InstructionStructAccounts<'info> {
     #[account(max = 5)]
     pub list5: Vec<Account<'info, StructAccountData>>,
 
-    pub either: Either<Account<'info, StructAccountData>, Account<'info, EnumAccountData>>,
+    pub either: Either<Account<'info, StructAccountData>, Account<'info, StructAccountData2>>,
 
     pub uninitialized: UninitializedAccount<'info>,
 

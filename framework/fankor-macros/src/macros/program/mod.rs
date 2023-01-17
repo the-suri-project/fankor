@@ -17,7 +17,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     if !args.is_empty() {
         return Err(Error::new(
             input.span(),
-            "account macro does not accept arguments",
+            "program macro does not accept arguments",
         ));
     }
 
