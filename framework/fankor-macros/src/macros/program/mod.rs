@@ -1,3 +1,4 @@
+use convert_case::{Case, Converter};
 use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{AttributeArgs, Error, Item};
@@ -13,6 +14,10 @@ mod lpi;
 mod programs;
 
 pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenStream> {
+    let case_converter = Converter::new()
+        .from_case(Case::Snake)
+        .to_case(Case::Pascal);
+
     // Process arguments.
     if !args.is_empty() {
         return Err(Error::new(
@@ -34,29 +39,44 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
     let program = Program::from(item)?;
     let name = &program.name;
+    let discriminant_name = format_ident!("{}Discriminant", program.name);
     let name_str = name.to_string();
     let item = &program.item;
 
     let program_entry_name = format_ident!("__fankor_internal__program_{}_entry", name);
     let program_try_entry_name = format_ident!("__fankor_internal__program_{}_try_entry", name);
 
-    let discriminants = program.methods.iter().map(|v| {
-        let fn_name = format_ident!("{}_discriminant", v.name);
-        let discriminant = &v.discriminant;
+    let mut discriminant_fields = Vec::new();
+    let discriminants = program
+        .methods
+        .iter()
+        .map(|v| {
+            let name = format_ident!(
+                "{}",
+                case_converter.convert(v.name.to_string()),
+                span = v.name.span()
+            );
+            let discriminant = &v.discriminant;
 
-        quote! {
-            pub fn #fn_name() -> u8 {
-                #discriminant
+            discriminant_fields.push(name.clone());
+
+            quote! {
+                Self::#name => #discriminant
             }
-        }
-    });
+        })
+        .collect::<Vec<_>>();
 
+    let mut discriminant_constants = Vec::new();
     let dispatch_methods = program.methods.iter().map(|v| {
+        let discriminant = format_ident!(
+            "{}",
+            case_converter.convert(v.name.to_string()),
+            span = v.name.span()
+        );
         let fn_name = &v.name;
-        let discriminant = &v.discriminant;
         let account_type = &v.account_type;
 
-        let (arguments_tokens,validation_call, method_call) = if let Some(argument_type) = &v.argument_type {
+        let (arguments_tokens, validation_call, method_call) = if let Some(argument_type) = &v.argument_type {
             let arguments_tokens = quote! {
                 let mut ix_data = ix_data;
                 let arguments: #argument_type = ::fankor::prelude::borsh::BorshDeserialize::deserialize(&mut ix_data)?;
@@ -101,6 +121,10 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
         let instruction_msg = format!("Instruction: {}", v.pascal_name);
 
+        discriminant_constants.push(quote! {
+            const #discriminant: u8 = #discriminant_name::#discriminant.code();
+        });
+
         quote! {
             #discriminant => {
                 ::fankor::prelude::msg!(#instruction_msg);
@@ -122,7 +146,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 Ok(())
             }
         }
-    });
+    }).collect::<Vec<_>>();
 
     let dispatch_default = if let Some(fallback_method) = &program.fallback_method {
         let fn_name = &fallback_method.name;
@@ -150,10 +174,8 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #item
 
         #[automatically_derived]
+        #[cfg(feature = "test")]
         impl #name {
-            #(#discriminants)*
-
-            #[cfg(feature = "test")]
             pub fn new_program_test<'info>() -> ::solana_program_test::ProgramTest {
                 ::solana_program_test::ProgramTest::new(
                     #name_str,
@@ -213,6 +235,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
 
         #[allow(non_snake_case)]
+        #[allow(non_upper_case_globals)]
         #[automatically_derived]
         fn #program_try_entry_name<'info>(
             program_id: &'info ::fankor::prelude::Pubkey,
@@ -244,9 +267,30 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 std::mem::transmute::<&::fankor::models::FankorContext, &'info ::fankor::models::FankorContext>(&context)
             };
 
+            #(#discriminant_constants)*
+
             match sighash {
                 #(#dispatch_methods,)*
                 #dispatch_default
+            }
+        }
+
+        #[allow(dead_code)]
+        #[automatically_derived]
+        #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+        #[non_exhaustive]
+        #[repr(u8)]
+        pub enum #discriminant_name {
+            #(#discriminant_fields,)*
+        }
+
+        #[automatically_derived]
+        impl #discriminant_name {
+            #[inline(always)]
+            pub const fn code(&self) -> u8 {
+                match self {
+                    #(#discriminants,)*
+                }
             }
         }
 

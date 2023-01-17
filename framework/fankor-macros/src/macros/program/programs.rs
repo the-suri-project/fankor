@@ -1,12 +1,13 @@
+use crate::utils::unwrap_int_from_literal;
 use crate::Result;
 use convert_case::{Boundary, Case, Converter};
 use proc_macro2::Ident;
-use quote::{format_ident, quote};
+use quote::format_ident;
 use std::collections::HashSet;
 use syn::spanned::Spanned;
 use syn::{
-    parse_macro_input, parse_quote, Attribute, Error, FnArg, GenericArgument, ImplItem, ItemImpl,
-    Lit, MetaList, NestedMeta, PathArguments, ReturnType, Type,
+    parse_quote, Attribute, Error, FnArg, GenericArgument, ImplItem, ItemImpl, Meta, PathArguments,
+    ReturnType, Type,
 };
 
 pub struct Program {
@@ -166,55 +167,25 @@ impl Program {
                             let attribute = item.attrs.remove(index);
                             let attribute_span = attribute.span();
 
-                            if discriminant.is_some() {
-                                return Err(Error::new(
-                                    attribute_span,
-                                    "The discriminant attribute can only be used once",
-                                ));
-                            }
-
-                            let path = &attribute.path;
-                            let tokens = &attribute.tokens;
-                            let tokens = quote! {#path #tokens};
-
-                            let args = match parse_macro_input::parse::<MetaList>(tokens.into()) {
-                                Ok(v) => v,
-                                Err(_) => {
-                                    return Err(Error::new(
-                                        attribute_span,
-                                        "The discriminant attribute expects one integer literal as arguments",
-                                    ));
-                                }
-                            };
-
-                            if args.nested.len() != 1 {
-                                return Err(Error::new(
-                                    attribute_span,
-                                    "The discriminant attribute expects only one argument",
-                                ));
-                            }
-
-                            // Check first argument is a literal string.
-                            let first_argument = args.nested.first().unwrap();
-                            match first_argument {
-                                NestedMeta::Lit(v) => match v {
-                                    Lit::Int(v) => {
-                                        discriminant = Some(v.clone());
-                                    }
-                                    v => {
+                            let result: u8 =
+                                if let Ok(Meta::NameValue(name_value)) = attribute.parse_meta() {
+                                    if discriminant.is_some() {
                                         return Err(Error::new(
-                                            v.span(),
-                                            "This must be a literal string",
+                                            attribute_span,
+                                            "Only one discriminant attribute is allowed",
                                         ));
                                     }
-                                },
-                                NestedMeta::Meta(v) => {
+
+                                    let literal = unwrap_int_from_literal(name_value.lit.clone())?;
+                                    literal.base10_parse()?
+                                } else {
                                     return Err(Error::new(
-                                        v.span(),
-                                        "This must be a literal string",
+                                        attribute_span,
+                                        "The correct pattern is #[discriminant = <number>]",
                                     ));
-                                }
-                            }
+                                };
+
+                            discriminant = Some(result);
                         } else if attribute.path.is_ident("deprecated") {
                             let attribute_span = attribute.span();
 
@@ -257,9 +228,14 @@ impl Program {
 
                     // Calculate the discriminant.
                     if let Some(v) = discriminant {
-                        let new_value = v.base10_parse::<u8>()?;
+                        if v < u8_index {
+                            return Err(Error::new(
+                                method_name.span(),
+                                "Instructions must always be sorted from lowest to highest discriminant",
+                            ));
+                        }
 
-                        u8_index = new_value;
+                        u8_index = v;
                     }
 
                     if u8_index == 0 {
@@ -311,55 +287,25 @@ impl Program {
                             let attribute = item.attrs.remove(index);
                             let attribute_span = attribute.span();
 
-                            if discriminant.is_some() {
-                                return Err(Error::new(
-                                    attribute_span,
-                                    "The discriminant attribute can only be used once",
-                                ));
-                            }
-
-                            let path = &attribute.path;
-                            let tokens = &attribute.tokens;
-                            let tokens = quote! {#path #tokens};
-
-                            let args = match parse_macro_input::parse::<MetaList>(tokens.into()) {
-                                Ok(v) => v,
-                                Err(_) => {
-                                    return Err(Error::new(
-                                        attribute_span,
-                                        "The discriminant attribute expects one integer literal as arguments",
-                                    ));
-                                }
-                            };
-
-                            if args.nested.len() != 1 {
-                                return Err(Error::new(
-                                    attribute_span,
-                                    "The discriminant attribute expects only one argument",
-                                ));
-                            }
-
-                            // Check first argument is a literal string.
-                            let first_argument = args.nested.first().unwrap();
-                            match first_argument {
-                                NestedMeta::Lit(v) => match v {
-                                    Lit::Int(v) => {
-                                        discriminant = Some(v.clone());
-                                    }
-                                    v => {
+                            let result: u8 =
+                                if let Ok(Meta::NameValue(name_value)) = attribute.parse_meta() {
+                                    if discriminant.is_some() {
                                         return Err(Error::new(
-                                            v.span(),
-                                            "This must be a literal string",
+                                            attribute_span,
+                                            "Only one discriminant attribute is allowed",
                                         ));
                                     }
-                                },
-                                NestedMeta::Meta(v) => {
+
+                                    let literal = unwrap_int_from_literal(name_value.lit.clone())?;
+                                    literal.base10_parse()?
+                                } else {
                                     return Err(Error::new(
-                                        v.span(),
-                                        "This must be a literal string",
+                                        attribute_span,
+                                        "The correct pattern is #[discriminant = <number>]",
                                     ));
-                                }
-                            }
+                                };
+
+                            discriminant = Some(result);
                         } else if attribute.path.is_ident("deprecated") {
                             let attribute_span = attribute.span();
 
@@ -401,10 +347,15 @@ impl Program {
                     }
 
                     // Calculate the discriminant.
-                    if let Some(v) = &discriminant {
-                        let new_value = v.base10_parse::<u8>()?;
+                    if let Some(v) = discriminant {
+                        if v < u8_index {
+                            return Err(Error::new(
+                                method_name.span(),
+                                "Instructions must always be sorted from lowest to highest discriminant",
+                            ));
+                        }
 
-                        u8_index = new_value;
+                        u8_index = v;
                     }
 
                     if u8_index == 0 {
