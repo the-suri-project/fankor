@@ -58,9 +58,7 @@ impl<L: TsInstructionAccountGen, R: TsInstructionAccountGen> TsInstructionAccoun
         let left = L::value_type();
         let right = R::value_type();
 
-        if left == right {
-            left
-        } else if left.starts_with(format!("{} | ", right).as_str()) {
+        if left == right || left.starts_with(format!("{} | ", right).as_str()) {
             left
         } else if right.starts_with(format!("{} | ", left).as_str()) {
             right
@@ -83,12 +81,29 @@ impl<L: TsInstructionAccountGen, R: TsInstructionAccountGen> TsInstructionAccoun
         signer: bool,
         writable: bool,
     ) -> Cow<'static, str> {
-        Cow::Owned(format!(
-            "if ({}.type === 'Left') {{ {} }} else {{ {} }}",
-            value,
-            L::get_external_account_metas(Cow::Owned(format!("{}.value", value)), signer, writable),
-            R::get_external_account_metas(Cow::Owned(format!("{}.value", value)), signer, writable),
-        ))
+        let left = L::value_type();
+        let right = R::value_type();
+
+        if left == right || left.starts_with(format!("{} | ", right).as_str()) {
+            L::get_external_account_metas(value, signer, writable)
+        } else if right.starts_with(format!("{} | ", left).as_str()) {
+            R::get_external_account_metas(value, signer, writable)
+        } else {
+            Cow::Owned(format!(
+                "if ({}.type === 'Left') {{ {} }} else {{ {} }}",
+                value,
+                L::get_external_account_metas(
+                    Cow::Owned(format!("{}.value", value)),
+                    signer,
+                    writable
+                ),
+                R::get_external_account_metas(
+                    Cow::Owned(format!("{}.value", value)),
+                    signer,
+                    writable
+                ),
+            ))
+        }
     }
 }
 
