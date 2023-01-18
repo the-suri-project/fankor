@@ -77,7 +77,7 @@ pub enum FankorErrorCode {
     /// The instruction contains duplicated writable accounts
     #[msg("The instruction contains duplicated writable accounts: {}", address)]
     #[discriminant = 1500]
-    DuplicatedWritableAccounts { address: Pubkey } ,
+    DuplicatedWritableAccounts { address: Pubkey },
 
     /// No 8 byte discriminant was found on the account
     #[msg("No 8 byte discriminant was found on the account: {}", account)]
@@ -320,7 +320,7 @@ pub enum FankorErrorCode {
     /// Cannot deserialize the zero copy type
     #[msg("Cannot deserialize the zero copy type: '{}'", type_name)]
     #[discriminant = 2500]
-    ZeroCopyCannotDeserialize { type_name: &'static str } ,
+    ZeroCopyCannotDeserialize { type_name: &'static str },
 
     /// Not enough length to deserialize the zero copy type
     #[msg("Not enough length to deserialize the zero copy type: '{}'", type_name)]
