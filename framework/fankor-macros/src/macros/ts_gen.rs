@@ -5,9 +5,7 @@ use syn::spanned::Spanned;
 use syn::{Error, Fields, Item};
 
 pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
-    let case_converter = Converter::new()
-        .from_case(Case::Snake)
-        .to_case(Case::Pascal);
+    let case_converter = Converter::new().from_case(Case::Snake).to_case(Case::Camel);
 
     // Process input.
     let (result, account_name) = match &input {
