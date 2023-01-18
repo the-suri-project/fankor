@@ -2,7 +2,9 @@ use crate::cpi;
 use crate::cpi::system_program::CpiCreateAccount;
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{Account, FankorContext, Program, System};
-use crate::traits::{AccountSize, AccountType, InstructionAccount, PdaChecker};
+use crate::traits::{
+    AccountInfoVerification, AccountSize, AccountType, InstructionAccount, PdaChecker,
+};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::pubkey::Pubkey;
@@ -226,11 +228,11 @@ impl<'info> InstructionAccount<'info> for UninitializedAccount<'info> {
         1
     }
 
-    fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
-    where
-        F: FnMut(&AccountInfo<'info>) -> FankorResult<()>,
-    {
-        f(self.info)
+    fn verify_account_infos<'a>(
+        &self,
+        config: &mut AccountInfoVerification<'a, 'info>,
+    ) -> FankorResult<()> {
+        config.verify(self.info)
     }
 
     #[inline(never)]

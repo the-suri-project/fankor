@@ -3,7 +3,7 @@ use crate::models::{
     Account, DefaultAccount, FankorContext, RefAccount, UninitializedAccount, ZcAccount,
 };
 use crate::prelude::PdaChecker;
-use crate::traits::{CpiInstructionAccount, InstructionAccount};
+use crate::traits::{AccountInfoVerification, CpiInstructionAccount, InstructionAccount};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use std::fmt;
@@ -108,13 +108,13 @@ impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> Instruct
         L::min_accounts().min(R::min_accounts())
     }
 
-    fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
-    where
-        F: FnMut(&AccountInfo<'info>) -> FankorResult<()>,
-    {
+    fn verify_account_infos<'a>(
+        &self,
+        config: &mut AccountInfoVerification<'a, 'info>,
+    ) -> FankorResult<()> {
         match self {
-            Either::Left(v) => v.verify_account_infos(f),
-            Either::Right(v) => v.verify_account_infos(f),
+            Either::Left(v) => v.verify_account_infos(config),
+            Either::Right(v) => v.verify_account_infos(config),
         }
     }
 

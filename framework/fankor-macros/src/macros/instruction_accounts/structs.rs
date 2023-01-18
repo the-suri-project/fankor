@@ -17,13 +17,6 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         .map(|args| quote! { args: &#args })
         .unwrap_or_default();
 
-    let verify_fn_fields = item.fields.iter().map(|v| {
-        let name = v.ident.as_ref().unwrap();
-        quote! {
-            self.#name.verify_account_infos(f)?;
-        }
-    });
-
     let mapped_fields = item
         .fields
         .iter()
@@ -53,10 +46,12 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                 let #name = #value;
             }
         }).collect::<Vec<_>>();
-        let mut conditions = Vec::new();
+
+        let mut account_info_conditions = Vec::new();
+        let mut constraints_conditions = Vec::new();
 
         if let Some(owner) = &v.owner {
-            conditions.push(quote! {{
+            account_info_conditions.push(quote! {{
                 let actual = info.owner;
                 let expected = #owner;
 
@@ -71,7 +66,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         }
 
         if let Some(address) = &v.address {
-            conditions.push(quote! {{
+            account_info_conditions.push(quote! {{
                 let actual = info.key;
                 let expected = #address;
 
@@ -86,7 +81,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         }
 
         if let Some(initialized) = &v.initialized {
-            conditions.push(quote! {{
+            account_info_conditions.push(quote! {{
                 let initialized = #initialized;
 
                 if initialized {
@@ -104,7 +99,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         }
 
         if let Some(writable) = &v.writable {
-            conditions.push(quote! {{
+            account_info_conditions.push(quote! {{
                 let writable = #writable;
 
                 if writable {
@@ -122,7 +117,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         }
 
         if let Some(executable) = &v.executable {
-            conditions.push(quote! {{
+            account_info_conditions.push(quote! {{
                 let executable = #executable;
 
                 if executable {
@@ -140,7 +135,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         }
 
         if let Some(rent_exempt) = &v.rent_exempt {
-            conditions.push(quote! {{
+            account_info_conditions.push(quote! {{
                 let rent_exempt = #rent_exempt;
                 let lamports = info.lamports();
                 let data_len = info.data_len();
@@ -163,7 +158,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         }
 
         if let Some(signer) = &v.signer {
-            conditions.push(quote! {{
+            account_info_conditions.push(quote! {{
                 let signer = #signer;
 
                 if signer {
@@ -223,7 +218,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                 }
             };
 
-            conditions.push(quote! {{
+            account_info_conditions.push(quote! {{
                 let seeds = #seeds;
                 let program_id = #program_id;
 
@@ -245,7 +240,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                 }
             };
 
-            conditions.push(quote! {{
+            constraints_conditions.push(quote! {{
                 require!(#condition, #error);
             }});
         }
@@ -280,15 +275,39 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
             }}
         });
 
-        if !conditions.is_empty() {
+        if !account_info_conditions.is_empty() || !constraints_conditions.is_empty() {
+            let account_info_conditions = if account_info_conditions.is_empty() {
+                quote! {}
+            } else {
+                quote! {
+                    let mut closure = |info: &AccountInfo<'info>| {
+                        #(#account_info_conditions)*
+                        Ok(())
+                    };
+                    verification_config.account_info = Some(&mut closure);
+                }
+            };
+
+            let constraints_conditions = if constraints_conditions.is_empty() {
+                quote! {}
+            } else {
+                quote! {
+                    let mut closure = |info: &AccountInfo<'info>| {
+                        #(#constraints_conditions)*
+                        Ok(())
+                    };
+                    verification_config.constraints = Some(&mut closure);
+                }
+            };
+
             quote! {
                 #(#data)*
 
-                self.#name.verify_account_infos(&mut |info: &AccountInfo<'info>| {
-                    #(#conditions)*
+                let mut verification_config = AccountInfoVerification::default();
+                #account_info_conditions
+                #constraints_conditions
 
-                    Ok(())
-                })?;
+                self.#name.verify_account_infos(&mut verification_config)?;
 
                 #min
                 #max
@@ -472,14 +491,6 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                 let mut min_accounts = 0;
                 #(#min_accounts_fn_elements)*
                 min_accounts
-            }
-
-            fn verify_account_infos<F>(&self, f: &mut F) -> ::fankor::errors::FankorResult<()>
-            where
-                F: FnMut(&AccountInfo<'info>) -> ::fankor::errors::FankorResult<()>,
-            {
-                #(#verify_fn_fields)*
-                Ok(())
             }
 
             fn try_from(

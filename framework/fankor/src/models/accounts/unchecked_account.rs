@@ -1,6 +1,6 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{FankorContext, Program, System};
-use crate::traits::{InstructionAccount, PdaChecker};
+use crate::traits::{AccountInfoVerification, InstructionAccount, PdaChecker};
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use crate::utils::rent::make_rent_exempt;
@@ -190,11 +190,11 @@ impl<'info> InstructionAccount<'info> for UncheckedAccount<'info> {
         1
     }
 
-    fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
-    where
-        F: FnMut(&AccountInfo<'info>) -> FankorResult<()>,
-    {
-        f(self.info)
+    fn verify_account_infos<'a>(
+        &self,
+        config: &mut AccountInfoVerification<'a, 'info>,
+    ) -> FankorResult<()> {
+        config.verify(self.info)
     }
 
     #[inline(never)]

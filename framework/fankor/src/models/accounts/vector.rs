@@ -1,6 +1,6 @@
 use crate::errors::FankorResult;
 use crate::models::FankorContext;
-use crate::traits::InstructionAccount;
+use crate::traits::{AccountInfoVerification, InstructionAccount};
 use solana_program::account_info::AccountInfo;
 
 impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Vec<T> {
@@ -12,12 +12,12 @@ impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Vec<T> {
         0 // Because can be any size.
     }
 
-    fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
-    where
-        F: FnMut(&AccountInfo<'info>) -> FankorResult<()>,
-    {
-        for v in self {
-            v.verify_account_infos(f)?;
+    fn verify_account_infos<'a>(
+        &self,
+        config: &mut AccountInfoVerification<'a, 'info>,
+    ) -> FankorResult<()> {
+        for account in self {
+            account.verify_account_infos(config)?;
         }
 
         Ok(())

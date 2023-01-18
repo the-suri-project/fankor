@@ -5,7 +5,8 @@ use syn::LitStr;
 pub fn processor(pubkey: LitStr) -> Result<proc_macro::TokenStream> {
     let result = quote! {
         /// The static program ID.
-        pub static ID: ::fankor::prelude::solana_program::pubkey::Pubkey = ::fankor::prelude::const_pubkey!(#pubkey);
+        #[::fankor::prelude::constant]
+        pub const ID: ::fankor::prelude::solana_program::pubkey::Pubkey = ::fankor::prelude::const_pubkey!(#pubkey);
 
         #[cfg(all(test, feature = "ts-gen"))]
         pub mod __ts_gen_test__setup {

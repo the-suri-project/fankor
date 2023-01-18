@@ -1,6 +1,6 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
-use crate::traits::{InstructionAccount, PdaChecker};
+use crate::traits::{AccountInfoVerification, InstructionAccount, PdaChecker};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::pubkey::Pubkey;
@@ -97,11 +97,11 @@ impl<'info, T: SysvarId> InstructionAccount<'info> for SysvarAccount<'info, T> {
         1
     }
 
-    fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
-    where
-        F: FnMut(&AccountInfo<'info>) -> FankorResult<()>,
-    {
-        f(self.info)
+    fn verify_account_infos<'a>(
+        &self,
+        config: &mut AccountInfoVerification<'a, 'info>,
+    ) -> FankorResult<()> {
+        config.verify_only_constraints(self.info)
     }
 
     #[inline(never)]

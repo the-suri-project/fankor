@@ -93,28 +93,6 @@ pub trait TsTypeGen {
     }
 }
 
-impl<'a, T: TsTypeGen> TsTypeGen for &'a T {
-    fn value(&self) -> Cow<'static, str> {
-        (*self).value()
-    }
-
-    fn value_type() -> Cow<'static, str> {
-        T::value_type()
-    }
-
-    fn schema_name() -> Cow<'static, str> {
-        T::schema_name()
-    }
-
-    fn generate_type(registered_types: &mut TsTypesCache) -> Cow<'static, str> {
-        T::generate_type(registered_types)
-    }
-
-    fn generate_schema(registered_schemas: &mut TsTypesCache) -> Cow<'static, str> {
-        T::generate_schema(registered_schemas)
-    }
-}
-
 impl<T: TsTypeGen> TsTypeGen for Box<T> {
     fn value(&self) -> Cow<'static, str> {
         T::value(self)

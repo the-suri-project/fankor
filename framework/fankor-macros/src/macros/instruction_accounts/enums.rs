@@ -18,13 +18,6 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
         .map(|args| quote! { args: &#args })
         .unwrap_or_default();
 
-    let verify_fn_fields = item.variants.iter().map(|v| {
-        let variant_name = &v.ident;
-        quote! {
-            #name::#variant_name(v) => v.verify_account_infos(f),
-        }
-    });
-
     let mapped_fields = item
         .variants
         .iter()
@@ -298,15 +291,6 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                 let mut min_accounts = #min_accounts;
                 #(#min_accounts_fn_elements)*
                 min_accounts
-            }
-
-            fn verify_account_infos<F>(&self, f: &mut F) -> ::fankor::errors::FankorResult<()>
-            where
-                F: FnMut(&AccountInfo<'info>) -> ::fankor::errors::FankorResult<()>,
-            {
-                match self {
-                    #(#verify_fn_fields)*
-                }
             }
 
             fn try_from(

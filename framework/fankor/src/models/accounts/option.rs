@@ -1,6 +1,6 @@
 use crate::errors::FankorResult;
 use crate::models::FankorContext;
-use crate::traits::{InstructionAccount, PdaChecker};
+use crate::traits::{AccountInfoVerification, InstructionAccount, PdaChecker};
 use solana_program::account_info::AccountInfo;
 
 impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Option<T> {
@@ -12,12 +12,12 @@ impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Option<T
         0 // Because None does not require any accounts.
     }
 
-    fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
-    where
-        F: FnMut(&AccountInfo<'info>) -> FankorResult<()>,
-    {
+    fn verify_account_infos<'a>(
+        &self,
+        config: &mut AccountInfoVerification<'a, 'info>,
+    ) -> FankorResult<()> {
         match self {
-            Some(v) => v.verify_account_infos(f),
+            Some(account) => account.verify_account_infos(config),
             None => Ok(()),
         }
     }

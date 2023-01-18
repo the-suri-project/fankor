@@ -11,14 +11,53 @@ pub trait InstructionAccount<'info>: Sized {
     /// Method to get the minimum number of accounts needed to decode the instruction account.
     fn min_accounts() -> usize;
 
-    fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
-    where
-        F: FnMut(&AccountInfo<'info>) -> FankorResult<()>;
+    /// Verifies the account info with specific data.
+    #[allow(unused_variables)]
+    fn verify_account_infos<'a>(
+        &self,
+        config: &mut AccountInfoVerification<'a, 'info>,
+    ) -> FankorResult<()> {
+        unreachable!("Custom enums and structs cannot have check attributes");
+    }
 
     fn try_from(
         context: &'info FankorContext<'info>,
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self>;
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+#[derive(Default)]
+pub struct AccountInfoVerification<'a, 'info> {
+    pub account_info: Option<&'a mut dyn Fn(&AccountInfo<'info>) -> FankorResult<()>>,
+    pub constraints: Option<&'a mut dyn Fn(&AccountInfo<'info>) -> FankorResult<()>>,
+}
+
+impl<'a, 'info> AccountInfoVerification<'a, 'info> {
+    // METHODS ----------------------------------------------------------------
+
+    pub fn verify(&mut self, account: &AccountInfo<'info>) -> FankorResult<()> {
+        if let Some(account_info) = &mut self.account_info {
+            (account_info)(account)?;
+        }
+
+        if let Some(constraints) = &mut self.constraints {
+            (constraints)(account)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn verify_only_constraints(&mut self, account: &AccountInfo<'info>) -> FankorResult<()> {
+        if let Some(constraints) = &mut self.constraints {
+            (constraints)(account)?;
+        }
+
+        Ok(())
+    }
 }
 
 // ----------------------------------------------------------------------------

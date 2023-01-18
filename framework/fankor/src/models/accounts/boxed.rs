@@ -1,6 +1,6 @@
 use crate::errors::FankorResult;
 use crate::models::FankorContext;
-use crate::traits::{InstructionAccount, PdaChecker};
+use crate::traits::{AccountInfoVerification, InstructionAccount, PdaChecker};
 use solana_program::account_info::AccountInfo;
 
 impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Box<T> {
@@ -12,11 +12,11 @@ impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Box<T> {
         T::min_accounts()
     }
 
-    fn verify_account_infos<F>(&self, f: &mut F) -> FankorResult<()>
-    where
-        F: FnMut(&AccountInfo<'info>) -> FankorResult<()>,
-    {
-        T::verify_account_infos(self, f)
+    fn verify_account_infos<'a>(
+        &self,
+        config: &mut AccountInfoVerification<'a, 'info>,
+    ) -> FankorResult<()> {
+        T::verify_account_infos(&*self, config)
     }
 
     #[inline(never)]
