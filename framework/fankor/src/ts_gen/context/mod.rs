@@ -4,15 +4,16 @@ mod data;
 
 use crate::ts_gen::context::data::DataContext;
 use std::panic::UnwindSafe;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use std::{fs, thread};
 
 /// Contains helper data to do the building process.
 pub struct BuildContext {
     finished: AtomicBool,
     actions: Arc<Mutex<Vec<BuildAction>>>,
+    start_at: AtomicU64,
     mutex: Arc<Mutex<DataContext>>,
 }
 
@@ -24,6 +25,14 @@ impl BuildContext {
         BuildContext {
             finished: AtomicBool::new(false),
             actions: Arc::new(Mutex::new(Vec::new())),
+            start_at: AtomicU64::new({
+                let now = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
+
+                now + 1
+            }),
             mutex: Arc::new(Mutex::new(DataContext::new())),
         }
     }
@@ -64,6 +73,14 @@ impl BuildContext {
         let mut actions = self.actions.lock().unwrap();
         println!("Registering action[{}]: {}", actions.len(), test_name);
 
+        // Increase time to make the main thread wait.
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        self.start_at.store(now + 1, Ordering::SeqCst);
+
         actions.push(BuildAction {
             test_name,
             file_path,
@@ -79,8 +96,20 @@ impl BuildContext {
 
     /// Performs the build process waiting 4 seconds till all tests register their actions.
     pub fn build(&self) {
-        // Wait enough time to let all other actions to be registered.
-        thread::sleep(Duration::from_secs(4));
+        // Wait till start_at.
+        loop {
+            let now = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
+            let start_at = self.start_at.load(Ordering::SeqCst);
+
+            if now >= start_at {
+                break;
+            }
+
+            thread::sleep(Duration::from_secs(start_at - now));
+        }
 
         let mut total_actions = 0;
         let data_context = self.execute_actions(self.data_context(), &mut total_actions);
