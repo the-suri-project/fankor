@@ -1,1 +1,1 @@
-export * as serde from './serde';
+export * from './serde';

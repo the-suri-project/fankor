@@ -63,6 +63,11 @@ impl DataContext {
     pub fn build_ts_file(&mut self) -> String {
         let mut buffer = String::new();
 
+        // Imports.
+        buffer.push_str("import * as solana from '@solana/web3.js';");
+        buffer.push_str("import * as fnk from '@suri-project/fankor/dist/esm';");
+        buffer.push_str("import BN from 'bn.js';");
+
         self.build_constants(&mut buffer);
         self.build_types_and_schemas(&mut buffer);
 

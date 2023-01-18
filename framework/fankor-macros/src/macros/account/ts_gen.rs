@@ -72,7 +72,7 @@ pub fn ts_gen(input: &Item) -> Result<TokenStream> {
             // METHODS ----------------------------------------------------------------
 
             serialize(buffer?: Buffer) {{
-                const writer = new FnkBorshWriter(buffer);
+                const writer = new fnk.FnkBorshWriter(buffer);
                 {}.serialize(writer, this);
                 return writer.toByteArray();
             }}
@@ -80,7 +80,7 @@ pub fn ts_gen(input: &Item) -> Result<TokenStream> {
             // STATIC METHODS ---------------------------------------------------------
 
             static deserialize(buffer: Buffer, offset?: number) {{
-                const reader = new FnkBorshReader(buffer, offset);
+                const reader = new fnk.FnkBorshReader(buffer, offset);
                 return {}.deserialize(reader);
             }}
         }}",
@@ -92,22 +92,22 @@ pub fn ts_gen(input: &Item) -> Result<TokenStream> {
     );
 
     let ts_schema = format!(
-        "export class {} implements FnkBorshSchema<{}> {{
-            innerSchema = TStruct([
-                ['discriminant', U8],
+        "export class {} implements fnk.FnkBorshSchema<{}> {{
+            innerSchema = fnk.TStruct([
+                ['discriminant', fnk.U8],
                 {}
             ] as const);
 
             // METHODS ----------------------------------------------------------------
 
-            serialize(writer: FnkBorshWriter, value: {}) {{
+            serialize(writer: fnk.FnkBorshWriter, value: {}) {{
                 this.innerSchema.serialize(writer, {{
                     discriminant: _r_discriminant_r_,
                     ...value
                 }});
             }}
 
-            deserialize(reader: FnkBorshReader) {{
+            deserialize(reader: fnk.FnkBorshReader) {{
                 const result = this.innerSchema.deserialize(reader);
                 return new {}({});
             }}

@@ -65,7 +65,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     // METHODS ----------------------------------------------------------------
 
                     serialize(buffer?: Buffer) {{
-                        const writer = new FnkBorshWriter(buffer);
+                        const writer = new fnk.FnkBorshWriter(buffer);
                         {}.serialize(writer, this);
                         return writer.toByteArray();
                     }}
@@ -73,7 +73,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     // STATIC METHODS ---------------------------------------------------------
 
                     static deserialize(buffer: Buffer, offset?: number) {{
-                        const reader = new FnkBorshReader(buffer, offset);
+                        const reader = new fnk.FnkBorshReader(buffer, offset);
                         return {}.deserialize(reader);
                     }}
                 }}",
@@ -85,16 +85,16 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             );
 
             let ts_schema = format!(
-                "export class {} implements FnkBorshSchema<{}> {{
-                    innerSchema = TStruct([{}] as const);
+                "export class {} implements fnk.FnkBorshSchema<{}> {{
+                    innerSchema = fnk.TStruct([{}] as const);
 
                     // METHODS ----------------------------------------------------------------
 
-                    serialize(writer: FnkBorshWriter, value: {}) {{
+                    serialize(writer: fnk.FnkBorshWriter, value: {}) {{
                         this.innerSchema.serialize(writer, value);
                     }}
 
-                    deserialize(reader: FnkBorshReader) {{
+                    deserialize(reader: fnk.FnkBorshReader) {{
                         const result = this.innerSchema.deserialize(reader);
                         return new {}({});
                     }}
@@ -231,7 +231,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         }).collect::<Vec<_>>();
 
                         ts_schema_fields.push(format!(
-                            "[{},'{}',TStruct([{}] as const)]",
+                            "[{},'{}',fnk.TStruct([{}] as const)]",
                             schema_discriminant_replacement_str,
                             variant_name,
                             field_schemas.join(",")
@@ -278,7 +278,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         ));
 
                         ts_schema_fields.push(format!(
-                            "[{},'{}',Unit]",
+                            "[{},'{}',fnk.Unit]",
                             schema_discriminant_replacement_str, variant_name
                         ));
                     }
@@ -308,7 +308,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     // METHODS ----------------------------------------------------------------
 
                     serialize(buffer?: Buffer) {{
-                        const writer = new FnkBorshWriter(buffer);
+                        const writer = new fnk.FnkBorshWriter(buffer);
                         {}.serialize(writer, this);
                         return writer.toByteArray();
                     }}
@@ -316,7 +316,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     // STATIC METHODS ---------------------------------------------------------
 
                     static deserialize(buffer: Buffer, offset?: number) {{
-                        const reader = new FnkBorshReader(buffer, offset);
+                        const reader = new fnk.FnkBorshReader(buffer, offset);
                         return {}.deserialize(reader);
                     }}
                 }}
@@ -335,16 +335,16 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             );
 
             let ts_schema = format!(
-                "export class {} implements FnkBorshSchema<{}> {{
-                    innerSchema = TEnum([{}] as const);
+                "export class {} implements fnk.FnkBorshSchema<{}> {{
+                    innerSchema = fnk.TEnum([{}] as const);
 
                     // METHODS ----------------------------------------------------------------
 
-                    serialize(writer: FnkBorshWriter, value: {}) {{
+                    serialize(writer: fnk.FnkBorshWriter, value: {}) {{
                         this.innerSchema.serialize(writer, value);
                     }}
 
-                    deserialize(reader: FnkBorshReader) {{
+                    deserialize(reader: fnk.FnkBorshReader) {{
                         const result = this.innerSchema.deserialize(reader);
                         return new {}(result.value);
                     }}

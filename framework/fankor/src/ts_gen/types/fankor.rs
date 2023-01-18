@@ -13,7 +13,7 @@ impl TsTypeGen for FnkInt {
     }
 
     fn schema_name() -> Cow<'static, str> {
-        Cow::Borrowed("FnkInt")
+        Cow::Borrowed("fnk.FnkInt")
     }
 }
 
@@ -27,43 +27,43 @@ impl TsTypeGen for FnkUInt {
     }
 
     fn schema_name() -> Cow<'static, str> {
-        Cow::Borrowed("FnkUInt")
+        Cow::Borrowed("fnk.FnkUInt")
     }
 }
 
 impl TsTypeGen for FnkRange {
     fn value(&self) -> Cow<'static, str> {
         Cow::Owned(format!(
-            "new FnkRange(new BN(\"{}\"), new BN(\"{}\"))",
+            "new fnk.FnkRange(new BN(\"{}\"), new BN(\"{}\"))",
             self.from(),
             self.to()
         ))
     }
 
     fn value_type() -> Cow<'static, str> {
-        Cow::Borrowed("FnkRange")
+        Cow::Borrowed("fnk.FnkRange")
     }
 
     fn schema_name() -> Cow<'static, str> {
-        Cow::Borrowed("TFnkRange")
+        Cow::Borrowed("fnk.TFnkRange")
     }
 }
 
 impl TsTypeGen for FnkURange {
     fn value(&self) -> Cow<'static, str> {
         Cow::Owned(format!(
-            "new FnkURange(new BN(\"{}\"), new BN(\"{}\"))",
+            "new fnk.FnkURange(new BN(\"{}\"), new BN(\"{}\"))",
             self.from(),
             self.to()
         ))
     }
 
     fn value_type() -> Cow<'static, str> {
-        Cow::Borrowed("FnkURange")
+        Cow::Borrowed("fnk.FnkURange")
     }
 
     fn schema_name() -> Cow<'static, str> {
-        Cow::Borrowed("TFnkURange")
+        Cow::Borrowed("fnk.TFnkURange")
     }
 }
 
@@ -77,7 +77,7 @@ impl<'a> TsTypeGen for FnkString<'a> {
     }
 
     fn schema_name() -> Cow<'static, str> {
-        Cow::Borrowed("FnkString")
+        Cow::Borrowed("fnk.FnkString")
     }
 }
 
@@ -102,18 +102,18 @@ impl<T: TsTypeGen + Any> TsTypeGen for FnkVec<T> {
 
     fn schema_name() -> Cow<'static, str> {
         if TypeId::of::<u8>() == TypeId::of::<T>() {
-            Cow::Borrowed("FnkByteVec")
+            Cow::Borrowed("fnk.FnkByteVec")
         } else {
-            Cow::Owned(format!("FnkVecSchema<{}>", T::schema_name()))
+            Cow::Owned(format!("fnk.FnkVecSchema<{}>", T::schema_name()))
         }
     }
 
     fn generate_schema(registered_schemas: &mut TsTypesCache) -> Cow<'static, str> {
         let inner_schema = T::generate_schema(registered_schemas);
         if TypeId::of::<u8>() == TypeId::of::<T>() {
-            Cow::Borrowed("FnkByteVec")
+            Cow::Borrowed("fnk.FnkByteVec")
         } else {
-            Cow::Owned(format!("FnkVec({})", inner_schema))
+            Cow::Owned(format!("fnk.FnkVec({})", inner_schema))
         }
     }
 }
@@ -129,12 +129,12 @@ impl<T: TsTypeGen> TsTypeGen for FnkSet<T> {
     }
 
     fn schema_name() -> Cow<'static, str> {
-        Cow::Owned(format!("FnkVecSchema<{}>", T::schema_name()))
+        Cow::Owned(format!("fnk.FnkVecSchema<{}>", T::schema_name()))
     }
 
     fn generate_schema(registered_schemas: &mut TsTypesCache) -> Cow<'static, str> {
         let inner_schema = T::generate_schema(registered_schemas);
-        Cow::Owned(format!("FnkVec({})", inner_schema))
+        Cow::Owned(format!("fnk.FnkVec({})", inner_schema))
     }
 }
 
@@ -149,12 +149,16 @@ impl<K: TsTypeGen, V: TsTypeGen> TsTypeGen for FnkMap<K, V> {
     }
 
     fn value_type() -> Cow<'static, str> {
-        Cow::Owned(format!("RustMap<{}, {}>", K::value_type(), V::value_type()))
+        Cow::Owned(format!(
+            "fnk.RustMap<{}, {}>",
+            K::value_type(),
+            V::value_type()
+        ))
     }
 
     fn schema_name() -> Cow<'static, str> {
         Cow::Owned(format!(
-            "FnkMapSchema<{}, {}>",
+            "fnk.FnkMapSchema<{}, {}>",
             K::schema_name(),
             V::schema_name()
         ))
@@ -164,7 +168,7 @@ impl<K: TsTypeGen, V: TsTypeGen> TsTypeGen for FnkMap<K, V> {
         let inner_key_schema = K::generate_schema(registered_schemas);
         let inner_value_schema = V::generate_schema(registered_schemas);
         Cow::Owned(format!(
-            "FnkMap({{ keySchema: {}, valueSchema: {} }})",
+            "fnk.FnkMap({{ keySchema: {}, valueSchema: {} }})",
             inner_key_schema, inner_value_schema
         ))
     }
