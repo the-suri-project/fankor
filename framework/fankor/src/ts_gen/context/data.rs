@@ -8,7 +8,9 @@ pub struct DataContext {
     pub accounts: HashSet<Cow<'static, str>>,
     pub account_types: TsTypesCache,
     pub account_schemas: TsTypesCache,
-    pub constants: HashMap<&'static str, Cow<'static, str>>,
+
+    // Type-value pairs.
+    pub constants: HashMap<&'static str, (Cow<'static, str>, Cow<'static, str>)>,
 }
 
 impl DataContext {
@@ -51,7 +53,8 @@ impl DataContext {
             return Err(format!("Duplicated constant name: '{}'", name));
         }
 
-        self.constants.insert(name, value.value());
+        self.constants
+            .insert(name, (T::value_type(), value.value()));
 
         Ok(())
     }
@@ -68,10 +71,8 @@ impl DataContext {
 
     /// Builds constants part.
     pub fn build_constants(&mut self, writer: &mut String) {
-        for (name, value) in self.constants.iter() {
-            writer.push_str(format!("type {}_TYPE = {};\n", name, value).as_str());
-            writer
-                .push_str(format!("export const {}: {}_TYPE = {};\n", name, name, value).as_str());
+        for (name, (ty, value)) in self.constants.iter() {
+            writer.push_str(format!("export const {}: {} = {};\n", name, ty, value).as_str());
         }
     }
 
