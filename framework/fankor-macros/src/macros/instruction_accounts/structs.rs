@@ -557,5 +557,91 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         }
     };
 
+    // Implement TypeScript generation.
+    let name_str = name.to_string();
+    let mut type_replacements = Vec::new();
+    let mut metas_replacements = Vec::new();
+    let mut metas_fields = Vec::new();
+    let ts_types = mapped_fields.iter().map(|v| {
+        let ty = &v.ty;
+        let types_replacement_str = format!("_r_interface_types_{}_r_", v.name);
+        let metas_replacement_str = format!("_r_interface_metas_{}_r_", v.name);
+        let writable = v.writable.clone().unwrap_or(quote! { false });
+        let signer = v.signer.clone().unwrap_or(quote! { false });
+
+        type_replacements.push(quote! {
+             .replace(#types_replacement_str, &< #ty as TsInstructionAccountGen>::generate_type(registered_types))
+        });
+        metas_fields.push(metas_replacement_str.clone());
+        metas_replacements.push(quote! {
+             .replace(#metas_replacement_str, &< #ty as TsInstructionAccountGen>::get_account_metas(Cow::Owned(format!("{}.value", value)), #writable, #signer))
+        });
+
+        format!("{}: {}", v.name, types_replacement_str)
+    }).collect::<Vec<_>>();
+
+    let ts_type = format!(
+        "export interface {} {{ {} }};",
+        name_str,
+        ts_types.join(",")
+    );
+
+    let ts_metas = format!("{}", metas_fields.join(""),);
+
+    let test_name = format_ident!("__ts_gen_test__instruction_accounts_{}", name_str);
+    let test_name_str = test_name.to_string();
+    let result = quote! {
+        #result
+
+        #[cfg(feature = "ts-gen")]
+        #[automatically_derived]
+        #[allow(non_snake_case)]
+        pub mod #test_name {
+            use super::*;
+            use ::fankor::prelude::ts_gen::accounts::TsInstructionAccountGen;
+            use ::fankor::prelude::ts_gen::types::TsTypesCache;
+            use std::borrow::Cow;
+
+            #[automatically_derived]
+            impl #impl_generics TsInstructionAccountGen for #name #ty_generics #where_clause {
+                fn value_type() -> Cow<'static, str> {
+                    Cow::Borrowed(#name_str)
+                }
+
+                fn generate_type(registered_types: &mut TsTypesCache) -> Cow<'static, str> {
+                    let name = Self::value_type();
+
+                    if registered_types.contains_key(&name) {
+                        return name;
+                    }
+
+                    // Prevents infinite recursion.
+                    registered_types.insert(name.clone(), std::borrow::Cow::Borrowed(""));
+
+                    let ts_type = #ts_type #(#type_replacements)*;
+                    *registered_types.get_mut(&name).unwrap() = std::borrow::Cow::Owned(ts_type);
+
+                    name
+                }
+
+                fn get_account_metas(
+                    value: Cow<'static, str>,
+                    _signer: bool,
+                    _writable: bool,
+                ) -> Cow<'static, str> {
+                    Cow::Owned(#ts_metas #(#metas_replacements)*)
+                }
+            }
+
+            #[test]
+            fn build() {
+                 // Register action.
+                crate::__ts_gen_test__setup::BUILD_CONTEXT.register_action(#test_name_str, file!(), move |action_context| {
+                    action_context.add_instruction_account::<#name>().unwrap();
+                })
+            }
+        }
+    };
+
     Ok(result.into())
 }

@@ -28,7 +28,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let result = quote! {
         #input
 
-        #[cfg(all(test, feature = "ts-gen"))]
+        #[cfg(feature = "ts-gen")]
         #[automatically_derived]
         #[allow(non_snake_case)]
         pub mod #constant_test_name {

@@ -21,16 +21,14 @@ impl TsTypesCache {
         self.0.iter().any(|(k, _)| k == key)
     }
 
+    pub fn get_mut(&mut self, key: &str) -> Option<&mut Cow<'static, str>> {
+        self.0.iter_mut().find(|(k, _)| k == key).map(|(_, v)| v)
+    }
+
     /// # Safety
     /// It does not assert duplicated keys.
     pub fn insert(&mut self, key: Cow<'static, str>, value: Cow<'static, str>) {
         self.0.push((key, value));
-    }
-
-    pub fn insert_if_missing(&mut self, key: Cow<'static, str>, value: Cow<'static, str>) {
-        if !self.contains_key(&key) {
-            self.insert(key, value);
-        }
     }
 }
 

@@ -417,7 +417,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
     let test_name = format_ident!("__ts_gen_test__account_{}", account_name_str);
     let test_name_str = test_name.to_string();
     let result = quote! {
-        #[cfg(all(test, feature = "ts-gen"))]
+        #[cfg(feature = "ts-gen")]
         #[automatically_derived]
         #[allow(non_snake_case)]
         pub mod #test_name {

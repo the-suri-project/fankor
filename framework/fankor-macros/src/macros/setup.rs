@@ -8,7 +8,7 @@ pub fn processor(pubkey: LitStr) -> Result<proc_macro::TokenStream> {
         #[::fankor::prelude::constant]
         pub const ID: ::fankor::prelude::solana_program::pubkey::Pubkey = ::fankor::prelude::const_pubkey!(#pubkey);
 
-        #[cfg(all(test, feature = "ts-gen"))]
+        #[cfg(feature = "ts-gen")]
         pub mod __ts_gen_test__setup {
             use ::fankor::prelude::ts_gen::BuildContext;
             use ::std::sync::Arc;

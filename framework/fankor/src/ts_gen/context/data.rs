@@ -1,3 +1,4 @@
+use crate::ts_gen::accounts::TsInstructionAccountGen;
 use crate::ts_gen::types::{TsTypeGen, TsTypesCache};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
@@ -8,6 +9,7 @@ pub struct DataContext {
     pub accounts: HashSet<Cow<'static, str>>,
     pub account_types: TsTypesCache,
     pub account_schemas: TsTypesCache,
+    pub instruction_methods: HashMap<&'static str, Cow<'static, str>>,
 
     // Type-value pairs.
     pub constants: HashMap<&'static str, (Cow<'static, str>, Cow<'static, str>)>,
@@ -23,6 +25,7 @@ impl DataContext {
             accounts: HashSet::new(),
             account_types: TsTypesCache::new(),
             account_schemas: TsTypesCache::new(),
+            instruction_methods: HashMap::new(),
             constants: HashMap::new(),
         }
     }
@@ -55,6 +58,19 @@ impl DataContext {
 
         self.constants
             .insert(name, (T::value_type(), value.value()));
+
+        Ok(())
+    }
+
+    /// Adds an instruction account.
+    pub fn add_instruction_account<T: TsInstructionAccountGen>(&mut self) -> Result<(), String> {
+        let name = T::value_type();
+
+        if self.accounts.contains(&name) {
+            return Err(format!("Duplicated instruction account: '{}'", name));
+        }
+
+        T::generate_type(&mut self.account_types);
 
         Ok(())
     }

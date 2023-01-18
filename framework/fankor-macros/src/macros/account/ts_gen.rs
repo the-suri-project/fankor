@@ -172,7 +172,7 @@ pub fn ts_gen(input: &Item) -> Result<TokenStream> {
     let test_name = format_ident!("__ts_gen_test__account_{}", name_str);
     let test_name_str = test_name.to_string();
     let result = quote! {
-        #[cfg(all(test, feature = "ts-gen"))]
+        #[cfg(feature = "ts-gen")]
         #[automatically_derived]
         #[allow(non_snake_case)]
         pub mod #test_name {
