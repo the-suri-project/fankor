@@ -347,7 +347,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         return this.data.type;
                     }}
 
-                    get schema() {{
+                    get value() {{
                         return this.data.value;
                     }}
 
@@ -392,7 +392,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                     deserialize(reader: fnk.FnkBorshReader) {{
                         const result = this.innerSchema.deserialize(reader);
-                        return new {}(result.value);
+                        return new {}(result as {});
                     }}
                 }}",
                 schema_name,
@@ -400,6 +400,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 ts_schema_fields.join(","),
                 name_str,
                 name_str,
+                types_name,
             );
 
             let ts_schema_constant = format!(
