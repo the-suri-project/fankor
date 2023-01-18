@@ -130,7 +130,7 @@ impl<'info, T: ProgramType> TsInstructionAccountGen for Program<'info, T> {
     ) -> Cow<'static, str> {
         Cow::Owned(format!(
             "if ({}) {{ accountMetas.push({{ pubkey: {}, isSigner: false, isWritable: false }}); }}\
-             else {{ accountMetas.push({{ pubkey: new PublicKey({}), isSigner: false, isWritable: false }}); }}",
+             else {{ accountMetas.push({{ pubkey: new solana.PublicKey('{}'), isSigner: false, isWritable: false }}); }}",
             value, value, T::address()
         ))
     }
@@ -171,7 +171,7 @@ impl<'info, T: SysvarId> TsInstructionAccountGen for SysvarAccount<'info, T> {
     ) -> Cow<'static, str> {
         Cow::Owned(format!(
             "if ({}) {{ accountMetas.push({{ pubkey: {}, isSigner: false, isWritable: false }}); }}\
-             else {{ accountMetas.push({{ pubkey: new PublicKey({}), isSigner: false, isWritable: false }}); }}",
+             else {{ accountMetas.push({{ pubkey: new solana.PublicKey('{}'), isSigner: false, isWritable: false }}); }}",
             value, value, T::id()
         ))
     }

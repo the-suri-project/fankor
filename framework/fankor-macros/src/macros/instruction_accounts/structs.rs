@@ -573,8 +573,10 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
              .replace(#types_replacement_str, &< #ty as TsInstructionAccountGen>::generate_type(registered_types))
         });
         metas_fields.push(metas_replacement_str.clone());
+
+        let value_str = format!("{{}}.{}", v.name);
         metas_replacements.push(quote! {
-             .replace(#metas_replacement_str, &< #ty as TsInstructionAccountGen>::get_account_metas(Cow::Owned(format!("{}.value", value)), #writable, #signer))
+             .replace(#metas_replacement_str, &< #ty as TsInstructionAccountGen>::get_account_metas(Cow::Owned(format!(#value_str, value)), #writable, #signer))
         });
 
         format!("{}: {}", v.name, types_replacement_str)

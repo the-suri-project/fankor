@@ -57,11 +57,9 @@ pub struct InstructionStructAccounts<'info> {
 
     pub maybe_uninitialized: MaybeUninitializedAccount<'info, StructAccountData>,
 
-    #[account(writable)]
-    pub other_struct: Box<InstructionStructAccounts<'info>>,
+    pub other_struct: Box<InstructionStructAccountsWithoutAssociatedType<'info>>,
 
-    #[account(writable)]
-    pub other_enum: Box<InstructionEnumAccounts<'info>>,
+    pub other_enum: Box<InstructionEnumAccountsWithoutArgs<'info>>,
 
     // Must be placed in the last position.
     #[account(min = 2)]

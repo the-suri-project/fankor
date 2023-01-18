@@ -5,11 +5,11 @@ use std::collections::{HashMap, HashSet};
 
 /// Contains the info for building the IDL.
 pub struct DataContext {
-    pub program_name: String,
+    pub program_name: &'static str,
     pub accounts: HashSet<Cow<'static, str>>,
     pub account_types: TsTypesCache,
     pub account_schemas: TsTypesCache,
-    pub instruction_methods: HashMap<&'static str, Cow<'static, str>>,
+    pub program_methods: HashMap<&'static str, Cow<'static, str>>,
 
     // Type-value pairs.
     pub constants: HashMap<&'static str, (Cow<'static, str>, Cow<'static, str>)>,
@@ -21,16 +21,23 @@ impl DataContext {
     /// Creates a new IDL build context.
     pub fn new() -> DataContext {
         DataContext {
-            program_name: "program".to_string(),
+            program_name: "program",
             accounts: HashSet::new(),
             account_types: TsTypesCache::new(),
             account_schemas: TsTypesCache::new(),
-            instruction_methods: HashMap::new(),
+            program_methods: HashMap::new(),
             constants: HashMap::new(),
         }
     }
 
     // METHODS ----------------------------------------------------------------
+
+    /// Adds an account.
+    pub fn set_context_name(&mut self, name: &'static str) -> Result<(), String> {
+        self.program_name = name;
+
+        Ok(())
+    }
 
     /// Adds an account.
     pub fn add_account<T: TsTypeGen>(&mut self) -> Result<(), String> {
@@ -75,6 +82,76 @@ impl DataContext {
         Ok(())
     }
 
+    /// Adds a program method.
+    pub fn add_program_method<T: TsInstructionAccountGen>(
+        &mut self,
+        name: &'static str,
+        discriminant: u8,
+    ) -> Result<(), String> {
+        if self.program_methods.contains_key(name) {
+            return Err(format!("Duplicated program method: '{}'", name));
+        }
+
+        let method = format!(
+            "export function {}(accounts: {}) {{
+                const data = Buffer.from([{}]);
+                const accountMetas: solana.AccountMeta[] = [];
+
+                {}
+
+                return new solana.TransactionInstruction({{
+                    keys: accountMetas,
+                    programId: ID,
+                    data
+                }});
+            }}",
+            name,
+            T::value_type(),
+            discriminant,
+            T::get_account_metas(Cow::Borrowed("accounts"), false, false),
+        );
+
+        self.program_methods.insert(name, Cow::Owned(method));
+
+        Ok(())
+    }
+
+    /// Adds a program method.
+    pub fn add_program_method_with_args<T: TsInstructionAccountGen, A: TsTypeGen>(
+        &mut self,
+        name: &'static str,
+        discriminant: u8,
+    ) -> Result<(), String> {
+        if self.program_methods.contains_key(name) {
+            return Err(format!("Duplicated program method: '{}'", name));
+        }
+
+        let method = format!(
+            "export function {}(accounts: {}, args: {}) {{
+                const argsBuffer = args.serialize();
+                const data = Buffer.concat([Buffer.from([{}]), argsBuffer]);
+                const accountMetas: solana.AccountMeta[] = [];
+
+                {}
+
+                return new solana.TransactionInstruction({{
+                    keys: accountMetas,
+                    programId: ID,
+                    data
+                }});
+            }}",
+            name,
+            T::value_type(),
+            A::value_type(),
+            discriminant,
+            T::get_account_metas(Cow::Borrowed("accounts"), false, false),
+        );
+
+        self.program_methods.insert(name, Cow::Owned(method));
+
+        Ok(())
+    }
+
     /// Builds the TypeScript file from the data stored in the context.
     pub fn build_ts_file(&mut self) -> String {
         let mut buffer = String::new();
@@ -84,27 +161,26 @@ impl DataContext {
         buffer.push_str("import * as fnk from '@suri-project/fankor/dist/esm';");
         buffer.push_str("import BN from 'bn.js';");
 
-        self.build_constants(&mut buffer);
-        self.build_types_and_schemas(&mut buffer);
+        // Build constants part.
+        for (name, (ty, value)) in self.constants.iter() {
+            buffer.push_str(format!("export const {}: {} = {};\n", name, ty, value).as_str());
+        }
+
+        // Build types.
+        for (_name, type_definition) in self.account_types.iter() {
+            buffer.push_str(&type_definition);
+        }
+
+        // Build schemas.
+        for (_name, schema) in self.account_schemas.iter() {
+            buffer.push_str(&schema);
+        }
+
+        // Build program methods.
+        for (_name, method) in self.program_methods.iter() {
+            buffer.push_str(&method);
+        }
 
         buffer
-    }
-
-    /// Builds constants part.
-    pub fn build_constants(&mut self, writer: &mut String) {
-        for (name, (ty, value)) in self.constants.iter() {
-            writer.push_str(format!("export const {}: {} = {};\n", name, ty, value).as_str());
-        }
-    }
-
-    /// Builds types and schemas part.
-    pub fn build_types_and_schemas(&mut self, writer: &mut String) {
-        for (_name, type_definition) in self.account_types.iter() {
-            writer.push_str(&type_definition);
-        }
-
-        for (_name, schema) in self.account_schemas.iter() {
-            writer.push_str(&schema);
-        }
     }
 }

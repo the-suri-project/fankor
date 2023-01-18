@@ -301,5 +301,58 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #lpi_mod
     };
 
+    // Implement TypeScript generation.
+    let method_registration = program
+        .methods
+        .iter()
+        .map(|v| {
+            let discriminant = format_ident!(
+                "{}",
+                case_converter.convert(v.name.to_string()),
+                span = v.name.span()
+            );
+
+            let name = &v.name;
+            let name_str = name.to_string();
+            let ty = &v.account_type;
+
+            if let Some(argument_type) = &v.argument_type {
+                quote! {
+                    action_context.add_program_method_with_args::<#ty, #argument_type>(#name_str, #discriminant_name::#discriminant.code()).unwrap();
+                }
+            }else {
+                quote! {
+                    action_context.add_program_method::<#ty>(#name_str, #discriminant_name::#discriminant.code()).unwrap();
+                }
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let test_name = format_ident!("__ts_gen_test__program_{}", name_str);
+    let test_name_str = test_name.to_string();
+    let result = quote! {
+        #result
+
+        #[cfg(feature = "ts-gen")]
+        #[automatically_derived]
+        #[allow(non_snake_case)]
+        pub mod #test_name {
+            use super::*;
+            use ::fankor::prelude::ts_gen::accounts::TsInstructionAccountGen;
+            use ::fankor::prelude::ts_gen::types::TsTypesCache;
+            use std::borrow::Cow;
+
+            #[test]
+            fn build<'info>() {
+                // Register name action action.
+                crate::__ts_gen_test__setup::BUILD_CONTEXT.register_action(#test_name_str, file!(), move |action_context| {
+                    action_context.set_context_name(#name_str).unwrap();
+                    action_context.add_constant("PROGRAM_NAME", #name_str).unwrap();
+                    #(#method_registration)*
+                })
+            }
+        }
+    };
+
     Ok(result.into())
 }

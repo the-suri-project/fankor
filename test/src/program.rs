@@ -31,6 +31,13 @@ impl TestProgram {
         Ok(3)
     }
 
+    fn instruction_with_enum(
+        context: FankorContext<'info>,
+        accounts: InstructionEnumAccountsWithoutArgs<'info>,
+    ) -> FankorResult<u8> {
+        Ok(3)
+    }
+
     fn fallback(
         program_id: &'info Pubkey,
         accounts: &'info [AccountInfo],
