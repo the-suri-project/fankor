@@ -109,9 +109,7 @@ impl DataContext {
         name: &'static str,
         discriminant: u8,
     ) -> Result<(), String> {
-        let case_converter = Converter::new()
-            .from_case(Case::Snake)
-            .to_case(Case::Pascal);
+        let case_converter = Converter::new().from_case(Case::Snake).to_case(Case::Camel);
         let name = Cow::Owned(case_converter.convert(format!("create_{}", name)));
 
         if self.program_methods.contains_key(&name) {
@@ -146,9 +144,7 @@ impl DataContext {
         name: &'static str,
         discriminant: u8,
     ) -> Result<(), String> {
-        let case_converter = Converter::new()
-            .from_case(Case::Snake)
-            .to_case(Case::Pascal);
+        let case_converter = Converter::new().from_case(Case::Snake).to_case(Case::Camel);
         let name = Cow::Owned(case_converter.convert(format!("create_{}", name)));
 
         if self.program_methods.contains_key(&name) {
