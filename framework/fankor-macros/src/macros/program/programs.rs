@@ -228,6 +228,13 @@ impl Program {
 
                     // Calculate the discriminant.
                     if let Some(v) = discriminant {
+                        if v == 0 {
+                            return Err(Error::new(
+                                method_name.span(),
+                                "The zero discriminant is reserved",
+                            ));
+                        }
+
                         if v < u8_index {
                             return Err(Error::new(
                                 method_name.span(),
@@ -348,6 +355,13 @@ impl Program {
 
                     // Calculate the discriminant.
                     if let Some(v) = discriminant {
+                        if v == 0 {
+                            return Err(Error::new(
+                                method_name.span(),
+                                "The zero discriminant is reserved",
+                            ));
+                        }
+
                         if v < u8_index {
                             return Err(Error::new(
                                 method_name.span(),

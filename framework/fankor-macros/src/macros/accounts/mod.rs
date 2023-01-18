@@ -53,7 +53,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             if v == 0 {
                 return Err(Error::new(
                     variants[0].name.span(),
-                    "First variant must have discriminant >= 1",
+                    "The zero discriminant is reserved",
                 ));
             }
         }
