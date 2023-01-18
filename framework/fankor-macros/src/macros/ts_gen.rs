@@ -135,7 +135,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             return name;
                         }
 
-                        let ts_type = #ts_type #(#constructor_replacements)*;
+                        let ts_type = #ts_type.to_string() #(#constructor_replacements)*;
                         registered_types.insert(name.clone(), std::borrow::Cow::Owned(ts_type));
 
                         name
@@ -149,7 +149,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             return name;
                         }
 
-                        let ts_schema = #ts_schema #(#schema_replacements)*;
+                        let ts_schema = #ts_schema.to_string() #(#schema_replacements)*;
                         registered_schemas.insert(name.clone(), std::borrow::Cow::Owned(ts_schema));
 
                         name
@@ -384,7 +384,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             return name;
                         }
 
-                        let ts_type = #ts_type #(#type_replacements)*;
+                        let ts_type = #ts_type.to_string() #(#type_replacements)*;
                         registered_types.insert(name.clone(), std::borrow::Cow::Owned(ts_type));
 
                         name
@@ -398,7 +398,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             return name;
                         }
 
-                        let ts_schema = #ts_schema #(#schema_replacements)*;
+                        let ts_schema = #ts_schema.to_string() #(#schema_replacements)*;
                         registered_schemas.insert(name.clone(), std::borrow::Cow::Owned(ts_schema));
 
                         name

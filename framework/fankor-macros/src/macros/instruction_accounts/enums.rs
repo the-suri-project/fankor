@@ -429,7 +429,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                     // Prevents infinite recursion.
                     registered_types.insert(name.clone(), std::borrow::Cow::Borrowed(""));
 
-                    let ts_type = #ts_type #(#type_replacements)*;
+                    let ts_type = #ts_type.to_string() #(#type_replacements)*;
                     *registered_types.get_mut(&name).unwrap() = std::borrow::Cow::Owned(ts_type);
 
                     name
