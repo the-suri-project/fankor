@@ -362,7 +362,7 @@ impl<T: TsTypeGen + Any> TsTypeGen for Vec<T> {
         if TypeId::of::<u8>() == TypeId::of::<T>() {
             Cow::Borrowed("Uint8Array")
         } else {
-            Cow::Owned(format!("{}[]", T::value_type()))
+            Cow::Owned(format!("({})[]", T::value_type()))
         }
     }
 
@@ -391,7 +391,7 @@ impl<T: TsTypeGen> TsTypeGen for BTreeSet<T> {
     }
 
     fn value_type() -> Cow<'static, str> {
-        Cow::Owned(format!("{}[]", T::value_type()))
+        Cow::Owned(format!("({})[]", T::value_type()))
     }
 
     fn schema_name() -> Cow<'static, str> {
