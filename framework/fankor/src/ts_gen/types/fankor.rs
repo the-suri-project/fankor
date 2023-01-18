@@ -1,4 +1,6 @@
-use crate::prelude::{FnkInt, FnkMap, FnkRange, FnkSet, FnkString, FnkUInt, FnkURange, FnkVec};
+use crate::prelude::{
+    FnkArray, FnkInt, FnkMap, FnkRange, FnkSet, FnkString, FnkUInt, FnkURange, FnkVec,
+};
 use crate::ts_gen::types::{TsTypeGen, TsTypesCache};
 use std::any::{Any, TypeId};
 use std::borrow::Cow;
@@ -78,6 +80,50 @@ impl<'a> TsTypeGen for FnkString<'a> {
 
     fn schema_name() -> Cow<'static, str> {
         Cow::Borrowed("fnk.FnkString")
+    }
+}
+
+impl<T: TsTypeGen + Any, const S: usize> TsTypeGen for FnkArray<T, S> {
+    fn value(&self) -> Cow<'static, str> {
+        let values = self.iter().map(|v| v.value()).collect::<Vec<_>>();
+
+        if TypeId::of::<u8>() == TypeId::of::<T>() {
+            Cow::Owned(format!("new Uint8Array([{}])", values.join(",")))
+        } else {
+            Cow::Owned(format!("[{}]", values.join(",")))
+        }
+    }
+
+    fn value_type() -> Cow<'static, str> {
+        if TypeId::of::<u8>() == TypeId::of::<T>() {
+            Cow::Borrowed("Uint8Array")
+        } else {
+            let ty = T::value_type();
+            Cow::Owned(format!(
+                "[{}]",
+                (0..S).map(|_| ty.clone()).collect::<Vec<_>>().join(",")
+            ))
+        }
+    }
+
+    fn schema_name() -> Cow<'static, str> {
+        if TypeId::of::<u8>() == TypeId::of::<T>() {
+            Cow::Borrowed("fnk.ByteArraySchema")
+        } else {
+            Cow::Owned(format!("fnk.ArraySchema<{}>", T::schema_name()))
+        }
+    }
+
+    fn generate_schema(registered_schemas: &mut TsTypesCache) -> Cow<'static, str> {
+        let inner_schema = T::generate_schema(registered_schemas);
+        if TypeId::of::<u8>() == TypeId::of::<T>() {
+            Cow::Owned(format!("fnk.ByteArray({})", S))
+        } else {
+            Cow::Owned(format!(
+                "fnk.TArray({{ schema: {}, size: {} }})",
+                inner_schema, S
+            ))
+        }
     }
 }
 

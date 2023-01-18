@@ -1,6 +1,7 @@
 export * from './fankor';
 export * from './bools';
 export * from './enums';
+export * from './floats';
 export * from './arrays';
 export * from './integers';
 export * from './maps';

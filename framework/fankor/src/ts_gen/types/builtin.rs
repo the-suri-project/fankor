@@ -193,6 +193,34 @@ impl TsTypeGen for u128 {
     }
 }
 
+impl TsTypeGen for f32 {
+    fn value(&self) -> Cow<'static, str> {
+        Cow::Owned(format!("{}", self))
+    }
+
+    fn value_type() -> Cow<'static, str> {
+        Cow::Borrowed("number")
+    }
+
+    fn schema_name() -> Cow<'static, str> {
+        Cow::Borrowed("fnk.F32")
+    }
+}
+
+impl TsTypeGen for f64 {
+    fn value(&self) -> Cow<'static, str> {
+        Cow::Owned(format!("{}", self))
+    }
+
+    fn value_type() -> Cow<'static, str> {
+        Cow::Borrowed("number")
+    }
+
+    fn schema_name() -> Cow<'static, str> {
+        Cow::Borrowed("fnk.F64")
+    }
+}
+
 impl TsTypeGen for String {
     fn value(&self) -> Cow<'static, str> {
         Cow::Owned(format!("{:?}", self))
@@ -290,7 +318,11 @@ impl<T: TsTypeGen + Any, const S: usize> TsTypeGen for [T; S] {
         if TypeId::of::<u8>() == TypeId::of::<T>() {
             Cow::Borrowed("Uint8Array")
         } else {
-            Cow::Owned(format!("{}[]", T::value_type()))
+            let ty = T::value_type();
+            Cow::Owned(format!(
+                "[{}]",
+                (0..S).map(|_| ty.clone()).collect::<Vec<_>>().join(",")
+            ))
         }
     }
 
