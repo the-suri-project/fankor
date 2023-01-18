@@ -12,8 +12,8 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         ));
     }
 
-    let (constant_name, constant_value) = match &input {
-        Item::Const(v) => (&v.ident, &v.expr),
+    let constant_name = match &input {
+        Item::Const(v) => &v.ident,
         _ => {
             return Err(Error::new(
                 input.span(),
@@ -32,11 +32,13 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[automatically_derived]
         #[allow(non_snake_case)]
         pub mod #constant_test_name {
+            use super::*;
+
             #[test]
             fn build() {
                  // Register action.
                 crate::__ts_gen_test__setup::BUILD_CONTEXT.register_action(#constant_test_name_str, file!(), move |action_context| {
-                    action_context.add_constant(#constant_name_str, #constant_value).unwrap();
+                    action_context.add_constant(#constant_name_str, #constant_name).unwrap();
                 })
             }
         }
