@@ -110,7 +110,7 @@ impl DataContext {
         discriminant: u8,
     ) -> Result<(), String> {
         let case_converter = Converter::new().from_case(Case::Snake).to_case(Case::Camel);
-        let name = Cow::Owned(case_converter.convert(format!("create_{}", name)));
+        let name = Cow::Owned(case_converter.convert(format!("create_{}_instruction", name)));
 
         if self.program_methods.contains_key(&name) {
             return Err(format!("Duplicated program method: '{}'", name));
@@ -145,7 +145,7 @@ impl DataContext {
         discriminant: u8,
     ) -> Result<(), String> {
         let case_converter = Converter::new().from_case(Case::Snake).to_case(Case::Camel);
-        let name = Cow::Owned(case_converter.convert(format!("create_{}", name)));
+        let name = Cow::Owned(case_converter.convert(format!("create_{}_instruction", name)));
 
         if self.program_methods.contains_key(&name) {
             return Err(format!("Duplicated program method: '{}'", name));
