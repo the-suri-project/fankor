@@ -105,13 +105,13 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 ts_schema_constructor_args.join(","),
             );
 
-            let ts_schema_constant = format!(
-                "export const {} = new {}();",
-                schema_constant_name, schema_name,
-            );
-
             let ts_schema_use_method_name = format!("use{}", schema_name);
             let ts_schema_use_method_call = format!("{}()", ts_schema_use_method_name);
+            let ts_schema_constant = format!(
+                "export const {} = {};",
+                schema_constant_name, ts_schema_use_method_call,
+            );
+
             let ts_schema_use_method = format!(
                 "const {} = (() => {{
                     let variable: {} | null = null;
@@ -401,13 +401,13 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 types_name,
             );
 
-            let ts_schema_constant = format!(
-                "export const {} = new {}();",
-                schema_constant_name, schema_name,
-            );
-
             let ts_schema_use_method_name = format!("use{}", schema_name);
             let ts_schema_use_method_call = format!("{}()", ts_schema_use_method_name);
+            let ts_schema_constant = format!(
+                "export const {} = {};",
+                schema_constant_name, ts_schema_use_method_call,
+            );
+
             let ts_schema_use_method = format!(
                 "const {} = (() => {{
                     let variable: {} | null = null;
