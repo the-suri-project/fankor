@@ -109,7 +109,7 @@ export class FnkURangeSchema implements FnkBorshSchema<FnkURange> {
     }
 }
 
-export const TFnkURange = () => new FnkURangeSchema();
+export const TFnkURange = new FnkURangeSchema();
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
@@ -179,4 +179,4 @@ export class FnkRangeSchema implements FnkBorshSchema<FnkRange> {
     }
 }
 
-export const TFnkRange = () => new FnkRangeSchema();
+export const TFnkRange = new FnkRangeSchema();
