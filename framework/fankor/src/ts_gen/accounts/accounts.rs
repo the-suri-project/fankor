@@ -29,7 +29,7 @@ impl<T: TsInstructionAccountGen> TsInstructionAccountGen for Box<T> {
         signer: bool,
         writable: bool,
     ) -> Cow<'static, str> {
-        T::get_account_metas(value, signer, writable)
+        T::get_external_account_metas(value, signer, writable)
     }
 }
 
@@ -86,8 +86,8 @@ impl<L: TsInstructionAccountGen, R: TsInstructionAccountGen> TsInstructionAccoun
         Cow::Owned(format!(
             "if ({}.type === 'Left') {{ {} }} else {{ {} }}",
             value,
-            L::get_account_metas(Cow::Owned(format!("{}.value", value)), signer, writable),
-            R::get_account_metas(Cow::Owned(format!("{}.value", value)), signer, writable),
+            L::get_external_account_metas(Cow::Owned(format!("{}.value", value)), signer, writable),
+            R::get_external_account_metas(Cow::Owned(format!("{}.value", value)), signer, writable),
         ))
     }
 }
@@ -113,7 +113,7 @@ impl<T: TsInstructionAccountGen> TsInstructionAccountGen for Option<T> {
         Cow::Owned(format!(
             "if ({}) {{ {} }}",
             value.clone(),
-            T::get_account_metas(value, signer, writable),
+            T::get_external_account_metas(value, signer, writable),
         ))
     }
 }
@@ -210,7 +210,7 @@ impl<T: TsInstructionAccountGen> TsInstructionAccountGen for Vec<T> {
         Cow::Owned(format!(
             "{}.forEach(v => {{ {} }});",
             value,
-            T::get_account_metas(Cow::Borrowed("v"), signer, writable)
+            T::get_external_account_metas(Cow::Borrowed("v"), signer, writable)
         ))
     }
 }

@@ -17,7 +17,8 @@ pub trait TsInstructionAccountGen {
         Self::value_type()
     }
 
-    /// Generates the equivalent TypeScript resolve definition for the account.
+    /// Generates the code to include the account metas of the type in the
+    /// getMetasOf method.
     #[allow(unused_variables)]
     fn get_account_metas(
         value: Cow<'static, str>,
@@ -28,5 +29,16 @@ pub trait TsInstructionAccountGen {
             "accountMetas.push({{ pubkey: {}, isSigner: {}, isWritable: {} }});",
             value, signer, writable
         ))
+    }
+
+    /// Generates the code to include the account metas of the type in another
+    /// account's getMetasOf method. This must return the getMetasOf method.
+    #[allow(unused_variables)]
+    fn get_external_account_metas(
+        value: Cow<'static, str>,
+        signer: bool,
+        writable: bool,
+    ) -> Cow<'static, str> {
+        Self::get_account_metas(value, signer, writable)
     }
 }

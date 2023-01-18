@@ -380,7 +380,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
         });
         metas_fields.push(format!("case '{}': {} break;", v.name, metas_replacement_str));
         metas_replacements.push(quote! {
-             .replace(#metas_replacement_str, &< #ty as TsInstructionAccountGen>::get_account_metas(Cow::Owned(format!("{}.value", value)), false, false))
+             .replace(#metas_replacement_str, &< #ty as TsInstructionAccountGen>::get_external_account_metas(Cow::Owned(format!("{}.value", value)), false, false))
         });
 
         format!("export interface {} {{ type: '{}', value: {} }}", name, v.name, types_replacement_str)
@@ -399,6 +399,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
         metas_fields.join(""),
     );
 
+    let get_metas_of_replacement_str = format!("getMetasOf{}(_r_value_r_,accountMetas)", name_str);
     let test_name = format_ident!("__ts_gen_test__instruction_accounts_{}", name_str);
     let test_name_str = test_name.to_string();
     let result = quote! {
@@ -441,6 +442,14 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                     _writable: bool,
                 ) -> Cow<'static, str> {
                     Cow::Owned(#ts_metas.replace("_r_value_r_", &value) #(#metas_replacements)*)
+                }
+
+                fn get_external_account_metas(
+                    value: Cow<'static, str>,
+                    _signer: bool,
+                    _writable: bool,
+                ) -> Cow<'static, str> {
+                    Cow::Owned(#get_metas_of_replacement_str.replace("_r_value_r_", &value))
                 }
             }
 

@@ -59,7 +59,7 @@ pub struct InstructionStructAccounts<'info> {
 
     pub other_struct: Box<InstructionStructAccountsWithoutAssociatedType<'info>>,
 
-    pub other_enum: Box<InstructionEnumAccountsWithoutArgs<'info>>,
+    pub other_enum: Box<InstructionEnumAccounts<'info>>,
 
     // Must be placed in the last position.
     #[account(min = 2)]

@@ -1,5 +1,6 @@
 use crate::ts_gen::accounts::TsInstructionAccountGen;
 use crate::ts_gen::types::{TsTypeGen, TsTypesCache};
+use convert_case::{Case, Converter};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
@@ -9,7 +10,8 @@ pub struct DataContext {
     pub accounts: HashSet<Cow<'static, str>>,
     pub account_types: TsTypesCache,
     pub account_schemas: TsTypesCache,
-    pub program_methods: HashMap<&'static str, Cow<'static, str>>,
+    pub get_meta_methods: HashMap<Cow<'static, str>, Cow<'static, str>>,
+    pub program_methods: HashMap<Cow<'static, str>, Cow<'static, str>>,
 
     // Type-value pairs.
     pub constants: HashMap<&'static str, (Cow<'static, str>, Cow<'static, str>)>,
@@ -25,6 +27,7 @@ impl DataContext {
             accounts: HashSet::new(),
             account_types: TsTypesCache::new(),
             account_schemas: TsTypesCache::new(),
+            get_meta_methods: HashMap::new(),
             program_methods: HashMap::new(),
             constants: HashMap::new(),
         }
@@ -79,6 +82,18 @@ impl DataContext {
 
         T::generate_type(&mut self.account_types);
 
+        let get_metas_method = format!(
+            "function getMetasOf{}(accounts: {}, accountMetas: solana.AccountMeta[]) {{
+                {}
+            }}",
+            name,
+            name,
+            T::get_account_metas(Cow::Borrowed("accounts"), false, false),
+        );
+
+        self.get_meta_methods
+            .insert(name, Cow::Owned(get_metas_method));
+
         Ok(())
     }
 
@@ -88,16 +103,22 @@ impl DataContext {
         name: &'static str,
         discriminant: u8,
     ) -> Result<(), String> {
-        if self.program_methods.contains_key(name) {
+        let case_converter = Converter::new()
+            .from_case(Case::Snake)
+            .to_case(Case::Pascal);
+        let name = Cow::Owned(case_converter.convert(format!("create_{}", name)));
+
+        if self.program_methods.contains_key(&name) {
             return Err(format!("Duplicated program method: '{}'", name));
         }
 
+        let accounts_type = T::value_type();
         let method = format!(
             "export function {}(accounts: {}) {{
                 const data = Buffer.from([{}]);
                 const accountMetas: solana.AccountMeta[] = [];
 
-                {}
+                getMetasOf{}(accounts, accountMetas);
 
                 return new solana.TransactionInstruction({{
                     keys: accountMetas,
@@ -105,10 +126,7 @@ impl DataContext {
                     data
                 }});
             }}",
-            name,
-            T::value_type(),
-            discriminant,
-            T::get_account_metas(Cow::Borrowed("accounts"), false, false),
+            name, accounts_type, discriminant, accounts_type,
         );
 
         self.program_methods.insert(name, Cow::Owned(method));
@@ -122,17 +140,23 @@ impl DataContext {
         name: &'static str,
         discriminant: u8,
     ) -> Result<(), String> {
-        if self.program_methods.contains_key(name) {
+        let case_converter = Converter::new()
+            .from_case(Case::Snake)
+            .to_case(Case::Pascal);
+        let name = Cow::Owned(case_converter.convert(format!("create_{}", name)));
+
+        if self.program_methods.contains_key(&name) {
             return Err(format!("Duplicated program method: '{}'", name));
         }
 
+        let accounts_type = T::value_type();
         let method = format!(
             "export function {}(accounts: {}, args: {}) {{
                 const argsBuffer = args.serialize();
                 const data = Buffer.concat([Buffer.from([{}]), argsBuffer]);
                 const accountMetas: solana.AccountMeta[] = [];
 
-                {}
+                getMetasOf{}(accounts, accountMetas);
 
                 return new solana.TransactionInstruction({{
                     keys: accountMetas,
@@ -141,10 +165,10 @@ impl DataContext {
                 }});
             }}",
             name,
-            T::value_type(),
+            accounts_type,
             A::value_type(),
             discriminant,
-            T::get_account_metas(Cow::Borrowed("accounts"), false, false),
+            accounts_type,
         );
 
         self.program_methods.insert(name, Cow::Owned(method));
@@ -174,6 +198,11 @@ impl DataContext {
         // Build schemas.
         for (_name, schema) in self.account_schemas.iter() {
             buffer.push_str(&schema);
+        }
+
+        // Build get meta methods.
+        for (_name, method) in self.get_meta_methods.iter() {
+            buffer.push_str(&method);
         }
 
         // Build program methods.

@@ -576,7 +576,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
         let value_str = format!("{{}}.{}", v.name);
         metas_replacements.push(quote! {
-             .replace(#metas_replacement_str, &< #ty as TsInstructionAccountGen>::get_account_metas(Cow::Owned(format!(#value_str, value)), #writable, #signer))
+             .replace(#metas_replacement_str, &< #ty as TsInstructionAccountGen>::get_external_account_metas(Cow::Owned(format!(#value_str, value)), #writable, #signer))
         });
 
         format!("{}: {}", v.name, types_replacement_str)
@@ -588,8 +588,8 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         ts_types.join(",")
     );
 
-    let ts_metas = format!("{}", metas_fields.join(""),);
-
+    let ts_metas = format!("{}", metas_fields.join(""));
+    let get_metas_of_replacement_str = format!("getMetasOf{}(_r_value_r_,accountMetas)", name_str);
     let test_name = format_ident!("__ts_gen_test__instruction_accounts_{}", name_str);
     let test_name_str = test_name.to_string();
     let result = quote! {
@@ -633,11 +633,19 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                 ) -> Cow<'static, str> {
                     Cow::Owned(#ts_metas #(#metas_replacements)*)
                 }
+
+                fn get_external_account_metas(
+                    value: Cow<'static, str>,
+                    _signer: bool,
+                    _writable: bool,
+                ) -> Cow<'static, str> {
+                    Cow::Owned(#get_metas_of_replacement_str.replace("_r_value_r_", &value))
+                }
             }
 
             #[test]
             fn build() {
-                 // Register action.
+                // Register action.
                 crate::__ts_gen_test__setup::BUILD_CONTEXT.register_action(#test_name_str, file!(), move |action_context| {
                     action_context.add_instruction_account::<#name>().unwrap();
                 })
