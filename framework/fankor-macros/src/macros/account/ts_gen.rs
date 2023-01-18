@@ -5,9 +5,7 @@ use quote::{format_ident, quote};
 use syn::Item;
 
 pub fn ts_gen(input: &Item) -> Result<TokenStream> {
-    let case_converter = Converter::new()
-        .from_case(Case::Snake)
-        .to_case(Case::Pascal);
+    let case_converter = Converter::new().from_case(Case::Snake).to_case(Case::Camel);
 
     // Process input.
     let item = match &input {
