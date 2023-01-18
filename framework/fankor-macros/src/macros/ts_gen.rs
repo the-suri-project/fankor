@@ -98,18 +98,34 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         const result = this.innerSchema.deserialize(reader);
                         return new {}({});
                     }}
-                }}
-
-                export const {} = new {}();
-                ",
+                }}",
                 schema_name,
                 name_str,
                 ts_schema_fields.join(","),
                 name_str,
                 name_str,
                 ts_schema_constructor_args.join(","),
-                schema_constant_name,
-                schema_name,
+            );
+
+            let ts_schema_constant = format!(
+                "export const {} = new {}();",
+                schema_constant_name, schema_name,
+            );
+
+            let ts_schema_use_method_name = format!("use{}", schema_name);
+            let ts_schema_use_method_call = format!("{}()", ts_schema_use_method_name);
+            let ts_schema_use_method = format!(
+                "const {} = (() => {{
+                    let variable: {} | null = null;
+                    return () => {{
+                        if (variable === null) {{
+                            variable = new {}();
+                        }}
+
+                        return variable
+                    }};
+                }})();",
+                ts_schema_use_method_name, schema_name, schema_name,
             );
 
             let result = quote! {
@@ -124,7 +140,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     }
 
                     fn schema_name() -> std::borrow::Cow<'static, str> {
-                        std::borrow::Cow::Borrowed(#schema_constant_name)
+                        std::borrow::Cow::Borrowed(#ts_schema_use_method_call)
                     }
 
                     fn generate_type(registered_types: &mut ::fankor::prelude::ts_gen::types::TsTypesCache) -> std::borrow::Cow<'static, str> {
@@ -135,8 +151,11 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             return name;
                         }
 
+                        // Prevents infinite recursion.
+                        registered_types.insert(name.clone(), std::borrow::Cow::Borrowed(""));
+
                         let ts_type = #ts_type.to_string() #(#constructor_replacements)*;
-                        registered_types.insert(name.clone(), std::borrow::Cow::Owned(ts_type));
+                        *registered_types.get_mut(&name).unwrap() = std::borrow::Cow::Owned(ts_type);
 
                         name
                     }
@@ -149,10 +168,37 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             return name;
                         }
 
+                        // Prevents infinite recursion.
+                        registered_schemas.insert(name.clone(), std::borrow::Cow::Borrowed(""));
+
                         let ts_schema = #ts_schema.to_string() #(#schema_replacements)*;
-                        registered_schemas.insert(name.clone(), std::borrow::Cow::Owned(ts_schema));
+                        *registered_schemas.get_mut(&name).unwrap() = std::borrow::Cow::Owned(ts_schema);
 
                         name
+                    }
+
+                    fn generate_schema_constant(registered_constants: &mut ::fankor::prelude::ts_gen::types::TsTypesCache) {
+                        use ::fankor::prelude::ts_gen::types::TsTypeGen;
+                        let name = Self::schema_name();
+
+                        if registered_constants.contains_key(&name) {
+                            return;
+                        }
+
+                        let ts_schema = #ts_schema_constant .to_string();
+                        registered_constants.insert(name.clone(), std::borrow::Cow::Owned(ts_schema));
+                    }
+
+                    fn generate_schema_use_method(registered_use_methods: &mut ::fankor::prelude::ts_gen::types::TsTypesCache) {
+                        use ::fankor::prelude::ts_gen::types::TsTypeGen;
+                        let name = Self::schema_name();
+
+                        if registered_use_methods.contains_key(&name) {
+                            return;
+                        }
+
+                        let ts_schema = #ts_schema_use_method .to_string();
+                        registered_use_methods.insert(name.clone(), std::borrow::Cow::Owned(ts_schema));
                     }
                 }
             };
@@ -348,17 +394,33 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         const result = this.innerSchema.deserialize(reader);
                         return new {}(result.value);
                     }}
-                }}
-
-                export const {} = new {}();
-                ",
+                }}",
                 schema_name,
                 name_str,
                 ts_schema_fields.join(","),
                 name_str,
                 name_str,
-                schema_constant_name,
-                schema_name,
+            );
+
+            let ts_schema_constant = format!(
+                "export const {} = new {}();",
+                schema_constant_name, schema_name,
+            );
+
+            let ts_schema_use_method_name = format!("use{}", schema_name);
+            let ts_schema_use_method_call = format!("{}()", ts_schema_use_method_name);
+            let ts_schema_use_method = format!(
+                "const {} = (() => {{
+                    let variable: {} | null = null;
+                    return () => {{
+                        if (variable === null) {{
+                            variable = new {}();
+                        }}
+
+                        return variable
+                    }};
+                }})();",
+                ts_schema_use_method_name, schema_name, schema_name,
             );
 
             let result = quote! {
@@ -373,7 +435,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     }
 
                     fn schema_name() -> std::borrow::Cow<'static, str> {
-                        std::borrow::Cow::Borrowed(#schema_constant_name)
+                        std::borrow::Cow::Borrowed(#ts_schema_use_method_call)
                     }
 
                     fn generate_type(registered_types: &mut ::fankor::prelude::ts_gen::types::TsTypesCache) -> std::borrow::Cow<'static, str> {
@@ -384,8 +446,11 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             return name;
                         }
 
+                        // Prevents infinite recursion.
+                        registered_types.insert(name.clone(), std::borrow::Cow::Borrowed(""));
+
                         let ts_type = #ts_type.to_string() #(#type_replacements)*;
-                        registered_types.insert(name.clone(), std::borrow::Cow::Owned(ts_type));
+                        *registered_types.get_mut(&name).unwrap() = std::borrow::Cow::Owned(ts_type);
 
                         name
                     }
@@ -398,10 +463,37 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             return name;
                         }
 
+                        // Prevents infinite recursion.
+                        registered_schemas.insert(name.clone(), std::borrow::Cow::Borrowed(""));
+
                         let ts_schema = #ts_schema.to_string() #(#schema_replacements)*;
-                        registered_schemas.insert(name.clone(), std::borrow::Cow::Owned(ts_schema));
+                        *registered_schemas.get_mut(&name).unwrap() = std::borrow::Cow::Owned(ts_schema);
 
                         name
+                    }
+
+                    fn generate_schema_constant(registered_constants: &mut ::fankor::prelude::ts_gen::types::TsTypesCache) {
+                        use ::fankor::prelude::ts_gen::types::TsTypeGen;
+                        let name = Self::schema_name();
+
+                        if registered_constants.contains_key(&name) {
+                            return;
+                        }
+
+                        let ts_schema = #ts_schema_constant .to_string();
+                        registered_constants.insert(name.clone(), std::borrow::Cow::Owned(ts_schema));
+                    }
+
+                    fn generate_schema_use_method(registered_use_methods: &mut ::fankor::prelude::ts_gen::types::TsTypesCache) {
+                        use ::fankor::prelude::ts_gen::types::TsTypeGen;
+                        let name = Self::schema_name();
+
+                        if registered_use_methods.contains_key(&name) {
+                            return;
+                        }
+
+                        let ts_schema = #ts_schema_use_method .to_string();
+                        registered_use_methods.insert(name.clone(), std::borrow::Cow::Owned(ts_schema));
                     }
                 }
             };

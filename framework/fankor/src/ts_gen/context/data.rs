@@ -10,8 +10,10 @@ pub struct DataContext {
     pub accounts: HashSet<Cow<'static, str>>,
     pub account_types: TsTypesCache,
     pub account_schemas: TsTypesCache,
-    pub get_meta_methods: HashMap<Cow<'static, str>, Cow<'static, str>>,
-    pub program_methods: HashMap<Cow<'static, str>, Cow<'static, str>>,
+    pub account_schemas_use_methods: TsTypesCache,
+    pub account_schemas_constants: TsTypesCache,
+    pub get_meta_methods: TsTypesCache,
+    pub program_methods: TsTypesCache,
 
     // Type-value pairs.
     pub constants: HashMap<&'static str, (Cow<'static, str>, Cow<'static, str>)>,
@@ -27,6 +29,8 @@ impl DataContext {
             accounts: HashSet::new(),
             account_types: TsTypesCache::new(),
             account_schemas: TsTypesCache::new(),
+            account_schemas_use_methods: TsTypesCache::new(),
+            account_schemas_constants: TsTypesCache::new(),
             get_meta_methods: HashMap::new(),
             program_methods: HashMap::new(),
             constants: HashMap::new(),
@@ -52,6 +56,8 @@ impl DataContext {
 
         T::generate_type(&mut self.account_types);
         T::generate_schema(&mut self.account_schemas);
+        T::generate_schema_constant(&mut self.account_schemas_constants);
+        T::generate_schema_use_method(&mut self.account_schemas_use_methods);
 
         Ok(())
     }
@@ -198,6 +204,16 @@ impl DataContext {
         // Build schemas.
         for (_name, schema) in self.account_schemas.iter() {
             buffer.push_str(&schema);
+        }
+
+        // Build schema use methods.
+        for (_name, use_method) in self.account_schemas_use_methods.iter() {
+            buffer.push_str(&use_method);
+        }
+
+        // Build schema constants.
+        for (_name, constant) in self.account_schemas_constants.iter() {
+            buffer.push_str(&constant);
         }
 
         // Build get meta methods.

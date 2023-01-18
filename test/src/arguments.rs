@@ -22,3 +22,9 @@ pub enum InstructionArgs3 {
     Arg2(u32),
     Arg3(u64),
 }
+
+#[fankor_base]
+#[derive(Clone)]
+pub struct RecursiveArgs {
+    pub arg1: Option<Box<RecursiveArgs>>,
+}

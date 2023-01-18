@@ -1,66 +1,12 @@
 pub use builtin::*;
 pub use fankor::*;
 use std::borrow::Cow;
-use std::ops::{Deref, DerefMut};
+use std::collections::HashMap;
 
 mod builtin;
 mod fankor;
 
-pub struct TsTypesCache(pub Vec<(Cow<'static, str>, Cow<'static, str>)>);
-
-impl TsTypesCache {
-    // CONSTRUCTORS -----------------------------------------------------------
-
-    pub fn new() -> TsTypesCache {
-        TsTypesCache(Vec::new())
-    }
-
-    // METHODS ----------------------------------------------------------------
-
-    pub fn contains_key(&self, key: &str) -> bool {
-        self.0.iter().any(|(k, _)| k == key)
-    }
-
-    pub fn get_mut(&mut self, key: &str) -> Option<&mut Cow<'static, str>> {
-        self.0.iter_mut().find(|(k, _)| k == key).map(|(_, v)| v)
-    }
-
-    /// # Safety
-    /// It does not assert duplicated keys.
-    pub fn insert(&mut self, key: Cow<'static, str>, value: Cow<'static, str>) {
-        self.0.push((key, value));
-    }
-}
-
-impl AsRef<Vec<(Cow<'static, str>, Cow<'static, str>)>> for TsTypesCache {
-    fn as_ref(&self) -> &Vec<(Cow<'static, str>, Cow<'static, str>)> {
-        &self.0
-    }
-}
-
-impl Deref for TsTypesCache {
-    type Target = Vec<(Cow<'static, str>, Cow<'static, str>)>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl DerefMut for TsTypesCache {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl Default for TsTypesCache {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
+pub type TsTypesCache = HashMap<Cow<'static, str>, Cow<'static, str>>;
 
 pub trait TsTypeGen {
     // METHODS ----------------------------------------------------------------
@@ -89,6 +35,18 @@ pub trait TsTypeGen {
     fn generate_schema(registered_schemas: &mut TsTypesCache) -> Cow<'static, str> {
         Self::schema_name()
     }
+
+    /// Generates the constant for the schema.
+    #[allow(unused_variables)]
+    fn generate_schema_constant(registered_constants: &mut TsTypesCache) {
+        unreachable!("generate_schema_constant")
+    }
+
+    /// Generates the use method for the schema.
+    #[allow(unused_variables)]
+    fn generate_schema_use_method(registered_use_methods: &mut TsTypesCache) {
+        unreachable!("generate_schema_use_method")
+    }
 }
 
 impl<T: TsTypeGen> TsTypeGen for Box<T> {
@@ -104,11 +62,15 @@ impl<T: TsTypeGen> TsTypeGen for Box<T> {
         T::schema_name()
     }
 
-    fn generate_type(registered_types: &mut TsTypesCache) -> Cow<'static, str> {
+    fn generate_type(
+        registered_types: &mut HashMap<Cow<'static, str>, Cow<'static, str>>,
+    ) -> Cow<'static, str> {
         T::generate_type(registered_types)
     }
 
-    fn generate_schema(registered_schemas: &mut TsTypesCache) -> Cow<'static, str> {
+    fn generate_schema(
+        registered_schemas: &mut HashMap<Cow<'static, str>, Cow<'static, str>>,
+    ) -> Cow<'static, str> {
         T::generate_schema(registered_schemas)
     }
 }
