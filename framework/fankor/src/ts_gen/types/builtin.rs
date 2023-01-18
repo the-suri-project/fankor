@@ -280,6 +280,20 @@ impl<'a> TsTypeGen for &'a str {
     }
 }
 
+impl TsTypeGen for char {
+    fn value(&self) -> Cow<'static, str> {
+        Cow::Owned(format!("{:?}", self))
+    }
+
+    fn value_type() -> Cow<'static, str> {
+        Cow::Borrowed("string")
+    }
+
+    fn schema_name() -> Cow<'static, str> {
+        Cow::Borrowed("fnk.TString")
+    }
+}
+
 impl<T: TsTypeGen> TsTypeGen for Option<T> {
     fn value(&self) -> Cow<'static, str> {
         if let Some(v) = self {
