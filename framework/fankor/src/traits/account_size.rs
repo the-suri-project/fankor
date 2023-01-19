@@ -48,7 +48,8 @@ impl AccountSize for String {
 impl<T: AccountSize> AccountSize for Box<T> {
     #[inline(always)]
     fn min_account_size() -> usize {
-        T::min_account_size()
+        // Prevents infinite recursion.
+        0
     }
 
     #[inline]
