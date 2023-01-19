@@ -71,7 +71,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     serialize(buffer?: Buffer) {{
                         const writer = new fnk.FnkBorshWriter(buffer);
                         {}.serialize(writer, this);
-                        return writer.toByteArray();
+                        return writer.toBuffer();
                     }}
 
                     equals(other: {}) {{
@@ -366,7 +366,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     serialize(buffer?: Buffer) {{
                         const writer = new fnk.FnkBorshWriter(buffer);
                         {}.serialize(writer, this);
-                        return writer.toByteArray();
+                        return writer.toBuffer();
                     }}
 
                     equals(other: {}) {{

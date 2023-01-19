@@ -78,7 +78,7 @@ pub fn ts_gen(input: &Item) -> Result<TokenStream> {
             serialize(buffer?: Buffer) {{
                 const writer = new fnk.FnkBorshWriter(buffer);
                 {}.serialize(writer, this);
-                return writer.toByteArray();
+                return writer.toBuffer();
             }}
 
             equals(other: {}) {{

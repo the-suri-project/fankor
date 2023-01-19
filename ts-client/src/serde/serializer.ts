@@ -38,7 +38,7 @@ export class FnkBorshWriter {
         this.length += buffer.length;
     }
 
-    toByteArray() {
+    toBuffer() {
         return this.buffer.subarray(0, this.length);
     }
 }
