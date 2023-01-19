@@ -1,10 +1,10 @@
 use crate::Result;
 use convert_case::{Case, Converter};
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote};
 use syn::Item;
 
-pub fn ts_gen(input: &Item) -> Result<TokenStream> {
+pub fn ts_gen(input: &Item, account_discriminants_name: &Ident) -> Result<TokenStream> {
     let case_converter = Converter::new().from_case(Case::Snake).to_case(Case::Camel);
 
     // Process input.
@@ -64,10 +64,6 @@ pub fn ts_gen(input: &Item) -> Result<TokenStream> {
             constructor({}) {{}}
 
             // GETTERS ----------------------------------------------------------------
-
-            static get discriminant() {{
-                return _r_discriminant_r_;
-            }}
 
             static get schema() {{
                 return {};
@@ -137,7 +133,7 @@ pub fn ts_gen(input: &Item) -> Result<TokenStream> {
 
             serialize(writer: fnk.FnkBorshWriter, value: {}) {{
                 this.innerSchema.serialize(writer, {{
-                    discriminant: _r_discriminant_r_,
+                    discriminant: {}.{},
                     ...value
                 }});
             }}
@@ -150,6 +146,8 @@ pub fn ts_gen(input: &Item) -> Result<TokenStream> {
         schema_name,
         name_str,
         ts_schema_fields.join(","),
+        name_str,
+        account_discriminants_name,
         name_str,
         name_str,
         ts_schema_constructor_args.join(","),
@@ -202,7 +200,7 @@ pub fn ts_gen(input: &Item) -> Result<TokenStream> {
                 // Prevents infinite recursion.
                 registered_types.insert(name.clone(), std::borrow::Cow::Borrowed(""));
 
-                let ts_type = #ts_type #(#constructor_replacements)* .replace("_r_discriminant_r_", &Self::discriminant().to_string());
+                let ts_type = #ts_type.to_string() #(#constructor_replacements)*;
                 *registered_types.get_mut(&name).unwrap() = std::borrow::Cow::Owned(ts_type);
 
                 name
@@ -219,7 +217,7 @@ pub fn ts_gen(input: &Item) -> Result<TokenStream> {
                 // Prevents infinite recursion.
                 registered_schemas.insert(name.clone(), std::borrow::Cow::Borrowed(""));
 
-                let ts_schema = #ts_schema #(#schema_replacements)* .replace("_r_discriminant_r_", &Self::discriminant().to_string());
+                let ts_schema = #ts_schema.to_string() #(#schema_replacements)*;
                 *registered_schemas.get_mut(&name).unwrap() = std::borrow::Cow::Owned(ts_schema);
 
                 name

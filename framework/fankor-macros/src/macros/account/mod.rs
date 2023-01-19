@@ -29,7 +29,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let name_str = name.to_string();
     let accounts_name = &arguments.accounts_type_name;
     let account_discriminants_name = format_ident!("{}Discriminant", accounts_name);
-    let ts_gen = ts_gen(&input)?;
+    let ts_gen = ts_gen(&input, &account_discriminants_name)?;
 
     let result = quote! {
         #[derive(FankorSerialize, FankorDeserialize)]

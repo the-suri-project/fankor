@@ -93,7 +93,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 is_last_deprecated = is_deprecated;
             }
 
-            quote! {
+            let result = quote! {
                 #[allow(dead_code)]
                 #[automatically_derived]
                 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -122,7 +122,55 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         }
                     }
                 }
-            }
+            };
+
+            // TypeScript generation.
+            let mut ts_enum_replacements = Vec::new();
+            let ts_offsets = fields
+                .iter()
+                .map(|field| {
+                    let replacement_str = format!("_r_{}_r_", field);
+
+                    ts_enum_replacements.push(quote! {
+                        .replace(#replacement_str, &#discriminant_name::#field.code().to_string())
+                    });
+
+                    format!("{} = {},", field, replacement_str)
+                })
+                .collect::<Vec<_>>();
+
+            let ts_enum = format!(
+                "export enum {} {{
+                    {}
+                }}",
+                discriminant_name,
+                ts_offsets.join("\n"),
+            );
+
+            let discriminant_name_str = discriminant_name.to_string();
+            let test_name = format_ident!("__ts_gen_test__account_offset_{}", discriminant_name);
+            let test_name_str = test_name.to_string();
+            let result = quote! {
+                #result
+
+                #[cfg(feature = "ts-gen")]
+                #[automatically_derived]
+                #[allow(non_snake_case)]
+                pub mod #test_name {
+                    use super::*;
+
+                    #[test]
+                    fn build() {
+                         // Register action.
+                        crate::__ts_gen_test__setup::BUILD_CONTEXT.register_action(#test_name_str, file!(), move |action_context| {
+                            let ts_enum = #ts_enum .to_string() #(#ts_enum_replacements)*;
+                            action_context.add_created_type(#discriminant_name_str, std::borrow::Cow::Owned(ts_enum)).unwrap();
+                        })
+                    }
+                }
+            };
+
+            result
         }
         _ => {
             return Err(Error::new(

@@ -87,11 +87,9 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             // TypeScript generation.
             let mut ts_enum_replacements = Vec::new();
-            let ts_offsets = item
-                .fields
+            let ts_offsets = fields
                 .iter()
-                .zip(&fields)
-                .map(|(_, field)| {
+                .map(|field| {
                     let replacement_str = format!("_r_{}_r_", field);
 
                     ts_enum_replacements.push(quote! {
