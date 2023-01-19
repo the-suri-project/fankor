@@ -26,6 +26,7 @@ pub fn ts_gen(input: &Item) -> Result<TokenStream> {
     let mut ts_constructor_params = Vec::new();
     let mut ts_schema_constructor_args = Vec::new();
     let mut ts_schema_fields = Vec::new();
+    let mut equals_method_conditions = Vec::new();
 
     for field in &item.fields {
         let field_name = field.ident.as_ref().unwrap();
@@ -49,6 +50,11 @@ pub fn ts_gen(input: &Item) -> Result<TokenStream> {
         schema_replacements.push(quote! {
             .replace(#schema_replacement_str, &< #field_ty as TsTypeGen>::generate_schema(registered_schemas))
         });
+
+        equals_method_conditions.push(format!(
+            "fnk.equals(this.{}, other.{})",
+            field_name_str, field_name_str
+        ));
     }
 
     let ts_type = format!(
@@ -75,7 +81,35 @@ pub fn ts_gen(input: &Item) -> Result<TokenStream> {
                 return writer.toByteArray();
             }}
 
+            equals(other: {}) {{
+                return {};
+            }}
+
             // STATIC METHODS ---------------------------------------------------------
+
+            static async getOnChainAccountByAddress(
+                connection: solana.Connection,
+                address: solana.PublicKey
+            ): Promise<fnk.AccountResult<{}> | null> {{
+                let account = await connection.getAccountInfo(
+                    address,
+                    connection.commitment
+                );
+
+                if (account) {{
+                    if (account.owner == ID) {{
+                        let buf = account.data;
+                        let data = this.deserialize(buf);
+                        return {{
+                            address,
+                            account,
+                            data,
+                        }};
+                    }}
+                }}
+
+                return null;
+            }}
 
             static deserialize(buffer: Buffer, offset?: number) {{
                 const reader = new fnk.FnkBorshReader(buffer, offset);
@@ -86,6 +120,9 @@ pub fn ts_gen(input: &Item) -> Result<TokenStream> {
         ts_constructor_params.join(","),
         schema_constant_name,
         schema_constant_name,
+        name_str,
+        equals_method_conditions.join(" && "),
+        name_str,
         schema_constant_name,
     );
 
