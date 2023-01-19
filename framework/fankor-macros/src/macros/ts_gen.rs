@@ -23,6 +23,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let mut ts_constructor_params = Vec::new();
             let mut ts_schema_constructor_args = Vec::new();
             let mut ts_schema_fields = Vec::new();
+            let mut equals_method_conditions = Vec::new();
 
             for field in &item.fields {
                 let field_name = field.ident.as_ref().unwrap();
@@ -46,6 +47,11 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 schema_replacements.push(quote! {
                     .replace(#schema_replacement_str, &< #field_ty as TsTypeGen>::generate_schema(registered_schemas))
                 });
+
+                equals_method_conditions.push(format!(
+                    "fnk.equals(this.{}, other.{})",
+                    field_name_str, field_name_str
+                ));
             }
 
             let ts_type = format!(
@@ -68,6 +74,10 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         return writer.toByteArray();
                     }}
 
+                    equals(other: {}) {{
+                        return {};
+                    }}
+
                     // STATIC METHODS ---------------------------------------------------------
 
                     static deserialize(buffer: Buffer, offset?: number) {{
@@ -79,6 +89,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 ts_constructor_params.join(","),
                 schema_constant_name,
                 schema_constant_name,
+                name_str,
+                equals_method_conditions.join(" && "),
                 schema_constant_name,
             );
 
@@ -357,6 +369,10 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         return writer.toByteArray();
                     }}
 
+                    equals(other: {}) {{
+                        return this.type === other.type && fnk.equals(this.value, other.value);
+                    }}
+
                     // STATIC METHODS ---------------------------------------------------------
 
                     static deserialize(buffer: Buffer, offset?: number) {{
@@ -372,6 +388,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 types_name,
                 schema_constant_name,
                 schema_constant_name,
+                name_str,
                 schema_constant_name,
                 types_name,
                 ts_interface_names.join("|"),

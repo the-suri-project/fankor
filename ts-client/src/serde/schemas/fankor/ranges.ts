@@ -51,6 +51,12 @@ export class FnkURange {
     static newUnbounded(from: BN | bigint | number) {
         return new FnkURange(from, U64_MAX_VALUE);
     }
+
+    // METHODS ----------------------------------------------------------------
+
+    equals(other: FnkURange): boolean {
+        return this.from.eq(other.from) && this.to.eq(other.to);
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -154,6 +160,12 @@ export class FnkRange {
 
     static newUnbounded(from: BN | bigint | number) {
         return new FnkRange(from, I64_MAX_VALUE);
+    }
+
+    // METHODS ----------------------------------------------------------------
+
+    equals(other: FnkURange): boolean {
+        return this.from.eq(other.from) && this.to.eq(other.to);
     }
 }
 
