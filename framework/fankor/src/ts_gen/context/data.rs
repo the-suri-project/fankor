@@ -47,6 +47,21 @@ impl DataContext {
     }
 
     /// Adds an account.
+    pub fn add_created_type(
+        &mut self,
+        name: &'static str,
+        data: Cow<'static, str>,
+    ) -> Result<(), String> {
+        if self.accounts.contains(name) {
+            return Err(format!("Duplicated account name: '{}'", name));
+        }
+
+        self.account_types.insert(Cow::Borrowed(name), data);
+
+        Ok(())
+    }
+
+    /// Adds an account.
     pub fn add_account<T: TsTypeGen>(&mut self) -> Result<(), String> {
         let name = T::value_type();
 

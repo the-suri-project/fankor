@@ -61,7 +61,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 }
             });
 
-            quote! {
+            let result = quote! {
                 #[allow(dead_code)]
                  #[automatically_derived]
                  #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -83,7 +83,57 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                          size
                      }
                  }
-            }
+            };
+
+            // TypeScript generation.
+            let mut ts_enum_replacements = Vec::new();
+            let ts_offsets = item
+                .fields
+                .iter()
+                .zip(&fields)
+                .map(|(_, field)| {
+                    let replacement_str = format!("_r_{}_r_", field);
+
+                    ts_enum_replacements.push(quote! {
+                        .replace(#replacement_str, &#fields_name::#field.offset().to_string())
+                    });
+
+                    format!("{} = {},", field, replacement_str)
+                })
+                .collect::<Vec<_>>();
+
+            let ts_enum = format!(
+                "export enum {} {{
+                    {}
+                }}",
+                fields_name,
+                ts_offsets.join("\n"),
+            );
+
+            let fields_name_str = fields_name.to_string();
+            let test_name = format_ident!("__ts_gen_test__account_offset_{}", fields_name);
+            let test_name_str = test_name.to_string();
+            let result = quote! {
+                #result
+
+                #[cfg(feature = "ts-gen")]
+                #[automatically_derived]
+                #[allow(non_snake_case)]
+                pub mod #test_name {
+                    use super::*;
+
+                    #[test]
+                    fn build() {
+                         // Register action.
+                        crate::__ts_gen_test__setup::BUILD_CONTEXT.register_action(#test_name_str, file!(), move |action_context| {
+                            let ts_enum = #ts_enum .to_string() #(#ts_enum_replacements)*;
+                            action_context.add_created_type(#fields_name_str, std::borrow::Cow::Owned(ts_enum)).unwrap();
+                        })
+                    }
+                }
+            };
+
+            result
         }
         Item::Enum(item) => {
             let visibility = &item.vis;
@@ -271,7 +321,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 }
             });
 
-            quote! {
+            let result = quote! {
                 #[allow(dead_code)]
                 #[automatically_derived]
                 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -293,7 +343,97 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         }
                     }
                 }
-            }
+            };
+
+            // TypeScript generation.
+            let mut ts_enum_replacements = Vec::new();
+            let ts_offsets = item
+                .variants
+                .iter()
+                .filter_map(|variant| match &variant.fields {
+                    Fields::Named(v) => {
+                        let variant_name = &variant.ident;
+
+                        let variants = v
+                            .named
+                            .iter()
+                            .map(|v| {
+                                let name = v.ident.as_ref().unwrap();
+                                let name = format_ident!(
+                                    "{}{}",
+                                    variant_name,
+                                    case_converter.convert(name.to_string()),
+                                    span = name.span()
+                                );
+
+                                let replacement_str = format!("_r_{}_r_", name);
+
+                                ts_enum_replacements.push(quote! {
+                                    .replace(#replacement_str, &#fields_name::#name.offset().to_string())
+                                });
+
+                                format!("{} = {},", name, replacement_str)
+                            })
+                            .collect::<Vec<_>>();
+
+                        Some(variants.join("\n"))
+                    }
+                    Fields::Unnamed(v) => {
+                        let variant_name = &variant.ident;
+
+                        let variants = v
+                            .unnamed
+                            .iter()
+                            .enumerate()
+                            .map(|(i, _)| {
+                                let name = format_ident!("{}{}", variant_name, i);
+                                let replacement_str = format!("_r_{}_r_", name);
+
+                                ts_enum_replacements.push(quote! {
+                                    .replace(#replacement_str, &#fields_name::#name.offset().to_string())
+                                });
+
+                                format!("{} = {},", name, replacement_str)
+                            })
+                            .collect::<Vec<_>>();
+
+                        Some(variants.join("\n"))
+                    }
+                    Fields::Unit => None,
+                }).collect::<Vec<_>>();
+
+            let ts_enum = format!(
+                "export enum {} {{
+                    {}
+                }}",
+                fields_name,
+                ts_offsets.join("\n"),
+            );
+
+            let fields_name_str = fields_name.to_string();
+            let test_name = format_ident!("__ts_gen_test__account_offset_{}", fields_name);
+            let test_name_str = test_name.to_string();
+            let result = quote! {
+                #result
+
+                #[cfg(feature = "ts-gen")]
+                #[automatically_derived]
+                #[allow(non_snake_case)]
+                pub mod #test_name {
+                    use super::*;
+
+                    #[test]
+                    fn build() {
+                         // Register action.
+                        crate::__ts_gen_test__setup::BUILD_CONTEXT.register_action(#test_name_str, file!(), move |action_context| {
+                            let ts_enum = #ts_enum .to_string() #(#ts_enum_replacements)*;
+                            action_context.add_created_type(#fields_name_str, std::borrow::Cow::Owned(ts_enum)).unwrap();
+                        })
+                    }
+                }
+            };
+
+            result
         }
         _ => {
             return Err(Error::new(
