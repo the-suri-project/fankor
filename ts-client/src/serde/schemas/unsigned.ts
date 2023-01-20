@@ -65,15 +65,10 @@ export const U32 = new U32Schema();
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-export class U64Schema implements FnkBorshSchema<BN | bigint | number> {
+export class U64Schema implements FnkBorshSchema<BN> {
     // METHODS ----------------------------------------------------------------
 
-    serialize(writer: FnkBorshWriter, value: BN | bigint | number) {
-        value =
-            typeof value === 'bigint'
-                ? new BN(value.toString())
-                : new BN(value);
-
+    serialize(writer: FnkBorshWriter, value: BN) {
         writer.writeBuffer(Buffer.from(value.toArray('le', 8)));
     }
 
@@ -89,15 +84,10 @@ export const U64 = new U64Schema();
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-export class U128Schema implements FnkBorshSchema<BN | bigint | number> {
+export class U128Schema implements FnkBorshSchema<BN> {
     // METHODS ----------------------------------------------------------------
 
-    serialize(writer: FnkBorshWriter, value: BN | bigint | number) {
-        value =
-            typeof value === 'bigint'
-                ? new BN(value.toString())
-                : new BN(value);
-
+    serialize(writer: FnkBorshWriter, value: BN) {
         writer.writeBuffer(Buffer.from(value.toArray('le', 16)));
     }
 

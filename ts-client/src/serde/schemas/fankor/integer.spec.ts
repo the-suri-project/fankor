@@ -12,7 +12,7 @@ describe('FnkInt Tests', () => {
             // Positive
             {
                 const writer = new FnkBorshWriter();
-                schema.serialize(writer, number);
+                schema.serialize(writer, new BN(number));
 
                 let actual = writer.buffer.slice(0, writer.length);
                 let expected = Buffer.from([number]);
@@ -29,7 +29,7 @@ describe('FnkInt Tests', () => {
             // Negative
             {
                 const writer = new FnkBorshWriter();
-                schema.serialize(writer, -number);
+                schema.serialize(writer, new BN(-number));
 
                 let actual = writer.buffer.slice(0, writer.length);
                 let expected = Buffer.from([number | 0x20]);
@@ -46,7 +46,7 @@ describe('FnkInt Tests', () => {
         {
             let number = 0b1010_1010_1010;
             const writer = new FnkBorshWriter();
-            schema.serialize(writer, number);
+            schema.serialize(writer, new BN(number));
 
             let actual = writer.buffer.slice(0, writer.length);
             let expected = Buffer.from([0b0100_1010, 0b0101_0101]);
@@ -60,7 +60,7 @@ describe('FnkInt Tests', () => {
         {
             let number = -0b1010_1010_1010;
             const writer = new FnkBorshWriter();
-            schema.serialize(writer, number);
+            schema.serialize(writer, new BN(number));
 
             let actual = writer.buffer.slice(0, writer.length);
             let expected = Buffer.from([0b0110_1010, 0b0101_0101]);
@@ -76,7 +76,7 @@ describe('FnkInt Tests', () => {
         {
             let number = 0x1555;
             const writer = new FnkBorshWriter();
-            schema.serialize(writer, number);
+            schema.serialize(writer, new BN(number));
 
             let actual = writer.buffer.slice(0, writer.length);
             let expected = Buffer.from([2 | 0x80, 0b0101_0101, 0b1_0101]);
@@ -90,7 +90,7 @@ describe('FnkInt Tests', () => {
         {
             let number = -0x1555;
             const writer = new FnkBorshWriter();
-            schema.serialize(writer, number);
+            schema.serialize(writer, new BN(number));
 
             let actual = writer.buffer.slice(0, writer.length);
             let expected = Buffer.from([
@@ -272,7 +272,7 @@ describe('FnkInt Tests', () => {
     it('test_deserialize_long', () => {
         for (let number = -1000; number < 1000; number += 1) {
             const writer = new FnkBorshWriter();
-            schema.serialize(writer, number);
+            schema.serialize(writer, new BN(number));
 
             const reader = new FnkBorshReader(
                 writer.buffer.slice(0, writer.length)

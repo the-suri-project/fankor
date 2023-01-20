@@ -4,12 +4,13 @@ import { FnkUIntSchema } from './unsigned';
 import { FnkBorshSchema } from '../../borsh';
 import { InferFnkBorshSchemaInner } from '../maps';
 import { FnkBorshError } from '../../errors';
+import { numberToBN } from '../../../utils';
 
 export class FnkByteVecSchema implements FnkBorshSchema<Uint8Array> {
     // METHODS ----------------------------------------------------------------
 
     serialize(writer: FnkBorshWriter, value: Uint8Array) {
-        new FnkUIntSchema().serialize(writer, value.length);
+        new FnkUIntSchema().serialize(writer, numberToBN(value.length));
 
         const buffer = Buffer.from(value);
         writer.writeBuffer(buffer);
@@ -56,7 +57,7 @@ export class FnkVecSchema<S extends FnkBorshSchema<any>>
     // METHODS ----------------------------------------------------------------
 
     serialize(writer: FnkBorshWriter, value: InferFnkBorshSchemaInner<S>[]) {
-        new FnkUIntSchema().serialize(writer, value.length);
+        new FnkUIntSchema().serialize(writer, numberToBN(value.length));
 
         for (const item of value) {
             this.schema.serialize(writer, item);

@@ -4,12 +4,13 @@ import { FnkBorshReader } from '../../deserializer';
 import { FnkBorshWriter } from '../../serializer';
 import { FnkBorshError } from '../../errors';
 import { FnkBorshSchema } from '../../borsh';
+import { numberToBN } from '../../../utils';
 
 export class FnkStringSchema implements FnkBorshSchema<string> {
     // METHODS ----------------------------------------------------------------
     serialize(writer: FnkBorshWriter, value: string) {
         const bytes = Buffer.from(value, 'utf8');
-        new FnkUIntSchema().serialize(writer, bytes.length);
+        new FnkUIntSchema().serialize(writer, numberToBN(bytes.length));
         writer.writeBuffer(bytes);
     }
 

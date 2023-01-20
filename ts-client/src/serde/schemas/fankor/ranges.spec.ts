@@ -9,7 +9,7 @@ describe('FnkRange and FnkURange Tests', () => {
     let intSchema = new FnkRangeSchema();
 
     it('test_serialize_unsigned_range_full', () => {
-        let fnk_range = FnkURange.newUnbounded(5);
+        let fnk_range = FnkURange.newUnbounded(new BN(5));
         const writer = new FnkBorshWriter();
         uIntSchema.serialize(writer, fnk_range);
 
@@ -28,7 +28,7 @@ describe('FnkRange and FnkURange Tests', () => {
     });
 
     it('test_serialize_unsigned_range_positive', () => {
-        let fnk_range = new FnkURange(5, 10);
+        let fnk_range = new FnkURange(new BN(5), new BN(10));
         const writer = new FnkBorshWriter();
         uIntSchema.serialize(writer, fnk_range);
 
@@ -48,7 +48,7 @@ describe('FnkRange and FnkURange Tests', () => {
 
     it('test_serialize_unsigned_range_negative', () => {
         let fnk_range = new FnkURange(
-            0,
+            new BN(0),
             new BN(2).pow(new BN(64)).subn(1).subn(5)
         );
         const writer = new FnkBorshWriter();
@@ -81,7 +81,7 @@ describe('FnkRange and FnkURange Tests', () => {
             new BN(2).pow(new BN(64)).subn(1).subn(1),
             new BN(2).pow(new BN(64)).subn(1),
         ]) {
-            let fnk_range = new FnkURange(0, i);
+            let fnk_range = new FnkURange(new BN(0), i);
             const writer = new FnkBorshWriter();
             uIntSchema.serialize(writer, fnk_range);
 
@@ -110,7 +110,7 @@ describe('FnkRange and FnkURange Tests', () => {
             new BN(-1),
             new BN(0),
         ]) {
-            let fnk_range = new FnkRange(i, 0);
+            let fnk_range = new FnkRange(i, new BN(0));
             const writer = new FnkBorshWriter();
             intSchema.serialize(writer, fnk_range);
 
@@ -137,7 +137,7 @@ describe('FnkRange and FnkURange Tests', () => {
             new BN(2).pow(new BN(63)).subn(1).subn(1),
             new BN(2).pow(new BN(63)).subn(1),
         ]) {
-            let fnk_range = new FnkRange(0, i);
+            let fnk_range = new FnkRange(new BN(0), i);
             const writer = new FnkBorshWriter();
             intSchema.serialize(writer, fnk_range);
 

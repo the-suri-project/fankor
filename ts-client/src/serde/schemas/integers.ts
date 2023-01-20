@@ -70,18 +70,11 @@ export const I32 = new I32Schema();
 // ----------------------------------------------------------------------------
 
 export class I64Schema
-    implements
-        FnkBorshReadSchema<BN | bigint | number>,
-        FnkBorshWriteSchema<BN | bigint | number>
+    implements FnkBorshReadSchema<BN>, FnkBorshWriteSchema<BN>
 {
     // METHODS ----------------------------------------------------------------
 
-    serialize(writer: FnkBorshWriter, value: BN | bigint | number) {
-        value =
-            typeof value === 'bigint'
-                ? new BN(value.toString())
-                : new BN(value);
-
+    serialize(writer: FnkBorshWriter, value: BN) {
         writer.writeBuffer(Buffer.from(value.toArray('le', 8)));
     }
 
@@ -98,18 +91,11 @@ export const I64 = new I64Schema();
 // ----------------------------------------------------------------------------
 
 export class I128Schema
-    implements
-        FnkBorshReadSchema<BN | bigint | number>,
-        FnkBorshWriteSchema<BN | bigint | number>
+    implements FnkBorshReadSchema<BN>, FnkBorshWriteSchema<BN>
 {
     // METHODS ----------------------------------------------------------------
 
-    serialize(writer: FnkBorshWriter, value: BN | bigint | number) {
-        value =
-            typeof value === 'bigint'
-                ? new BN(value.toString())
-                : new BN(value);
-
+    serialize(writer: FnkBorshWriter, value: BN) {
         writer.writeBuffer(Buffer.from(value.toArray('le', 16)));
     }
 

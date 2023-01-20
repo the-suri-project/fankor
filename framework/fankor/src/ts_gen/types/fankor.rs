@@ -11,7 +11,7 @@ impl TsTypeGen for FnkInt {
     }
 
     fn value_type() -> Cow<'static, str> {
-        Cow::Borrowed("BN | bigint | number")
+        Cow::Borrowed("BN")
     }
 
     fn schema_name() -> Cow<'static, str> {
@@ -25,7 +25,7 @@ impl TsTypeGen for FnkUInt {
     }
 
     fn value_type() -> Cow<'static, str> {
-        Cow::Borrowed("BN | bigint | number")
+        Cow::Borrowed("BN")
     }
 
     fn schema_name() -> Cow<'static, str> {

@@ -3,6 +3,7 @@ import { FnkBorshReader } from '../../deserializer';
 import { FnkUIntSchema } from './unsigned';
 import { InferFnkBorshSchemaInner, RustMap } from '../maps';
 import { FnkBorshSchema } from '../../borsh';
+import { numberToBN } from '../../../utils';
 
 export function FnkMap<
     Sk extends FnkBorshSchema<any>,
@@ -38,7 +39,7 @@ export class FnkMapSchema<
             InferFnkBorshSchemaInner<Sv>
         >
     ) {
-        new FnkUIntSchema().serialize(writer, value.length);
+        new FnkUIntSchema().serialize(writer, numberToBN(value.length));
 
         for (const item of value) {
             this.keySchema.serialize(writer, item.key);

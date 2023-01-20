@@ -10,15 +10,10 @@ const BN_0x40 = new BN(0x40);
 const BN_0x7F = new BN(0x7f);
 const BN_0x80 = new BN(0x80);
 
-export class FnkUIntSchema implements FnkBorshSchema<BN | bigint | number> {
+export class FnkUIntSchema implements FnkBorshSchema<BN> {
     // METHODS ----------------------------------------------------------------
 
-    serialize(writer: FnkBorshWriter, value: BN | bigint | number) {
-        value =
-            typeof value === 'bigint'
-                ? new BN(value.toString())
-                : new BN(value);
-
+    serialize(writer: FnkBorshWriter, value: BN) {
         if (value.lt(ZERO)) {
             throw new RangeError('FnkUInt cannot be negative');
         }

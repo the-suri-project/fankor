@@ -17,11 +17,7 @@ export class FnkURange {
 
     // CONSTRUCTORS -----------------------------------------------------------
 
-    constructor(from: BN | bigint | number, to: BN | bigint | number) {
-        from =
-            typeof from === 'bigint' ? new BN(from.toString()) : new BN(from);
-        to = typeof to === 'bigint' ? new BN(to.toString()) : new BN(to);
-
+    constructor(from: BN, to: BN) {
         if (from.gt(to)) {
             throw new FnkBorshError('Invalid range: from > to');
         }
@@ -48,7 +44,7 @@ export class FnkURange {
         this.to = to;
     }
 
-    static newUnbounded(from: BN | bigint | number) {
+    static newUnbounded(from: BN) {
         return new FnkURange(from, U64_MAX_VALUE);
     }
 
@@ -127,11 +123,7 @@ export class FnkRange {
 
     // CONSTRUCTORS -----------------------------------------------------------
 
-    constructor(from: BN | bigint | number, to: BN | bigint | number) {
-        from =
-            typeof from === 'bigint' ? new BN(from.toString()) : new BN(from);
-        to = typeof to === 'bigint' ? new BN(to.toString()) : new BN(to);
-
+    constructor(from: BN, to: BN) {
         if (from.gt(to)) {
             throw new FnkBorshError('Invalid range: from > to');
         }
@@ -158,7 +150,7 @@ export class FnkRange {
         this.to = to;
     }
 
-    static newUnbounded(from: BN | bigint | number) {
+    static newUnbounded(from: BN) {
         return new FnkRange(from, I64_MAX_VALUE);
     }
 
