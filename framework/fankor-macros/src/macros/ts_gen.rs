@@ -253,6 +253,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     Fields::Named(v) => {
                         let fields = v.named.iter().map(|f| {
                             let field_name = f.ident.as_ref().unwrap();
+                            let field_name = case_converter.convert(field_name.to_string());
                             let replacement_str = format!("_r_interface_{}_{}_r_", interface_name, field_name);
                             let ty = &f.ty;
 
@@ -276,6 +277,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                         let field_schemas = v.named.iter().map(|f| {
                             let field_name = f.ident.as_ref().unwrap();
+                            let field_name = case_converter.convert(field_name.to_string());
                             let replacement_str = format!("_r_schema_{}_{}_r_", interface_name, field_name);
                             let ty = &f.ty;
 

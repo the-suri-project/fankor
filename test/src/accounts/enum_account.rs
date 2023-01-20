@@ -5,7 +5,7 @@ use fankor::prelude::*;
 pub enum EnumAccountData {
     A,
     B(u32),
-    C { value1: u32, value2: String },
+    C { value1: u32, value2_snake: String },
 }
 
 #[derive(EnumDiscriminants, FankorZeroCopy)]
