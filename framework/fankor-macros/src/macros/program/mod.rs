@@ -294,10 +294,10 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             }
         }
 
-        #[cfg(not(feature = "no-entrypoint"))]
+        #[cfg(not(feature = "library"))]
         #cpi_mod
 
-        #[cfg(feature = "library")]
+        #[cfg(any(test, feature = "library"))]
         #lpi_mod
     };
 
