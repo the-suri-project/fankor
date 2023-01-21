@@ -174,7 +174,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #item
 
         #[automatically_derived]
-        #[cfg(feature = "test")]
+        #[cfg(any(test, feature = "test"))]
         impl #name {
             pub fn new_program_test<'info>() -> ::solana_program_test::ProgramTest {
                 ::solana_program_test::ProgramTest::new(
