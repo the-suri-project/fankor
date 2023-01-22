@@ -417,7 +417,7 @@ impl<'info, T: AccountType + AccountSize + 'static> RefAccount<'info, T> {
     pub fn is_value_rent_exempt(&self) -> bool {
         let info = self.info();
         let lamports = info.lamports();
-        let data_len = self.data.borrow().actual_account_size();
+        let data_len = self.data.borrow().actual_account_size() + 1 /* account discriminant */;
 
         let rent = Rent::get().expect("Cannot access Rent Sysvar");
 
@@ -437,7 +437,7 @@ impl<'info, T: AccountType + AccountSize + 'static> RefAccount<'info, T> {
     ) -> FankorResult<()> {
         unsafe {
             self.realloc(
-                self.data.borrow().actual_account_size() + 1,
+                self.data.borrow().actual_account_size() + 1, /* account discriminant */
                 zero_bytes,
                 payer,
                 system_program,
@@ -477,7 +477,7 @@ impl<'info, T: AccountType + AccountSize + 'static> RefAccount<'info, T> {
             .into());
         }
 
-        let new_size = self.data.borrow().actual_account_size() + 1;
+        let new_size = self.data.borrow().actual_account_size() + 1 /* account discriminant */;
         make_rent_exempt(new_size, payer, self.info, system_program)
     }
 }
@@ -600,6 +600,14 @@ fn drop_aux<T: AccountType + 'static>(account: &mut RefAccount<T>) -> FankorResu
             if account.is_writable() && account.is_owned_by_program() {
                 // Write the data.
                 account.save()?;
+
+                // Prevent not rent exempt.
+                if !account.is_rent_exempt() {
+                    return Err(FankorErrorCode::AccountNotRentExempt {
+                        account: *account.address(),
+                    }
+                    .into());
+                }
 
                 // Prevent executing this action twice.
                 account

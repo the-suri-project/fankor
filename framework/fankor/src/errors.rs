@@ -125,12 +125,9 @@ pub enum FankorErrorCode {
     #[msg("Cannot create an account from an AccountInfo ({}) which has been already marked as closed. If your purpose is to revive the account, please use: FankorContext::revive", address)]
     NewFromClosedAccount { address: Pubkey },
 
-    /// Cannot modify a readonly account
-    #[msg("Cannot {} a readonly account: {}", address, action)]
-    AccountNotRentExempt {
-        address: Pubkey,
-        action: &'static str,
-    },
+    /// The account {} is not rent exempt
+    #[msg("The account {} is not rent exempt", account)]
+    AccountNotRentExempt { account: Pubkey },
 
     /// Account not initialized
     #[msg("Account {} not initialized", address)]
