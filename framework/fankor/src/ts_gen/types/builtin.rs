@@ -341,6 +341,20 @@ impl<'a> TsTypeGen for &'a str {
     }
 }
 
+impl<'a> TsTypeGen for Cow<'a, str> {
+    fn value(&self) -> Cow<'static, str> {
+        Cow::Owned(format!("{:?}", self))
+    }
+
+    fn value_type() -> Cow<'static, str> {
+        Cow::Borrowed("string")
+    }
+
+    fn schema_name() -> Cow<'static, str> {
+        Cow::Borrowed("fnk.TString")
+    }
+}
+
 impl TsTypeGen for char {
     fn value(&self) -> Cow<'static, str> {
         Cow::Owned(format!("{:?}", self))
