@@ -180,29 +180,26 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
             let seeds = &pda.data;
 
             pda_methods.push(quote! {
-                pub fn #pda_method_name(&self, context: &FankorContext<'info>, #ixn_args_type) -> FankorResult<Vec<u8>> {
+                pub fn #pda_method_name(&self, context: &FankorContext<'info>, #ixn_args_type) -> FankorResult<Vec<Vec<u8>>> {
                     let info = match self.#name.pda_info() {
                         Some(v) => v,
-                        None => return Ok(Vec::new()),
+                        None => return Err(::fankor::errors::FankorErrorCode::MissingSeedsAccount.into()),
                     };
 
-                    let mut buf = {
+                    let mut seeds = {
                         #(#data)*
                         let seeds = #seeds;
-                        let size = seeds.iter().fold(0, |acc, s| acc + s.len());
-                        let mut buf = Vec::with_capacity(size + 1);
-                        seeds.iter().for_each(|s| buf.extend_from_slice(s));
 
-                        buf
+                        seeds.into_iter().map(|v|v.to_vec()).collect::<Vec<_>>()
                     };
 
                     // Get bump.
                     let bump = context.get_bump_seed_from_account(info).ok_or_else(|| ::fankor::errors::FankorErrorCode::MissingPdaBumpSeed {
                         account: *info.key
                     })?;
-                    buf.push(bump);
+                    seeds.push(vec![bump]);
 
-                    Ok(buf)
+                    Ok(seeds)
                 }
             });
 

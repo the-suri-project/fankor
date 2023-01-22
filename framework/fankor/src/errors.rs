@@ -67,8 +67,12 @@ pub enum FankorErrorCode {
     )]
     InvalidPda { expected: Pubkey, actual: Pubkey },
 
-    /// The ump seed of the PDA is missing
-    #[msg("The ump seed of the PDA ({}) is missing", account)]
+    /// The account to calculate the seeds is missing
+    #[msg("The account to calculate the seeds is missing")]
+    MissingSeedsAccount,
+
+    /// The bump seed of the PDA is missing
+    #[msg("The bump seed of the PDA ({}) is missing", account)]
     MissingPdaBumpSeed { account: Pubkey },
 
     // ------------------------------------------------------------------------
