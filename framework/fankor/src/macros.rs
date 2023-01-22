@@ -29,7 +29,8 @@ macro_rules! require_not {
     };
 }
 
-#[cfg(not(feature = "no-entrypoint"))]
+/// Empty macro to not include the content if the feature is enabled.
+#[cfg(feature = "no-entrypoint")]
 #[macro_export]
 macro_rules! security_txt {
     ($($name:ident: $value:expr),*) => {};
@@ -38,5 +39,5 @@ macro_rules! security_txt {
 pub use panic_error;
 pub use require;
 pub use require_not;
-#[cfg(not(feature = "no-entrypoint"))]
+#[cfg(feature = "no-entrypoint")]
 pub use security_txt;
