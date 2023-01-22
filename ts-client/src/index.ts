@@ -3,6 +3,7 @@ import { AccountInfo, PublicKey } from '@solana/web3.js';
 export * from './accounts';
 export * from './serde';
 export * from './utils';
+export * from './errors';
 
 /**
  * Data information returned by lots of functions.

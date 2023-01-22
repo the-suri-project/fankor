@@ -15,5 +15,5 @@ pub enum Errors {
     #[msg("A: {}", v0)]
     #[deprecated]
     #[discriminant = 78]
-    B(u64, u64, u64),
+    B(u64),
 }

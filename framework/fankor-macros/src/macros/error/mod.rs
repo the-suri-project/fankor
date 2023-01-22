@@ -27,6 +27,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let attributes = ErrorArguments::from(args, &enum_item)?;
 
     let name = enum_item.ident;
+    let discriminant_name = format_ident!("{}Discriminant", name);
     let attrs = &attributes.attrs;
 
     // Parse fields taking into account whether any variant is deprecated or not.
@@ -96,68 +97,77 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
     let mut u32_index = 0u32;
     let mut used_codes = HashSet::new();
-    let mut codes = Vec::with_capacity(variants.len());
-    let from_u32_fn_variants = variants
-        .iter()
-        .map(|v| {
-            let span = v.name.span();
-            let ErrorVariant {
-                name: variant_name,
-                fields,
-                code,
-                ..
-            } = &v;
-            let discriminant = {
-                if let Some(v) = code {
-                    if *v < u32_index {
-                        return Err(Error::new(
-                            span,
-                            "Errors must always be sorted from lowest to highest discriminant",
-                        ));
-                    }
+    let mut discriminant_fields = Vec::with_capacity(variants.len());
+    let mut discriminant_codes = Vec::with_capacity(variants.len());
+    let mut discriminant_maps = Vec::with_capacity(variants.len());
 
-                    u32_index = *v;
-                }
-
-                if used_codes.contains(&u32_index) {
+    for v in &variants {
+        let span = v.name.span();
+        let ErrorVariant {
+            name: variant_name,
+            fields,
+            code,
+            ..
+        } = &v;
+        let discriminant = {
+            if let Some(v) = code {
+                if *v < u32_index {
                     return Err(Error::new(
                         span,
-                        format!("The code attribute is already in use: {}", u32_index),
+                        "Errors must always be sorted from lowest to highest discriminant",
                     ));
                 }
 
-                used_codes.insert(u32_index);
+                u32_index = *v;
+            }
 
-                if attributes.contains_removed_code(u32_index) {
-                    return Err(Error::new(
-                        name.span(),
-                        format!("The discriminant '{}' is marked as removed", u32_index),
-                    ));
-                }
+            if used_codes.contains(&u32_index) {
+                return Err(Error::new(
+                    span,
+                    format!("The code attribute is already in use: {}", u32_index),
+                ));
+            }
 
-                let result = quote! { #u32_index };
-                u32_index += 1;
-                result
-            };
+            used_codes.insert(u32_index);
 
-            let discriminant_field_name = format!("{}::{}", name, variant_name);
-            codes.push(quote! {
-                (#discriminant_field_name, #discriminant)
-            });
+            if attributes.contains_removed_code(u32_index) {
+                return Err(Error::new(
+                    name.span(),
+                    format!("The discriminant '{}' is marked as removed", u32_index),
+                ));
+            }
 
-            Ok(match fields {
-                Fields::Named(_) => quote! {
-                    #name::#variant_name{..} => (#discriminant) #offset
-                },
-                Fields::Unnamed(_) => quote! {
-                    #name::#variant_name(..) => (#discriminant) #offset
-                },
-                Fields::Unit => quote! {
-                    #name::#variant_name => (#discriminant) #offset
-                },
-            })
-        })
-        .collect::<Result<Vec<_>>>()?;
+            let result = quote! { #u32_index };
+            u32_index += 1;
+            result
+        };
+
+        discriminant_codes.push(quote! {
+            Self::#variant_name => (#discriminant) #offset
+        });
+
+        discriminant_fields.push(quote! {
+            #variant_name
+        });
+
+        match fields {
+            Fields::Named(_) => {
+                discriminant_maps.push(quote! {
+                    Self::#variant_name{..} =>#discriminant_name::#variant_name
+                });
+            }
+            Fields::Unnamed(_) => {
+                discriminant_maps.push(quote! {
+                    Self::#variant_name(..) =>#discriminant_name::#variant_name
+                });
+            }
+            Fields::Unit => {
+                discriminant_maps.push(quote! {
+                    Self::#variant_name =>#discriminant_name::#variant_name
+                });
+            }
+        }
+    }
 
     let display_fn_variants = variants.iter().map(|v| {
         let ErrorVariant {
@@ -197,7 +207,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     });
 
     let result = quote! {
-        #[derive(::std::fmt::Debug, ::std::clone::Clone)]
+        #[derive(::std::fmt::Debug, ::std::clone::Clone, TsGen)]
         #[repr(u32)]
         #(#attrs)*
         #[non_exhaustive]
@@ -217,10 +227,15 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                 format!("{}", self)
             }
 
-            pub fn error_code(&self) -> u32 {
+            #[inline(always)]
+            pub const fn discriminant(&self) -> #discriminant_name {
                 match self {
-                    #(#from_u32_fn_variants,)*
+                    #(#discriminant_maps,)*
                 }
+            }
+
+            pub fn error_code(&self) -> u32 {
+                self.discriminant().code()
             }
         }
 
@@ -241,6 +256,25 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
                     error_code_number: error_code.error_code(),
                     error_msg: error_code.to_string(),
                 })
+            }
+        }
+
+        #[allow(dead_code)]
+        #[automatically_derived]
+        #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+        #[non_exhaustive]
+        #[repr(u32)]
+        #visibility enum #discriminant_name {
+            #(#discriminant_fields,)*
+        }
+
+        #[automatically_derived]
+        impl #discriminant_name {
+            #[inline(always)]
+            pub const fn code(&self) -> u32 {
+                match self {
+                    #(#discriminant_codes,)*
+                }
             }
         }
     };

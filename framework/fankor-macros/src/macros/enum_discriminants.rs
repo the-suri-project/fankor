@@ -126,7 +126,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             // TypeScript generation.
             let mut ts_enum_replacements = Vec::new();
-            let ts_offsets = fields
+            let ts_discriminants = fields
                 .iter()
                 .map(|field| {
                     let replacement_str = format!("_r_{}_r_", field);
@@ -144,7 +144,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     {}
                 }}",
                 discriminant_name,
-                ts_offsets.join("\n"),
+                ts_discriminants.join("\n"),
             );
 
             let discriminant_name_str = discriminant_name.to_string();

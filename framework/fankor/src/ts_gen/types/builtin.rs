@@ -4,6 +4,7 @@ use solana_sdk::signature::Keypair;
 use std::any::{Any, TypeId};
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
+use std::mem::size_of;
 
 impl TsTypeGen for () {
     fn value(&self) -> Cow<'static, str> {
@@ -107,6 +108,44 @@ impl TsTypeGen for i128 {
     }
 }
 
+impl TsTypeGen for isize {
+    fn value(&self) -> Cow<'static, str> {
+        let size = size_of::<usize>();
+
+        if size == 8 {
+            Cow::Owned(format!("new BN(\"{}\")", self))
+        } else if size == 4 {
+            Cow::Owned(format!("{}", self))
+        } else {
+            panic!("Unsupported pointer width");
+        }
+    }
+
+    fn value_type() -> Cow<'static, str> {
+        let size = size_of::<usize>();
+
+        if size == 8 {
+            Cow::Borrowed("BN")
+        } else if size == 4 {
+            Cow::Borrowed("number")
+        } else {
+            panic!("Unsupported pointer width");
+        }
+    }
+
+    fn schema_name() -> Cow<'static, str> {
+        let size = size_of::<usize>();
+
+        if size == 8 {
+            Cow::Borrowed("fnk.I64")
+        } else if size == 4 {
+            Cow::Borrowed("fnk.I32")
+        } else {
+            panic!("Unsupported pointer width");
+        }
+    }
+}
+
 impl TsTypeGen for u8 {
     fn value(&self) -> Cow<'static, str> {
         Cow::Owned(format!("{}", self))
@@ -174,6 +213,44 @@ impl TsTypeGen for u128 {
 
     fn schema_name() -> Cow<'static, str> {
         Cow::Borrowed("fnk.U128")
+    }
+}
+
+impl TsTypeGen for usize {
+    fn value(&self) -> Cow<'static, str> {
+        let size = size_of::<usize>();
+
+        if size == 8 {
+            Cow::Owned(format!("new BN(\"{}\")", self))
+        } else if size == 4 {
+            Cow::Owned(format!("{}", self))
+        } else {
+            panic!("Unsupported pointer width");
+        }
+    }
+
+    fn value_type() -> Cow<'static, str> {
+        let size = size_of::<usize>();
+
+        if size == 8 {
+            Cow::Borrowed("BN")
+        } else if size == 4 {
+            Cow::Borrowed("number")
+        } else {
+            panic!("Unsupported pointer width");
+        }
+    }
+
+    fn schema_name() -> Cow<'static, str> {
+        let size = size_of::<usize>();
+
+        if size == 8 {
+            Cow::Borrowed("fnk.U64")
+        } else if size == 4 {
+            Cow::Borrowed("fnk.U32")
+        } else {
+            panic!("Unsupported pointer width");
+        }
     }
 }
 

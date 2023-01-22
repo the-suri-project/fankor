@@ -443,7 +443,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             let result = quote! {
                 #[automatically_derived]
-                impl #impl_generics ::fankor::prelude::ts_gen::types::TsTypeGen for #name #ty_generics #where_clause {
+                impl #impl_generics fankor::prelude::ts_gen::types::TsTypeGen for #name #ty_generics #where_clause {
                     fn value(&self) -> std::borrow::Cow<'static, str> {
                         unreachable!()
                     }
@@ -456,8 +456,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         std::borrow::Cow::Borrowed(#ts_schema_use_method_call)
                     }
 
-                    fn generate_type(registered_types: &mut ::fankor::prelude::ts_gen::types::TsTypesCache) -> std::borrow::Cow<'static, str> {
-                        use ::fankor::prelude::ts_gen::types::TsTypeGen;
+                    fn generate_type(registered_types: &mut fankor::prelude::ts_gen::types::TsTypesCache) -> std::borrow::Cow<'static, str> {
+                        use fankor::prelude::ts_gen::types::TsTypeGen;
                         let name = Self::value_type();
 
                         if registered_types.contains_key(&name) {
@@ -473,8 +473,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         name
                     }
 
-                    fn generate_schema(registered_schemas: &mut ::fankor::prelude::ts_gen::types::TsTypesCache) -> std::borrow::Cow<'static, str> {
-                        use ::fankor::prelude::ts_gen::types::TsTypeGen;
+                    fn generate_schema(registered_schemas: &mut fankor::prelude::ts_gen::types::TsTypesCache) -> std::borrow::Cow<'static, str> {
+                        use fankor::prelude::ts_gen::types::TsTypeGen;
                         let name = Self::schema_name();
 
                         if registered_schemas.contains_key(&name) {
@@ -490,8 +490,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         name
                     }
 
-                    fn generate_schema_constant(registered_constants: &mut ::fankor::prelude::ts_gen::types::TsTypesCache) {
-                        use ::fankor::prelude::ts_gen::types::TsTypeGen;
+                    fn generate_schema_constant(registered_constants: &mut fankor::prelude::ts_gen::types::TsTypesCache) {
+                        use fankor::prelude::ts_gen::types::TsTypeGen;
                         let name = Self::schema_name();
 
                         if registered_constants.contains_key(&name) {
@@ -502,8 +502,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         registered_constants.insert(name.clone(), std::borrow::Cow::Owned(ts_schema));
                     }
 
-                    fn generate_schema_use_method(registered_use_methods: &mut ::fankor::prelude::ts_gen::types::TsTypesCache) {
-                        use ::fankor::prelude::ts_gen::types::TsTypeGen;
+                    fn generate_schema_use_method(registered_use_methods: &mut fankor::prelude::ts_gen::types::TsTypesCache) {
+                        use fankor::prelude::ts_gen::types::TsTypeGen;
                         let name = Self::schema_name();
 
                         if registered_use_methods.contains_key(&name) {
