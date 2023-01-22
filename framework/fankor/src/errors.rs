@@ -394,13 +394,13 @@ impl Error {
         match self {
             Error::ProgramError(program_error) => {
                 msg!(
-                    "ProgramError occurred. Error Code: {:?}. Error Number: {}. Error Message: {}.",
+                    "ProgramError occurred. Error Name: {:?}. Error Code: {}. Error Message: {}.",
                     program_error,
                     u64::from(program_error.clone()),
                     program_error
                 );
             }
-            Error::FankorError(anchor_error) => anchor_error.log(),
+            Error::FankorError(fankor_error) => fankor_error.log(),
         }
     }
 }
@@ -419,7 +419,7 @@ pub struct FankorError {
 impl FankorError {
     pub fn log(&self) {
         msg!(
-            "FankorError occurred. Error Code: {}. Error Number: {}. Error Message: {}.",
+            "FankorError occurred. Error Name: {}. Error Code: {}. Error Message: {}.",
             self.error_name,
             self.error_code_number,
             self.error_msg

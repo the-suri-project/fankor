@@ -3,6 +3,7 @@ pub mod errors;
 pub mod macros;
 pub mod models;
 pub mod prelude;
+pub mod rpc_errors;
 #[cfg(feature = "test")]
 pub mod tests;
 pub mod traits;
