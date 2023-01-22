@@ -9,7 +9,8 @@ impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Box<T> {
 
     #[inline]
     fn min_accounts() -> usize {
-        T::min_accounts()
+        // Prevents infinite recursion.
+        0
     }
 
     fn verify_account_infos<'a>(
