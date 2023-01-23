@@ -23,7 +23,7 @@ pub fn build_lpi(program: &Program) -> Result<TokenStream> {
             };
 
             (arguments, quote! {
-                , arguments: #argument_type
+                , arguments: &#argument_type
             })
         } else {
             (quote! {}, quote! {})
