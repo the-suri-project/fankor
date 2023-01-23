@@ -19,8 +19,12 @@ impl<'info> ZeroCopyType<'info> for ZcFnkString<'info> {
         let bytes = &mut bytes;
         let initial_len = bytes.len();
         let length = FnkUInt::deserialize(bytes)?;
+        let length_field_size = initial_len - bytes.len();
 
-        Ok(length.0 as usize + initial_len - bytes.len())
+        Ok(length
+            .get_usize()
+            .ok_or(FankorErrorCode::ZeroCopyLengthFieldOverflow)?
+            + length_field_size)
     }
 }
 

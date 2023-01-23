@@ -25,11 +25,13 @@ impl<'info, T: CopyType<'info>> ZeroCopyType<'info> for ZcFnkVec<'info, T> {
     }
 
     fn read_byte_size_from_bytes(mut bytes: &[u8]) -> FankorResult<usize> {
+        let initial_len = bytes.len();
         let mut size = 0;
 
         let bytes2 = &mut bytes;
         let len = FnkUInt::deserialize(bytes2)?;
-        size += len.0 as usize;
+        let length_field_size = initial_len - bytes2.len();
+        size += length_field_size;
 
         for _ in 0..len.0 {
             size += T::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;

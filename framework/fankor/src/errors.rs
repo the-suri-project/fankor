@@ -338,6 +338,10 @@ pub enum FankorErrorCode {
     /// Possible deadlock trying to access a zero copy type
     #[msg("Possible deadlock trying to access a zero copy type: '{}'", type_name)]
     ZeroCopyPossibleDeadlock { type_name: &'static str },
+
+    /// The value for a length field is too big.
+    #[msg("The value for a length field is too big")]
+    ZeroCopyLengthFieldOverflow,
 }
 
 // ----------------------------------------------------------------------------

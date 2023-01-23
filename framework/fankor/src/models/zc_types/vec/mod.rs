@@ -7,6 +7,7 @@ use crate::models::{CopyType, Zc, ZeroCopyType};
 use borsh::BorshDeserialize;
 use solana_program::account_info::AccountInfo;
 use std::marker::PhantomData;
+use std::mem::size_of;
 
 pub struct ZcVec<'info, T: CopyType<'info>> {
     info: &'info AccountInfo<'info>,
@@ -27,11 +28,10 @@ impl<'info, T: CopyType<'info>> ZeroCopyType<'info> for ZcVec<'info, T> {
     }
 
     fn read_byte_size_from_bytes(mut bytes: &[u8]) -> FankorResult<usize> {
-        let mut size = 0;
+        let mut size = size_of::<u32>() as usize;
 
         let bytes2 = &mut bytes;
         let len = u32::deserialize(bytes2)?;
-        size += len as usize;
 
         for _ in 0..len {
             size += T::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;

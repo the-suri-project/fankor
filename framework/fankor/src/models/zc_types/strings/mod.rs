@@ -22,8 +22,9 @@ impl<'info> ZeroCopyType<'info> for ZcString<'info> {
         let bytes = &mut bytes;
         let initial_len = bytes.len();
         let length = u32::deserialize(bytes)?;
+        let length_field_size = initial_len - bytes.len();
 
-        Ok(length as usize + initial_len - bytes.len())
+        Ok(length as usize + length_field_size)
     }
 }
 
