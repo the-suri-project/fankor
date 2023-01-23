@@ -573,7 +573,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
         let value_str = format!("{{}}.{}", v.name);
         metas_replacements.push(quote! {
-             .replace(#metas_replacement_str, &< #ty as TsInstructionAccountGen>::get_external_account_metas(Cow::Owned(format!(#value_str, value)), #writable, #signer))
+             .replace(#metas_replacement_str, &< #ty as TsInstructionAccountGen>::get_external_account_metas(Cow::Owned(format!(#value_str, value)), #signer, #writable))
         });
 
         format!("{}: {}", v.name, types_replacement_str)
