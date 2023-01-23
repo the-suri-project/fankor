@@ -49,17 +49,14 @@ pub(crate) fn make_rent_exempt<'info>(
         }
         Ordering::Equal => Ok(()),
         Ordering::Greater => {
+            // Transfer tokens from the account to the payer.
             let lamports = current_balance - needed_balance;
 
-            cpi::system_program::transfer(
-                program,
-                CpiTransfer {
-                    from: info.clone(),
-                    to: payer.clone(),
-                },
-                lamports,
-                &[],
-            )
+            let payer_lamports = payer.lamports();
+            **payer.lamports.borrow_mut() += payer_lamports;
+            **info.lamports.borrow_mut() -= lamports;
+
+            Ok(())
         }
     }
 }
