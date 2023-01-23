@@ -9,7 +9,7 @@ pub(crate) fn close_account<'info>(
     context: &FankorContext<'info>,
     destination_account: &AccountInfo<'info>,
 ) -> FankorResult<()> {
-    if info.key != context.program_id() {
+    if info.owner != context.program_id() {
         return Err(FankorErrorCode::AccountNotOwnedByProgram {
             address: *info.key,
             action: "close",
