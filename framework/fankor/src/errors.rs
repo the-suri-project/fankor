@@ -103,8 +103,8 @@ pub enum FankorErrorCode {
     /// Cannot modify an account that is not owned by the current program
     #[msg(
         "Cannot {} an account that is not owned by the current program: {}",
-        address,
-        action
+        action,
+        address
     )]
     AccountNotOwnedByProgram {
         address: Pubkey,
@@ -112,7 +112,7 @@ pub enum FankorErrorCode {
     },
 
     /// Cannot modify a readonly account
-    #[msg("Cannot {} a readonly account: {}", address, action)]
+    #[msg("Cannot {} a readonly account: {}", action, address)]
     ReadonlyAccountModification {
         address: Pubkey,
         action: &'static str,
