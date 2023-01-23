@@ -22,7 +22,7 @@ macro_rules! impl_account {
         #[cfg(any(feature = "test", test))]
         impl AccountSerialize for $name {
             fn try_serialize<W: Write>(&self, writer: &mut W) -> FankorResult<()> {
-                let mut buf = Vec::with_capacity(<$ty>::LEN);
+                let mut buf = [0u8; <$ty>::LEN];
                 <$ty>::pack(self.0.clone(), &mut buf).map_err(|e| crate::errors::Error::from(e))?;
 
                 writer.write_all(&buf)?;
@@ -41,7 +41,7 @@ macro_rules! impl_account {
         #[cfg(any(feature = "test", test))]
         impl BorshSerialize for $name {
             fn serialize<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
-                let mut buf = Vec::with_capacity(<$ty>::LEN);
+                let mut buf = [0u8; <$ty>::LEN];
                 <$ty>::pack(self.0.clone(), &mut buf)
                     .map_err(|e| std::io::Error::new(ErrorKind::Other, e))?;
 
