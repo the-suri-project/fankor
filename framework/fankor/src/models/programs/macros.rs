@@ -4,6 +4,12 @@ macro_rules! impl_account {
         #[derive($($derived),*)]
         pub struct $name($ty);
 
+        impl $name {
+            pub fn new(data: $ty) -> Self {
+                Self(data)
+            }
+        }
+
         impl crate::traits::AccountType for $name {
             fn discriminant() -> u8 {
                 0
