@@ -7,7 +7,6 @@ use solana_program::pubkey::Pubkey;
 use fankor_macros::error_code;
 
 use crate as fankor;
-use fankor_macros::TsGen;
 
 pub type FankorResult<T> = Result<T, Error>;
 
