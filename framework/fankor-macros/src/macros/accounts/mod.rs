@@ -59,7 +59,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
         None => {
             // Add initial discriminant.
-            if !arguments.accounts_type_name.is_some() {
+            if arguments.accounts_type_name.is_none() {
                 variants[0]
                     .attributes
                     .push(parse_quote!(#[discriminant = 1]));

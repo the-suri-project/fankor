@@ -31,6 +31,7 @@ pub trait InstructionAccount<'info>: Sized {
 // ----------------------------------------------------------------------------
 
 #[derive(Default)]
+#[allow(clippy::type_complexity)]
 pub struct AccountInfoVerification<'a, 'info> {
     pub account_info: Option<&'a mut dyn Fn(&AccountInfo<'info>) -> FankorResult<()>>,
     pub constraints: Option<&'a mut dyn Fn(&AccountInfo<'info>) -> FankorResult<()>>,

@@ -146,20 +146,26 @@ impl BuildContext {
     }
 
     fn generate(&self, mut data_context: MutexGuard<DataContext>) {
-        let folder_path = format!("target/fnk_ts");
+        let folder_path = "target/fnk_ts";
         let file_path = format!("{}/{}.ts", folder_path, data_context.program_name);
 
         // Remove file.
         let _ = fs::remove_file(file_path.as_str());
 
         // Create folder.
-        fs::create_dir_all(folder_path.as_str())
+        fs::create_dir_all(folder_path)
             .unwrap_or_else(|e| panic!("Cannot create folder '{}': {}", folder_path, e));
 
         // Generate the TypeScript file.
         let file_content = data_context.build_ts_file();
         fs::write(file_path.as_str(), file_content.as_str())
             .unwrap_or_else(|e| panic!("Cannot write file '{}': {}", file_path, e));
+    }
+}
+
+impl Default for BuildContext {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

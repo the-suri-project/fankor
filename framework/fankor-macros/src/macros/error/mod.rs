@@ -24,7 +24,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     };
 
     // Process arguments.
-    let attributes = ErrorArguments::from(args, &enum_item)?;
+    let attributes = ErrorArguments::from(args)?;
 
     let name = enum_item.ident;
     let discriminant_name = format_ident!("{}Discriminant", name);
@@ -130,13 +130,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
             used_codes.insert(u32_index);
 
-            if attributes.contains_removed_code(u32_index) {
-                return Err(Error::new(
-                    name.span(),
-                    format!("The discriminant '{}' is marked as removed", u32_index),
-                ));
-            }
-
             let result = quote! { #u32_index };
             u32_index += 1;
             result
@@ -206,9 +199,18 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         }
     });
 
+    let ts_gen = if attributes.skip_ts_gen {
+        quote! {}
+    } else {
+        quote! {
+            #[derive(TsGen)]
+        }
+    };
+
     let result = quote! {
-        #[derive(::std::fmt::Debug, ::std::clone::Clone, TsGen)]
+        #[derive(::std::fmt::Debug, ::std::clone::Clone)]
         #[repr(u32)]
+        #ts_gen
         #(#attrs)*
         #[non_exhaustive]
         #visibility enum #name #ty_generics #where_clause {

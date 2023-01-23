@@ -23,7 +23,7 @@ pub const ERROR_CODE_OFFSET: u32 = 6000;
 ///
 /// The starting point for user-defined errors is defined
 /// by the [ERROR_CODE_OFFSET](crate::error::ERROR_CODE_OFFSET).
-#[error_code(offset = 0)]
+#[error_code(offset = 0, skip_ts_gen)]
 pub enum FankorErrorCode {
     // ------------------------------------------------------------------------
     // General ----------------------------------------------------------------

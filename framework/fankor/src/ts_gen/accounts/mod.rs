@@ -1,8 +1,8 @@
 use crate::ts_gen::types::TsTypesCache;
-pub use accounts::*;
+pub use account_impls::*;
 use std::borrow::Cow;
 
-mod accounts;
+mod account_impls;
 
 pub trait TsInstructionAccountGen {
     // STATIC METHODS ---------------------------------------------------------

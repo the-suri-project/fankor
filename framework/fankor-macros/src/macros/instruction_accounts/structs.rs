@@ -585,7 +585,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         ts_types.join(",")
     );
 
-    let ts_metas = format!("{}", metas_fields.join(""));
+    let ts_metas = metas_fields.join("");
     let get_metas_of_replacement_str = format!("getMetasOf{}(_r_value_r_,accountMetas);", name_str);
     let test_name = format_ident!("__ts_gen_test__instruction_accounts_{}", name_str);
     let test_name_str = test_name.to_string();

@@ -1,4 +1,4 @@
-use crate::errors::FankorResult;
+use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::zc_types::vec::Iter;
 use crate::models::{CopyType, Zc, ZeroCopyType};
 use crate::prelude::{FnkMap, FnkUInt};
@@ -69,9 +69,11 @@ impl<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> ZcFnkMap<'info, K, V> 
     pub fn len(&self) -> FankorResult<usize> {
         let bytes = (*self.info.data).borrow();
         let mut bytes = &bytes[self.offset..];
-        let len = u32::deserialize(&mut bytes)?;
+        let len = FnkUInt::deserialize(&mut bytes)?;
 
-        Ok(len as usize)
+        Ok(len
+            .get_usize()
+            .ok_or(FankorErrorCode::ZeroCopyLengthFieldOverflow)?)
     }
 
     /// Whether the vector is empty or not
@@ -91,7 +93,9 @@ impl<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> ZcFnkMap<'info, K, V> 
         Iter {
             info: self.info,
             offset: self.offset + (original_len - bytes.len()),
-            len: len.0 as usize,
+            len: len
+                .get_usize()
+                .expect("Failed to get usize from FnkUInt in iterator"),
             index: 0,
             _data: PhantomData,
         }

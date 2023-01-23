@@ -28,7 +28,7 @@ impl<'info, T: CopyType<'info>> ZeroCopyType<'info> for ZcVec<'info, T> {
     }
 
     fn read_byte_size_from_bytes(mut bytes: &[u8]) -> FankorResult<usize> {
-        let mut size = size_of::<u32>() as usize;
+        let mut size = size_of::<u32>();
 
         let bytes2 = &mut bytes;
         let len = u32::deserialize(bytes2)?;

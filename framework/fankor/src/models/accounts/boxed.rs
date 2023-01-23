@@ -17,7 +17,8 @@ impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Box<T> {
         &self,
         config: &mut AccountInfoVerification<'a, 'info>,
     ) -> FankorResult<()> {
-        T::verify_account_infos(&*self, config)
+        let value: &T = self;
+        T::verify_account_infos(value, config)
     }
 
     #[inline(never)]

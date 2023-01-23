@@ -49,7 +49,9 @@ impl<'info> ZcFnkString<'info> {
         let mut bytes = &bytes[self.offset..];
         let length = FnkUInt::deserialize(&mut bytes)?;
 
-        Ok(length.0 as usize)
+        Ok(length
+            .get_usize()
+            .ok_or(FankorErrorCode::ZeroCopyLengthFieldOverflow)?)
     }
 
     pub fn is_empty(&self) -> FankorResult<bool> {
@@ -68,7 +70,9 @@ impl<'info> ZcFnkString<'info> {
                 })?;
         let mut bytes = &bytes[self.offset..];
         let length = FnkUInt::deserialize(&mut bytes)?;
-        let size = length.0 as usize;
+        let size = length
+            .get_usize()
+            .ok_or(FankorErrorCode::ZeroCopyLengthFieldOverflow)?;
 
         if bytes.len() < size {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
@@ -101,7 +105,9 @@ impl<'info> ZcFnkString<'info> {
                 })?;
         let mut bytes = &bytes[self.offset..];
         let length = FnkUInt::deserialize(&mut bytes)?;
-        let size = length.0 as usize;
+        let size = length
+            .get_usize()
+            .ok_or(FankorErrorCode::ZeroCopyLengthFieldOverflow)?;
 
         if bytes.len() < size {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {

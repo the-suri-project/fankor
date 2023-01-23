@@ -270,5 +270,5 @@ pub fn ts_gen(input: &Item, account_discriminants_name: &Ident) -> Result<TokenS
         }
     };
 
-    Ok(result.into())
+    Ok(result)
 }

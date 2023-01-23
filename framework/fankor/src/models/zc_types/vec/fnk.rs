@@ -116,7 +116,9 @@ impl<'info, T: CopyType<'info>> ZcFnkVec<'info, T> {
         Iter {
             info: self.info,
             offset: self.offset + (original_len - bytes.len()),
-            len: len.0 as usize,
+            len: len
+                .get_usize()
+                .expect("Failed to get usize from FnkUInt in iterator"),
             index: 0,
             _data: PhantomData,
         }

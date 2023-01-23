@@ -209,34 +209,40 @@ impl DataContext {
 
         // Build types.
         for (_name, type_definition) in self.account_types.iter() {
-            buffer.push_str(&type_definition);
+            buffer.push_str(type_definition);
         }
 
         // Build schemas.
         for (_name, schema) in self.account_schemas.iter() {
-            buffer.push_str(&schema);
+            buffer.push_str(schema);
         }
 
         // Build schema use methods.
         for (_name, use_method) in self.account_schemas_use_methods.iter() {
-            buffer.push_str(&use_method);
+            buffer.push_str(use_method);
         }
 
         // Build schema constants.
         for (_name, constant) in self.account_schemas_constants.iter() {
-            buffer.push_str(&constant);
+            buffer.push_str(constant);
         }
 
         // Build get meta methods.
         for (_name, method) in self.get_meta_methods.iter() {
-            buffer.push_str(&method);
+            buffer.push_str(method);
         }
 
         // Build program methods.
         for (_name, method) in self.program_methods.iter() {
-            buffer.push_str(&method);
+            buffer.push_str(method);
         }
 
         buffer
+    }
+}
+
+impl Default for DataContext {
+    fn default() -> Self {
+        Self::new()
     }
 }
