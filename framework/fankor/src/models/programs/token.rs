@@ -31,11 +31,7 @@ impl ProgramType for Token {
 // ACCOUNTS -------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-impl_account!(
-    token: Mint,
-    spl_token::state::Mint,
-    &spl_token::ID,
-);
+impl_account!(token: Mint, spl_token::state::Mint, &spl_token::ID);
 
 impl_account!(
     token: TokenAccount,

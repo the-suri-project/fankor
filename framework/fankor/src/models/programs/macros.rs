@@ -60,17 +60,25 @@ macro_rules! impl_account {
 
         impl AccountDeserialize for $name {
             unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> FankorResult<Self> {
-                <$ty>::unpack(buf)
+                let result = <$ty>::unpack(buf)
                     .map($name)
-                    .map_err(|e| crate::errors::Error::from(e))
+                    .map_err(|e| crate::errors::Error::from(e))?;
+
+                *buf = &buf[<$ty>::LEN..];
+
+                Ok(result)
             }
         }
 
         impl BorshDeserialize for $name {
             fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
-                <$ty>::unpack(buf)
+                let result = <$ty>::unpack(buf)
                     .map($name)
-                    .map_err(|e| std::io::Error::new(ErrorKind::Other, e))
+                    .map_err(|e| std::io::Error::new(ErrorKind::Other, e))?;
+
+                *buf = &buf[<$ty>::LEN..];
+
+                Ok(result)
             }
         }
 
