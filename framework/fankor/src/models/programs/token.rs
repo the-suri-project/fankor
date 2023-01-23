@@ -32,30 +32,21 @@ impl ProgramType for Token {
 // ----------------------------------------------------------------------------
 
 impl_account!(
-    Mint,
+    token: Mint,
     spl_token::state::Mint,
     &spl_token::ID,
-    unpack,
-    unpack,
-    [Default]
 );
 
 impl_account!(
-    TokenAccount,
+    token: TokenAccount,
     spl_token::state::Account,
     &spl_token::ID,
-    unpack,
-    unpack,
-    [Default]
 );
 
 impl_account!(
-    TokenMultisig,
+    token: TokenMultisig,
     spl_token::state::Multisig,
     &spl_token::ID,
-    unpack,
-    unpack,
-    [Default]
 );
 
 // ----------------------------------------------------------------------------

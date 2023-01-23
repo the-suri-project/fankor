@@ -97,84 +97,57 @@ impl Metadata {
 // ----------------------------------------------------------------------------
 
 impl_account!(
-    MetadataAccount,
+    meta: MetadataAccount,
     mpl_token_metadata::state::Metadata,
     &mpl_token_metadata::ID,
-    deserialize,
-    safe_deserialize,
-    [Eq]
 );
 
 impl_account!(
-    MasterEditionV1,
+    meta: MasterEditionV1,
     mpl_token_metadata::state::MasterEditionV1,
     &mpl_token_metadata::ID,
-    deserialize,
-    safe_deserialize,
-    [Eq]
 );
 
 impl_account!(
-    MasterEditionV2,
+    meta: MasterEditionV2,
     mpl_token_metadata::state::MasterEditionV2,
     &mpl_token_metadata::ID,
-    deserialize,
-    safe_deserialize,
-    [Eq]
 );
 
 impl_account!(
-    Edition,
+    meta: Edition,
     mpl_token_metadata::state::Edition,
     &mpl_token_metadata::ID,
-    deserialize,
-    safe_deserialize,
-    [Eq]
 );
 
 impl_account!(
-    ReservationListV1,
+    meta: ReservationListV1,
     mpl_token_metadata::state::ReservationListV1,
     &mpl_token_metadata::ID,
-    deserialize,
-    safe_deserialize,
-    [Eq]
 );
 
 impl_account!(
-    ReservationListV2,
+    meta: ReservationListV2,
     mpl_token_metadata::state::ReservationListV2,
     &mpl_token_metadata::ID,
-    deserialize,
-    safe_deserialize,
-    [Eq]
 );
 
 impl_account!(
-    EditionMarker,
+    meta: EditionMarker,
     mpl_token_metadata::state::EditionMarker,
     &mpl_token_metadata::ID,
-    deserialize,
-    safe_deserialize,
-    [Eq]
 );
 
 impl_account!(
-    UseAuthorityRecord,
+    meta: UseAuthorityRecord,
     mpl_token_metadata::state::UseAuthorityRecord,
     &mpl_token_metadata::ID,
-    deserialize,
-    safe_deserialize,
-    [Eq]
 );
 
 impl_account!(
-    CollectionAuthorityRecord,
+    meta: CollectionAuthorityRecord,
     mpl_token_metadata::state::CollectionAuthorityRecord,
     &mpl_token_metadata::ID,
-    deserialize,
-    safe_deserialize,
-    [Eq]
 );
 
 // ----------------------------------------------------------------------------

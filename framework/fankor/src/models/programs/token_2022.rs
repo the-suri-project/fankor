@@ -32,30 +32,21 @@ impl ProgramType for Token2022 {
 // ----------------------------------------------------------------------------
 
 impl_account!(
-    Mint2022,
+    token: Mint2022,
     spl_token_2022::state::Mint,
     &spl_token_2022::ID,
-    unpack,
-    unpack,
-    [Default]
 );
 
 impl_account!(
-    TokenAccount2022,
+    token: TokenAccount2022,
     spl_token_2022::state::Account,
     &spl_token_2022::ID,
-    unpack,
-    unpack,
-    [Default]
 );
 
 impl_account!(
-    TokenMultisig2022,
+    token: TokenMultisig2022,
     spl_token_2022::state::Multisig,
     &spl_token_2022::ID,
-    unpack,
-    unpack,
-    [Default]
 );
 
 // ----------------------------------------------------------------------------
