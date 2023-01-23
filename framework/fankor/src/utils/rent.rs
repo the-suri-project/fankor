@@ -35,6 +35,7 @@ pub(crate) fn make_rent_exempt<'info>(
     let current_balance = info.lamports();
     match current_balance.cmp(&needed_balance) {
         Ordering::Less => {
+            // Transfer funds to the account.
             let lamports = needed_balance - current_balance;
 
             cpi::system_program::transfer(
@@ -52,8 +53,7 @@ pub(crate) fn make_rent_exempt<'info>(
             // Transfer tokens from the account to the payer.
             let lamports = current_balance - needed_balance;
 
-            let payer_lamports = payer.lamports();
-            **payer.lamports.borrow_mut() += payer_lamports;
+            **payer.lamports.borrow_mut() += lamports;
             **info.lamports.borrow_mut() -= lamports;
 
             Ok(())
