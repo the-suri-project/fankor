@@ -28,7 +28,7 @@ pub trait AccountDeserialize: Sized {
     /// Deserializes previously initialized account data. Should fail for all
     /// uninitialized accounts, where the bytes are zeroed.
     fn try_deserialize(buf: &mut &[u8]) -> FankorResult<Self> {
-        unsafe { Self::try_deserialize_unchecked(buf) }
+        Self::try_deserialize_unchecked(buf)
     }
 
     /// Deserializes account data without checking the account discriminant.
@@ -39,5 +39,5 @@ pub trait AccountDeserialize: Sized {
     /// This is unsafe because it does not check the account discriminant. It is
     /// the caller's responsibility to ensure that the account is of the correct
     /// type.
-    unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> FankorResult<Self>;
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> FankorResult<Self>;
 }

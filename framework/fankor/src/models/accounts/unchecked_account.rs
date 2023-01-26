@@ -108,10 +108,9 @@ impl<'info> UncheckedAccount<'info> {
     /// fankor will add funds to the account to make it rent-exempt.
     ///
     /// # Safety
-    ///
     /// This method does not check the new account data is valid. It is the caller's
     /// responsibility to ensure the new data is valid.
-    pub unsafe fn realloc(
+    pub fn realloc_unchecked(
         &self,
         size: usize,
         zero_bytes: bool,

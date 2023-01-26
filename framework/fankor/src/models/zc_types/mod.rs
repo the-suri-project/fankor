@@ -1,4 +1,5 @@
 pub mod arrays;
+pub mod binary_vectors;
 pub mod bool;
 pub mod boxed;
 pub mod maps;
@@ -11,7 +12,7 @@ pub mod strings;
 pub mod tuples;
 pub mod vec;
 
-use crate::errors::FankorResult;
+use crate::errors::{FankorErrorCode, FankorResult};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use std::cmp::Ordering;
@@ -55,7 +56,7 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
     ///
     /// # Safety
     /// This method is unsafe because it does not check the offset.
-    pub unsafe fn new(info: &'info AccountInfo<'info>, offset: usize) -> Self {
+    pub fn new_unchecked(info: &'info AccountInfo<'info>, offset: usize) -> Self {
         Self {
             info,
             offset,
@@ -76,9 +77,76 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
     /// Returns the size of the type in bytes.
     /// Note: validates the type without deserializing it.
     pub fn byte_size(&self) -> FankorResult<usize> {
-        let bytes = (*self.info.data).borrow();
+        let bytes =
+            self.info
+                .data
+                .try_borrow()
+                .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
+                    type_name: std::any::type_name::<Self>(),
+                })?;
         let bytes = &bytes[self.offset..];
         T::ZeroCopyType::read_byte_size_from_bytes(bytes)
+    }
+
+    /// Removes the data from the bytes.
+    ///
+    /// # Safety
+    /// This method can fail if `value` was not present at the position.
+    ///
+    /// MAKE SURE THAT THIS IS THE ONLY REFERENCE TO THE SAME ACCOUNT, OTHERWISE
+    /// YOU WILL OVERWRITE DATA.
+    pub fn remove_unchecked(self) -> FankorResult<()> {
+        let mut original_bytes = self.info.data.try_borrow_mut().map_err(|_| {
+            FankorErrorCode::ZeroCopyPossibleDeadlock {
+                type_name: std::any::type_name::<Self>(),
+            }
+        })?;
+
+        let bytes = &mut original_bytes[self.offset..];
+        let value_size = T::ZeroCopyType::read_byte_size_from_bytes(bytes)?;
+
+        if value_size == 0 {
+            return Ok(());
+        }
+
+        // Shift bytes
+        bytes.rotate_left(value_size);
+
+        // Reallocate the buffer
+        self.info
+            .realloc(original_bytes.len() - value_size, false)?;
+
+        Ok(())
+    }
+
+    /// Removes `length` bytes from the current offset.
+    ///
+    /// # Safety
+    ///
+    /// This method can fail if there is not enough bytes to remove.
+    ///
+    /// MAKE SURE THAT THIS IS THE ONLY REFERENCE TO THE SAME ACCOUNT, OTHERWISE
+    /// YOU WILL OVERWRITE DATA.
+    pub fn remove_bytes_unchecked(&self, length: usize) -> FankorResult<()> {
+        if length == 0 {
+            return Ok(());
+        }
+
+        let mut original_bytes = self.info.data.try_borrow_mut().map_err(|_| {
+            FankorErrorCode::ZeroCopyPossibleDeadlock {
+                type_name: std::any::type_name::<Self>(),
+            }
+        })?;
+
+        let bytes = &mut original_bytes[self.offset..];
+
+        // Shift bytes
+        bytes.rotate_left(length);
+
+        // Reallocate the buffer
+        self.info.realloc(original_bytes.len() - length, false)?;
+
+        Ok(())
     }
 }
 
@@ -91,7 +159,13 @@ impl<'info, T: CopyType<'info> + BorshDeserialize> Zc<'info, T> {
     ///
     /// This method can fail if `bytes` cannot be deserialized into the type.
     pub fn try_get_value(&self) -> FankorResult<T> {
-        let bytes = (*self.info.data).borrow();
+        let bytes =
+            self.info
+                .data
+                .try_borrow()
+                .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
+                    type_name: std::any::type_name::<Self>(),
+                })?;
         let mut bytes = &bytes[self.offset..];
         Ok(T::deserialize(&mut bytes)?)
     }
@@ -113,38 +187,46 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
     /// previous value.
     ///
     /// # Safety
-    ///
     /// This method can fail if `value` does not fit in the buffer.
     ///
     /// MAKE SURE THAT THIS IS THE ONLY REFERENCE TO THE SAME ACCOUNT, OTHERWISE
     /// YOU WILL OVERWRITE DATA.
-    pub unsafe fn try_write_value(&self, value: &T) -> FankorResult<()> {
-        let bytes = (*self.info.data).borrow();
+    pub fn try_write_value_unchecked(&self, value: &T) -> FankorResult<()> {
+        let bytes =
+            self.info
+                .data
+                .try_borrow()
+                .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
+                    type_name: std::any::type_name::<Self>(),
+                })?;
         let previous_size = T::ZeroCopyType::read_byte_size_from_bytes(&bytes)?;
         let new_size = value.byte_size_from_instance();
 
         drop(bytes);
 
-        self.try_write_value_with_sizes(value, previous_size, new_size)
+        self.try_write_value_with_sizes_unchecked(value, previous_size, new_size)
     }
 
     /// Writes a value in the buffer occupying at most the same space as the
     /// previous value.
     ///
     /// # Safety
-    ///
     /// This method can fail if `value` does not fit in the buffer or if any
     /// of the sizes are incorrect.
     ///
     /// MAKE SURE THAT THIS IS THE ONLY REFERENCE TO THE SAME ACCOUNT, OTHERWISE
     /// YOU WILL OVERWRITE DATA.
-    pub unsafe fn try_write_value_with_sizes(
+    pub fn try_write_value_with_sizes_unchecked(
         &self,
         value: &T,
         previous_size: usize,
         new_size: usize,
     ) -> FankorResult<()> {
-        let mut original_bytes = (*self.info.data).borrow_mut();
+        let mut original_bytes = self.info.data.try_borrow_mut().map_err(|_| {
+            FankorErrorCode::ZeroCopyPossibleDeadlock {
+                type_name: std::any::type_name::<Self>(),
+            }
+        })?;
 
         match new_size.cmp(&previous_size) {
             Ordering::Less => {
@@ -183,6 +265,21 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
         }
 
         Ok(())
+    }
+}
+
+impl<'info, T: CopyType<'info>> Zc<'info, T> {
+    // METHODS ----------------------------------------------------------------
+
+    /// Generates a new ZC at the given `position` starting from the current offset.
+    ///
+    /// # Safety
+    /// This method can fail if `position` is out of bounds.
+    pub fn zc_at_unchecked<V: CopyType<'info>>(
+        &self,
+        position: usize,
+    ) -> FankorResult<Zc<'info, V>> {
+        Ok(Zc::new_unchecked(self.info, self.offset + position))
     }
 }
 

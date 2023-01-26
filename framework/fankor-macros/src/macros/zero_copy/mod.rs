@@ -56,7 +56,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                         #(#zc_field_methods_aux)*
 
-                        Ok(unsafe { Zc::new(self.info, self.offset + size) })
+                        Ok(Zc::new_unchecked(self.info, self.offset + size))
                     }
                 };
 
@@ -64,10 +64,10 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     let last_ty = &last.ty;
 
                     zc_unsafe_field_methods.push(quote! {
-                        pub unsafe fn #unsafe_field_name(&self, last: &Zc<'info, #last_ty>) -> FankorResult<Zc<'info, #field_ty>> {
+                        pub fn #unsafe_field_name(&self, last: &Zc<'info, #last_ty>) -> FankorResult<Zc<'info, #field_ty>> {
                             let size = last.byte_size()?;
 
-                            Ok(unsafe { Zc::new(last.info(), last.offset() + size) })
+                            Ok(Zc::new_unchecked(last.info(), last.offset() + size))
                         }
                     });
                 }
@@ -95,12 +95,12 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                 if i + 1 == item.fields.len() {
                     quote! {
-                        let #field_name = unsafe { Zc::new(self.info, self.offset + size) };
+                        let #field_name = Zc::new_unchecked(self.info, self.offset + size);
                     }
                 } else {
                     quote! {
                         let #field_name = {
-                            let zc = unsafe { Zc::new(self.info, self.offset + size) };
+                            let zc = Zc::new_unchecked(self.info, self.offset + size);
 
                             size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
 
@@ -315,7 +315,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                     });
 
                                     quote! {
-                                        let #field_name = unsafe { Zc::new(info, __offset) };
+                                        let #field_name = Zc::new_unchecked(info, __offset);
                                         size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
                                     }
                                 });
@@ -339,7 +339,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                     });
 
                                     quote! {
-                                        let #field_name = unsafe { Zc::new(info, __offset) };
+                                        let #field_name = Zc::new_unchecked(info, __offset);
                                         size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
                                     }
                                 });

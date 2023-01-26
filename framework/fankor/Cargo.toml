@@ -40,3 +40,6 @@ static_assertions = "1.1.0"
 mpl-token-metadata = { version = "1.4.3", optional = true, features = ["no-entrypoint"] }
 time = "=0.3.15"
 fankor-macros = { path = "../fankor-macros" }
+
+[dev-dependencies]
+rand = "0.8.5"

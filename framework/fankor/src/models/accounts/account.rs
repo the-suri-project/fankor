@@ -213,10 +213,9 @@ impl<'info, T: AccountType> Account<'info, T> {
     /// fankor will add funds to the account to make it rent-exempt.
     ///
     /// # Safety
-    ///
     /// This method is unsafe because the provided `size` can be less than what
     /// the actual data needs to be writen into the account.
-    pub unsafe fn realloc(
+    pub fn realloc_unchecked(
         &self,
         size: usize,
         zero_bytes: bool,
@@ -330,9 +329,7 @@ impl<'info, T: AccountType> Account<'info, T> {
         new_account.data().try_serialize(&mut data_bytes)?;
 
         // Realloc account.
-        unsafe {
-            new_account.realloc(data_bytes.len(), zero_bytes, Some(payer), system_program)?;
-        }
+        new_account.realloc_unchecked(data_bytes.len(), zero_bytes, Some(payer), system_program)?;
 
         // Save data.
         let mut data = self.info.try_borrow_mut_data()?;
@@ -463,14 +460,12 @@ impl<'info, T: AccountType + AccountSize> Account<'info, T> {
         payer: Option<&'info AccountInfo<'info>>,
         system_program: &Program<System>,
     ) -> FankorResult<()> {
-        unsafe {
-            self.realloc(
-                self.data.actual_account_size() + 1, /* account discriminant */
-                zero_bytes,
-                payer,
-                system_program,
-            )
-        }
+        self.realloc_unchecked(
+            self.data.actual_account_size() + 1, /* account discriminant */
+            zero_bytes,
+            payer,
+            system_program,
+        )
     }
 
     /// Makes the account rent-exempt by adding or removing funds from/to `payer`
@@ -626,14 +621,12 @@ fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
             account.data.try_serialize(&mut serialized)?;
 
             // Reallocate.
-            unsafe {
-                account.realloc(
-                    serialized.len(),
-                    zero_bytes,
-                    payer,
-                    &Program::new(account.context(), system_program)?,
-                )?;
-            }
+            account.realloc_unchecked(
+                serialized.len(),
+                zero_bytes,
+                payer,
+                &Program::new(account.context(), system_program)?,
+            )?;
 
             // Write data.
             let mut data = account.info.try_borrow_mut_data()?;

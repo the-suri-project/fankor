@@ -65,7 +65,7 @@ impl<'info> FankorContext<'info> {
     /// # Safety
     /// The params are not not checked. If you use this method manually, it can cause
     /// undefined behaviours.
-    pub unsafe fn new(
+    pub fn new_unchecked(
         program_id: &'info Pubkey,
         accounts: &'info [AccountInfo<'info>],
     ) -> FankorContext<'info> {
@@ -204,9 +204,8 @@ impl<'info> FankorContext<'info> {
     /// Sets the bump seed associated with an account.
     ///
     /// # Safety
-    ///
     /// This method is intended to be used only by the framework.
-    pub unsafe fn set_bump_seed(&self, account: &AccountInfo<'info>, bump_seed: u8) {
+    pub fn set_bump_seed_unchecked(&self, account: &AccountInfo<'info>, bump_seed: u8) {
         let index = self.get_index_for_account(account);
         let mut inner = (*self.inner).borrow_mut();
 

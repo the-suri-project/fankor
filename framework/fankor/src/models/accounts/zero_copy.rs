@@ -284,9 +284,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
         new_account.data().try_serialize(&mut data_bytes)?;
 
         // Realloc account.
-        unsafe {
-            new_account.realloc(data_bytes.len(), zero_bytes, Some(payer), system_program)?;
-        }
+        new_account.realloc_unchecked(data_bytes.len(), zero_bytes, Some(payer), system_program)?;
 
         // Save data.
         let mut data = self.info.try_borrow_mut_data()?;

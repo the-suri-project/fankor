@@ -255,7 +255,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
             // Build context.
             let context = unsafe {
-                ::fankor::models::FankorContext::<'info>::new(
+                ::fankor::models::FankorContext::<'info>::new_unchecked(
                     program_id,
                     accounts
                 )

@@ -246,10 +246,9 @@ impl<'info, T: AccountType + 'static> RefAccount<'info, T> {
     /// fankor will add funds to the account to make it rent-exempt.
     ///
     /// # Safety
-    ///
     /// This method is unsafe because the provided `size` can be less than what
     /// the actual data needs to be writen into the account.
-    pub unsafe fn realloc(
+    pub fn realloc_unchecked(
         &self,
         size: usize,
         zero_bytes: bool,
@@ -435,14 +434,12 @@ impl<'info, T: AccountType + AccountSize + 'static> RefAccount<'info, T> {
         payer: Option<&'info AccountInfo<'info>>,
         system_program: &Program<System>,
     ) -> FankorResult<()> {
-        unsafe {
-            self.realloc(
-                self.data.borrow().actual_account_size() + 1, /* account discriminant */
-                zero_bytes,
-                payer,
-                system_program,
-            )
-        }
+        self.realloc_unchecked(
+            self.data.borrow().actual_account_size() + 1, /* account discriminant */
+            zero_bytes,
+            payer,
+            system_program,
+        )
     }
 
     /// Makes the account rent-exempt by adding or removing funds from/to `payer`
@@ -631,14 +628,12 @@ fn drop_aux<T: AccountType + 'static>(account: &mut RefAccount<T>) -> FankorResu
             account.data.borrow().try_serialize(&mut serialized)?;
 
             // Reallocate.
-            unsafe {
-                account.realloc(
-                    serialized.len(),
-                    zero_bytes,
-                    payer,
-                    &Program::new(account.context(), system_program)?,
-                )?;
-            }
+            account.realloc_unchecked(
+                serialized.len(),
+                zero_bytes,
+                payer,
+                &Program::new(account.context(), system_program)?,
+            )?;
 
             // Write data.
             let mut data = account.info.try_borrow_mut_data()?;

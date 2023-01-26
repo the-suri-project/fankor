@@ -59,7 +59,7 @@ macro_rules! impl_account {
         }
 
         impl AccountDeserialize for $name {
-            unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> FankorResult<Self> {
+            fn try_deserialize_unchecked(buf: &mut &[u8]) -> FankorResult<Self> {
                 let result = <$ty>::unpack(buf)
                     .map($name)
                     .map_err(|e| crate::errors::Error::from(e))?;
@@ -145,7 +145,7 @@ macro_rules! impl_account {
         }
 
         impl AccountDeserialize for $name {
-            unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> FankorResult<Self> {
+            fn try_deserialize_unchecked(buf: &mut &[u8]) -> FankorResult<Self> {
                 <$ty>::deserialize(buf)
                     .map($name)
                     .map_err(|e| crate::errors::Error::from(e))

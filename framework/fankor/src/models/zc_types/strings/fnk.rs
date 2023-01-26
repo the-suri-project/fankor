@@ -93,10 +93,9 @@ impl<'info> ZcFnkString<'info> {
     /// Reads the string as `&str` without copying it.
     ///
     /// # Safety
-    ///
     /// Differs from `borrow_as_str` in that this method returns does not check
     /// the string is a valid UTF-8 string.
-    pub unsafe fn borrow_as_str_unchecked<R, F: FnOnce(&str) -> R>(&self, f: F) -> FankorResult<R> {
+    pub fn borrow_as_str_unchecked<R, F: FnOnce(&str) -> R>(&self, f: F) -> FankorResult<R> {
         let bytes =
             self.info
                 .try_borrow_data()
@@ -116,7 +115,7 @@ impl<'info> ZcFnkString<'info> {
             .into());
         }
 
-        let text = std::str::from_utf8_unchecked(&bytes[..size]);
+        let text = unsafe { std::str::from_utf8_unchecked(&bytes[..size]) };
 
         Ok(f(text))
     }

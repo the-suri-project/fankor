@@ -96,7 +96,7 @@ impl BorshSerialize for UpgradeableLoaderAccount {
 }
 
 impl AccountDeserialize for UpgradeableLoaderAccount {
-    unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> FankorResult<Self> {
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> FankorResult<Self> {
         let result = bincode::deserialize(buf)
             .map(UpgradeableLoaderAccount)
             .map_err(|e| std::io::Error::new(ErrorKind::Other, e))?;

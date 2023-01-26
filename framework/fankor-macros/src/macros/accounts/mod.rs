@@ -305,10 +305,10 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[automatically_derived]
         impl #impl_generics ::fankor::traits::AccountDeserialize for #name #ty_generics #where_clause {
             fn try_deserialize(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
-                unsafe { Self::try_deserialize_unchecked(buf) }
+                Self::try_deserialize_unchecked(buf)
             }
 
-            unsafe fn try_deserialize_unchecked(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
+            fn try_deserialize_unchecked(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
                 ::fankor::prelude::borsh::BorshDeserialize::deserialize(buf)
                     .map_err(|_| ::fankor::errors::FankorErrorCode::AccountDidNotDeserialize {
                     account: #name_str.to_string()
