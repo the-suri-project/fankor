@@ -1,6 +1,6 @@
 use crate::models::{
-    Account, CopyType, DefaultAccount, Either, Program, RefAccount, Rest, SysvarAccount,
-    UncheckedAccount, UninitializedAccount, ZcAccount,
+    Account, CopyType, DefaultAccount, Either, Program, Rest, SysvarAccount, UncheckedAccount,
+    UninitializedAccount, ZcAccount,
 };
 use crate::prelude::ProgramType;
 use crate::traits::AccountType;
@@ -148,12 +148,6 @@ impl<'info, T: ProgramType> TsInstructionAccountGen for Program<'info, T> {
              else {{ accountMetas.push({{ pubkey: new solana.PublicKey('{}'), isSigner: false, isWritable: false }}); }}",
             value, value, T::address()
         ))
-    }
-}
-
-impl<'info, T: AccountType + 'static> TsInstructionAccountGen for RefAccount<'info, T> {
-    fn value_type() -> Cow<'static, str> {
-        Cow::Borrowed("solana.PublicKey")
     }
 }
 

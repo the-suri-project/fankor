@@ -1,7 +1,6 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
-use std::any::Any;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
@@ -30,10 +29,6 @@ struct FankorContextAccountData<'info> {
 
     // The bump seed used for the derived the account.
     bump_seed: Option<u8>,
-
-    // A link to an associated data of any type. This is useful to store the data of the accounts
-    // and work with duplicates.
-    deserialized_data: Option<Rc<RefCell<dyn Any>>>,
 }
 
 /// The action to perform at the end of the instruction for a specific account.
@@ -150,7 +145,6 @@ impl<'info> FankorContext<'info> {
                     FankorContextAccountData {
                         exit_action: Some(exit_action),
                         bump_seed: None,
-                        deserialized_data: None,
                     },
                 );
             }
@@ -164,41 +158,6 @@ impl<'info> FankorContext<'info> {
         if let Some(v) = inner.account_data.get_mut(&index) {
             v.exit_action = None;
         }
-    }
-
-    pub(crate) fn set_deserialized_data_for_account(
-        &'info self,
-        account: &AccountInfo<'info>,
-        value: Rc<RefCell<dyn Any>>,
-    ) {
-        let index = self.get_index_for_account(account);
-        let mut inner = (*self.inner).borrow_mut();
-
-        match inner.account_data.get_mut(&index) {
-            Some(v) => v.deserialized_data = Some(value),
-            None => {
-                inner.account_data.insert(
-                    index,
-                    FankorContextAccountData {
-                        exit_action: None,
-                        bump_seed: None,
-                        deserialized_data: Some(value),
-                    },
-                );
-            }
-        }
-    }
-
-    pub(crate) fn get_deserialized_data_for_account(
-        &'info self,
-        account: &AccountInfo<'info>,
-    ) -> Option<Rc<RefCell<dyn Any>>> {
-        let index = self.get_index_for_account(account);
-        (*self.inner)
-            .borrow()
-            .account_data
-            .get(&index)
-            .and_then(|v| v.deserialized_data.clone())
     }
 
     /// Sets the bump seed associated with an account.
@@ -217,7 +176,6 @@ impl<'info> FankorContext<'info> {
                     FankorContextAccountData {
                         exit_action: None,
                         bump_seed: Some(bump_seed),
-                        deserialized_data: None,
                     },
                 );
             }
@@ -298,7 +256,6 @@ impl<'info> FankorContext<'info> {
                             FankorContextAccountData {
                                 exit_action: None,
                                 bump_seed: Some(expected_bump_seed),
-                                deserialized_data: None,
                             },
                         );
                     }
