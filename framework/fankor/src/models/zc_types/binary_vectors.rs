@@ -89,7 +89,7 @@ impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZcFnkBVec<'info, K, V> {
     }
 
     /// Clears the map, deallocating all memory.
-    pub fn clear(&mut self) -> FankorResult<()> {
+    pub fn clear(&self) -> FankorResult<()> {
         let actual_length = self.len()?;
         let length = Zc::<u16>::new_unchecked(self.info, self.offset);
         length.try_write_value_unchecked(&0)?;
@@ -416,7 +416,7 @@ impl<
     }
 
     /// Returns a mutable reference to the value corresponding to the key.
-    pub fn get_mut(&mut self, key: &K) -> FankorResult<Option<Zc<'info, V>>> {
+    pub fn get_mut(&self, key: &K) -> FankorResult<Option<Zc<'info, V>>> {
         let root_position = self.root_position()?;
         if root_position == 0 {
             return Ok(None);
@@ -458,7 +458,7 @@ impl<
     /// Inserts a new element into the vector. It will panic if the maximum
     /// number of nodes is exceeded. If the key already exists, it will
     /// overwrite the value and return the old one.
-    pub fn insert(&mut self, key: K, value: V) -> FankorResult<Option<V>> {
+    pub fn insert(&self, key: K, value: V) -> FankorResult<Option<V>> {
         let length = self.len()?;
 
         let root_position = self.root_position()?;
@@ -559,7 +559,7 @@ impl<
     }
 
     /// Removes the entry from the map and returns its value.
-    pub fn remove(&mut self, key: &K) -> FankorResult<Option<V>> {
+    pub fn remove(&self, key: &K) -> FankorResult<Option<V>> {
         let root_position = self.root_position()?;
         if root_position == 0 {
             return Ok(None);
@@ -872,7 +872,7 @@ impl<
     ///    RL   RR       L   RL
     /// ```
     /// Note `node_position` is always correct.
-    fn rotate_left(&mut self, node_position: u16) -> FankorResult<u16> {
+    fn rotate_left(&self, node_position: u16) -> FankorResult<u16> {
         let right_position = self.get_node_right_child_at(node_position - 1)?;
         let node_right_child_at = self.get_node_left_child_at(right_position - 1)?;
 
@@ -895,7 +895,7 @@ impl<
     /// LL   LR              LR   R
     /// ```
     /// Note `node_position` is always correct.
-    fn rotate_right(&mut self, node_position: u16) -> FankorResult<u16> {
+    fn rotate_right(&self, node_position: u16) -> FankorResult<u16> {
         let left_position = self.get_node_left_child_at(node_position - 1)?;
         let node_left_child_at = self.get_node_right_child_at(left_position - 1)?;
 
@@ -919,7 +919,7 @@ impl<
     /// LL   LR              LR   R
     /// ```
     /// Note `node_position` is always correct.
-    fn rebalance_node(&mut self, node_position: u16) -> FankorResult<(u16, bool)> {
+    fn rebalance_node(&self, node_position: u16) -> FankorResult<(u16, bool)> {
         let left_child_height = self.left_height(node_position)?;
         let right_child_height = self.right_height(node_position)?;
 
@@ -973,7 +973,7 @@ impl<
         }
     }
 
-    fn adjust_height(&mut self, node_position: u16) -> FankorResult<()> {
+    fn adjust_height(&self, node_position: u16) -> FankorResult<()> {
         let left_child_height = self.left_height(node_position)?;
         let right_child_height = self.right_height(node_position)?;
 
