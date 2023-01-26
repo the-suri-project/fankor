@@ -1,6 +1,7 @@
+use convert_case::{Case, Converter};
 use quote::{format_ident, quote};
 use syn::spanned::Spanned;
-use syn::{Error, Field, Fields, Item};
+use syn::{Error, Fields, Item};
 
 use crate::Result;
 
@@ -28,7 +29,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             });
 
             let zc_name = format_ident!("Zc{}", name);
-            let zc_name_refs = format_ident!("Zc{}Refs", name);
+            let name_fields = format_ident!("{}ZcFields", name);
             let mut aux_zc_generics = item.generics.clone();
             aux_zc_generics
                 .params
@@ -37,13 +38,21 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let (zc_impl_generics, zc_ty_generics, zc_where_clause) =
                 aux_zc_generics.split_for_impl();
 
+            let case_converter = Converter::new()
+                .from_case(Case::Snake)
+                .to_case(Case::Pascal);
+
+            let mut zc_field_names = Vec::with_capacity(item.fields.len());
             let mut zc_field_methods_aux = Vec::with_capacity(item.fields.len());
-            let mut zc_unsafe_field_methods = Vec::with_capacity(item.fields.len());
-            let mut last: Option<&Field> = None;
+            let mut zc_from_previous_methods = Vec::with_capacity(item.fields.len());
+            let mut zc_from_previous_methods_lasts = Vec::with_capacity(item.fields.len());
             let zc_field_methods = item.fields.iter().map(|field| {
                 let field_name = field.ident.as_ref().unwrap();
-                let unsafe_field_name = format_ident!("{}_from_previous", field_name);
+                let from_previous_method_name = format_ident!("{}_from_previous_unchecked", field_name);
                 let field_ty = &field.ty;
+
+                let pascal_field_name = format_ident!("{}", case_converter.convert(field_name.to_string()), span = field_name.span());
+                zc_field_names.push(pascal_field_name.clone());
 
                 let res = quote! {
                     pub fn #field_name(&self) -> FankorResult<Zc<'info, #field_ty>> {
@@ -60,14 +69,19 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     }
                 };
 
-                if let Some(last ) = last {
-                    let last_ty = &last.ty;
+                if !zc_from_previous_methods_lasts.is_empty() {
+                    zc_from_previous_methods.push(quote! {
+                        pub fn #from_previous_method_name(&self, previous: #name_fields, mut offset: usize) -> FankorResult<Zc<'info, #field_ty>> {
+                            let bytes = self.info.try_borrow_data().map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock { type_name: std::any::type_name::<Self>() })?;
+                            let mut processed = false;
 
-                    zc_unsafe_field_methods.push(quote! {
-                        pub fn #unsafe_field_name(&self, last: &Zc<'info, #last_ty>) -> FankorResult<Zc<'info, #field_ty>> {
-                            let size = last.byte_size()?;
+                            #(#zc_from_previous_methods_lasts)*
 
-                            Ok(Zc::new_unchecked(last.info(), last.offset() + size))
+                            if !processed {
+                                return Err(FankorErrorCode::ZeroCopyIncorrectPrecedingField.into());
+                            }
+
+                            Ok(Zc::new_unchecked(self.info, offset))
                         }
                     });
                 }
@@ -76,47 +90,15 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
                 });
 
-                last = Some(field);
+                zc_from_previous_methods_lasts.push(quote! {
+                    if processed || previous == #name_fields::#pascal_field_name {
+                        offset += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[offset..])?;
+                        processed = true;
+                    }
+                });
+
                 res
-            });
-
-            let zc_name_refs_fields = item.fields.iter().map(|field| {
-                let field_name = field.ident.as_ref().unwrap();
-                let field_ty = &field.ty;
-
-                quote! {
-                    pub #field_name: Zc<'info, #field_ty>,
-                }
-            });
-
-            let to_refs_method = item.fields.iter().enumerate().map(|(i, field)| {
-                let field_name = field.ident.as_ref().unwrap();
-                let field_ty = &field.ty;
-
-                if i + 1 == item.fields.len() {
-                    quote! {
-                        let #field_name = Zc::new_unchecked(self.info, self.offset + size);
-                    }
-                } else {
-                    quote! {
-                        let #field_name = {
-                            let zc = Zc::new_unchecked(self.info, self.offset + size);
-
-                            size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
-
-                            zc
-                        };
-                    }
-                }
-            });
-
-            let to_refs_method_names = item.fields.iter().map(|field| {
-                let field_name = field.ident.as_ref().unwrap();
-
-                quote! {
-                    #field_name
-                }
-            });
+            }).collect::<Vec<_>>();
 
             quote! {
                 #[automatically_derived]
@@ -130,14 +112,15 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     }
                 }
 
+                #[allow(dead_code)]
+                #[automatically_derived]
+                #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+                pub enum #name_fields { #(#zc_field_names),* }
+
                 // TODO process generics to add phantom data if needed
                 pub struct #zc_name #zc_ty_generics #zc_where_clause {
                     info: &'info AccountInfo<'info>,
                     offset: usize,
-                }
-
-                pub struct #zc_name_refs #zc_ty_generics #zc_where_clause {
-                    #(#zc_name_refs_fields)*
                 }
 
                 #[automatically_derived]
@@ -162,22 +145,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 #[automatically_derived]
                 impl #zc_impl_generics #zc_name #zc_ty_generics #zc_where_clause {
                     #(#zc_field_methods)*
-                    #(#zc_unsafe_field_methods)*
-
-                    pub fn to_refs(&self) -> FankorResult<#zc_name_refs #zc_ty_generics> {
-                        let bytes = self.info.try_borrow_data()
-                            .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
-                                type_name: std::any::type_name::<Self>(),
-                            })?;
-                        let bytes = &bytes[self.offset..];
-                        let mut size = 0;
-
-                        #(#to_refs_method)*
-
-                        Ok(#zc_name_refs {
-                            #(#to_refs_method_names),*
-                        })
-                    }
+                    #(#zc_from_previous_methods)*
                 }
             }
         }

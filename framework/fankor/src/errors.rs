@@ -341,6 +341,10 @@ pub enum FankorErrorCode {
     /// The value for a length field is too big.
     #[msg("The value for a length field is too big")]
     ZeroCopyLengthFieldOverflow,
+
+    /// The provided field is not preceding the current one.
+    #[msg("The provided field is not preceding the current one")]
+    ZeroCopyIncorrectPrecedingField,
 }
 
 // ----------------------------------------------------------------------------
