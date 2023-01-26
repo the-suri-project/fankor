@@ -1,6 +1,6 @@
 {
   "name": "@suri-project/fankor",
-  "version": "0.2.15",
+  "version": "0.2.16",
   "description": "The TypeScript client for the Fankor Framework",
   "author": "Julio Treviño Páez <julio@treviware.com>",
   "license": "(MIT OR Apache-2.0)",
