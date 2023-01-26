@@ -6,6 +6,8 @@ use std::io::Write;
 use std::mem;
 use std::mem::size_of;
 
+// Based on https://github.com/oliver-anhuth/avl/blob/d53a6e006a5f4a6df04755703c10dca763028fcf/src/map.rs#L1039
+
 pub(crate) const MAX_HEIGHT: usize = 23; // 1,44 * log2(MAX_NODES) / MAX_NODES = 2 ^ 16 bits
 
 /// Wrapper over `Vec` whose values are sorted and serialized forming a BTree
