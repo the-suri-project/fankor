@@ -1,5 +1,5 @@
 use crate::prelude::{
-    FnkArray, FnkInt, FnkMap, FnkRange, FnkSet, FnkString, FnkUInt, FnkURange, FnkVec,
+    FnkArray, FnkBVec, FnkInt, FnkMap, FnkRange, FnkSet, FnkString, FnkUInt, FnkURange, FnkVec,
 };
 use crate::ts_gen::types::{TsTypeGen, TsTypesCache};
 use std::any::{Any, TypeId};
@@ -215,6 +215,42 @@ impl<K: TsTypeGen, V: TsTypeGen> TsTypeGen for FnkMap<K, V> {
         let inner_value_schema = V::generate_schema(registered_schemas);
         Cow::Owned(format!(
             "fnk.FnkMap({{ keySchema: {}, valueSchema: {} }})",
+            inner_key_schema, inner_value_schema
+        ))
+    }
+}
+
+impl<K: TsTypeGen, V: TsTypeGen> TsTypeGen for FnkBVec<K, V> {
+    fn value(&self) -> Cow<'static, str> {
+        let values = self
+            .iter()
+            .map(|(k, v)| format!("{{ key: {}; value: {} }}", k.value(), v.value()))
+            .collect::<Vec<_>>();
+
+        Cow::Owned(format!("[{}]", values.join(",")))
+    }
+
+    fn value_type() -> Cow<'static, str> {
+        Cow::Owned(format!(
+            "fnk.RustMap<{}, {}>",
+            K::value_type(),
+            V::value_type()
+        ))
+    }
+
+    fn schema_name() -> Cow<'static, str> {
+        Cow::Owned(format!(
+            "fnk.FnkBVecSchema<{}, {}>",
+            K::schema_name(),
+            V::schema_name()
+        ))
+    }
+
+    fn generate_schema(registered_schemas: &mut TsTypesCache) -> Cow<'static, str> {
+        let inner_key_schema = K::generate_schema(registered_schemas);
+        let inner_value_schema = V::generate_schema(registered_schemas);
+        Cow::Owned(format!(
+            "fnk.FnkBVec({{ keySchema: {}, valueSchema: {} }})",
             inner_key_schema, inner_value_schema
         ))
     }

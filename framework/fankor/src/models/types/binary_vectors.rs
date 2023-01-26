@@ -546,37 +546,6 @@ impl<K: Ord + Copy, V: Copy> FnkBVec<K, V> {
         Some(old_node.value)
     }
 
-    /// Returns an iterator over the map.
-    pub fn iter(&self) -> Iter<K, V> {
-        if self.is_empty() {
-            return Iter {
-                data: self,
-                parents: [0; 23],
-                parent_index: 0,
-            };
-        }
-
-        let mut parents = [0u16; 23];
-        parents[0] = self.root_position;
-
-        let mut parent_index = 1u8;
-
-        // Get left most node.
-        let mut min_node = &self.nodes[self.root_position as usize - 1];
-        while min_node.left_child_at != 0 {
-            parent_index += 1;
-            parents[parent_index as usize - 1] = min_node.left_child_at;
-
-            min_node = &self.nodes[min_node.left_child_at as usize - 1];
-        }
-
-        Iter {
-            data: self,
-            parents,
-            parent_index,
-        }
-    }
-
     // ------------------------------------------------------------------------
     // Auxiliary methods ------------------------------------------------------
     // ------------------------------------------------------------------------
@@ -712,7 +681,40 @@ impl<K: Ord + Copy, V: Copy> FnkBVec<K, V> {
     }
 }
 
-impl<K, T> Default for FnkBVec<K, T> {
+impl<K, V> FnkBVec<K, V> {
+    /// Returns an iterator over the map.
+    pub fn iter(&self) -> Iter<K, V> {
+        if self.is_empty() {
+            return Iter {
+                data: self,
+                parents: [0; 23],
+                parent_index: 0,
+            };
+        }
+
+        let mut parents = [0u16; 23];
+        parents[0] = self.root_position;
+
+        let mut parent_index = 1u8;
+
+        // Get left most node.
+        let mut min_node = &self.nodes[self.root_position as usize - 1];
+        while min_node.left_child_at != 0 {
+            parent_index += 1;
+            parents[parent_index as usize - 1] = min_node.left_child_at;
+
+            min_node = &self.nodes[min_node.left_child_at as usize - 1];
+        }
+
+        Iter {
+            data: self,
+            parents,
+            parent_index,
+        }
+    }
+}
+
+impl<K, V> Default for FnkBVec<K, V> {
     fn default() -> Self {
         Self::new()
     }

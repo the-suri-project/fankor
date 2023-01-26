@@ -1,3 +1,4 @@
+export * from './bvec';
 export * from './integers';
 export * from './maps';
 export * from './ranges';
