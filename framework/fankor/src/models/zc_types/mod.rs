@@ -135,18 +135,9 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
         let bytes = &mut original_bytes[self.offset..];
         let value_size = T::ZeroCopyType::read_byte_size_from_bytes(bytes)?;
 
-        if value_size == 0 {
-            return Ok(());
-        }
-
-        // Shift bytes
-        bytes.copy_within(value_size.., 0);
-
-        // Reallocate the buffer
-        let original_length = original_bytes.len();
         drop(original_bytes);
 
-        self.info.realloc(original_length - value_size, false)?;
+        self.remove_bytes_unchecked(value_size)?;
 
         Ok(())
     }
@@ -163,18 +154,22 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
         if length == 0 {
             return Ok(());
         }
-
-        // Reallocate the buffer
-        self.info.realloc(self.info.data_len() + length, false)?;
-
-        // Shift bytes
+        
         let mut original_bytes = self.info.data.try_borrow_mut().map_err(|_| {
             FankorErrorCode::ZeroCopyPossibleDeadlock {
                 type_name: std::any::type_name::<Self>(),
             }
         })?;
+
+        // Shift bytes
         let bytes = &mut original_bytes[self.offset..];
-        bytes.copy_within(0..bytes.len() - length, length);
+        bytes.copy_within(length.., 0);
+
+        // Reallocate the buffer
+        let original_length = original_bytes.len();
+        drop(original_bytes);
+
+        self.info.realloc(original_length - length, false)?;
 
         Ok(())
     }
