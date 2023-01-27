@@ -5,6 +5,7 @@ use crate::utils::bpf_writer::BpfWriter;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use std::cmp::Ordering;
+use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::mem::size_of;
 
@@ -102,6 +103,56 @@ impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZcFnkBVec<'info, K, V> {
         content.remove_bytes_unchecked(actual_length as usize * Node::<K, V>::byte_size())?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+impl<
+        'info,
+        K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+        V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+    > ZcFnkBVec<'info, K, V>
+{
+    // GETTERS ----------------------------------------------------------------
+
+    /// Returns the height of the map.
+    pub fn height(&self) -> u8 {
+        let root_position = self.root_position().unwrap();
+        if root_position == 0 {
+            0
+        } else {
+            self.read_node_height(root_position - 1).unwrap()
+        }
+    }
+
+    // METHODS ----------------------------------------------------------------
+
+    /// Validates the tree is ok.
+    pub fn validate(&self) -> i16 {
+        self._validate(self.root_position().unwrap())
+    }
+
+    fn _validate(&self, node_position: u16) -> i16 {
+        if node_position == 0 {
+            return 0;
+        }
+
+        let node = self.read_node(node_position - 1).unwrap();
+        let left_height = self._validate(node.left_child_at);
+        if left_height < 0 {
+            return -1;
+        }
+
+        let right_height = self._validate(node.right_child_at);
+        if right_height < 0 {
+            return -1;
+        }
+
+        if (left_height - right_height).abs() > 1 {
+            -1
+        } else {
+            left_height.max(right_height) + 1
+        }
     }
 }
 
@@ -305,9 +356,12 @@ impl<
         let mut offset = self.content_offset();
         offset += length as usize * node_size;
 
-        // Realloc the buffer to contain the new value.
-        let cursor = Zc::<()>::new_unchecked(self.info, offset);
-        cursor.make_space(node_size)?;
+        #[cfg(not(test))]
+        {
+            // Realloc the buffer to contain the new value.
+            let cursor = Zc::<()>::new_unchecked(self.info, offset);
+            cursor.make_space(node_size)?;
+        }
 
         self.write_node(length, node)?;
         self.write_len(length + 1)?;
@@ -578,7 +632,7 @@ impl<
 
     /// Removes the entry from the map and returns its value.
     pub fn remove(&self, key: &K) -> FankorResult<Option<V>> {
-        let root_position = self.root_position()?;
+        let mut root_position = self.root_position()?;
         if root_position == 0 {
             return Ok(None);
         }
@@ -719,7 +773,8 @@ impl<
 
                 // Update parent.
                 if node_to_remove_parent_index == 0 {
-                    self.write_root_position(parents[node_to_remove_parent_index])?;
+                    root_position = parents[node_to_remove_parent_index];
+                    self.write_root_position(root_position)?;
                 } else {
                     let parent_index = parents[node_to_remove_parent_index - 1] - 1;
 
@@ -744,7 +799,8 @@ impl<
                 let left_child_at = node_to_remove.left_child_at;
 
                 if parent_index == 0 {
-                    self.write_root_position(left_child_at)?;
+                    root_position = left_child_at;
+                    self.write_root_position(root_position)?;
                 } else {
                     let parent_position = parents[parent_index - 1] - 1;
                     if parent_left_direction[parent_index] {
@@ -769,7 +825,8 @@ impl<
 
                 // Update parent.
                 if parent_index == 0 {
-                    self.write_root_position(subtree_root)?;
+                    root_position = subtree_root;
+                    self.write_root_position(root_position)?;
                 } else {
                     let parent_position = parents[parent_index - 1] - 1;
                     if parent_left_direction[parent_index] {
@@ -787,12 +844,18 @@ impl<
         let last_node = self.read_node(last_node_position - 1)?;
         self.write_node(to_remove_position - 1, &last_node)?;
 
-        // Remove bytes from the last element.
-        let node_size = Node::<K, V>::byte_size();
-        let last_element_offset =
-            self.content_offset() + (last_node_position as usize - 1) * node_size;
-        let zc = Zc::<()>::new_unchecked(self.info, last_element_offset);
-        zc.remove_bytes_unchecked(node_size)?;
+        #[cfg(not(test))]
+        {
+            // Remove bytes from the last element.
+            let node_size = Node::<K, V>::byte_size();
+            let last_element_offset =
+                self.content_offset() + (last_node_position as usize - 1) * node_size;
+            let zc = Zc::<()>::new_unchecked(self.info, last_element_offset);
+            zc.remove_bytes_unchecked(node_size)?;
+        }
+
+        // Decrease length.
+        self.write_len(last_node_position - 1)?;
 
         // Fix position of content.
         if root_position == last_node_position {
@@ -1104,4 +1167,171 @@ impl<
         V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
     > ExactSizeIterator for Iter<'info, K, V>
 {
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use rand::Rng;
+    use solana_program::pubkey::Pubkey;
+    use std::cell::RefCell;
+    use std::collections::HashSet;
+    use std::rc::Rc;
+
+    /// This test can take some time to complete.
+    #[test]
+    fn test_iterator() {
+        let mut lamports = 0;
+        let mut vector = vec![0u8; 10_000];
+
+        for _ in 0..100 {
+            let info = AccountInfo {
+                key: &Pubkey::default(),
+                is_signer: false,
+                is_writable: false,
+                lamports: Rc::new(RefCell::new(&mut lamports)),
+                data: Rc::new(RefCell::new(&mut vector)),
+                owner: &Pubkey::default(),
+                executable: false,
+                rent_epoch: 0,
+            };
+
+            let mut rng = rand::thread_rng();
+            let (map, _) = ZcFnkBVec::new(&info, 0).unwrap();
+
+            let mut keys = HashSet::with_capacity(100);
+
+            for i in 0..100 {
+                let next = rng.gen_range(0..u32::MAX);
+                map.insert(next, i).expect("Cannot insert into ZcFnkBVec");
+                keys.insert(next);
+            }
+
+            let mut sorted_keys = keys.iter().copied().collect::<Vec<_>>();
+            sorted_keys.sort();
+
+            let map_keys = map
+                .iter()
+                .expect("Cannot iter over ZcFnkBVec")
+                .map(|(k, _)| k)
+                .collect::<Vec<_>>();
+
+            assert_eq!(sorted_keys, map_keys);
+        }
+    }
+
+    /// This test can take some time to complete.
+    #[test]
+    fn test_insert_get_and_remove_random() {
+        let mut lamports = 0;
+        let bits = 10;
+        let combinations = 2u32.pow(bits);
+
+        for _ in 0..10 {
+            let mut vector = vec![0u8; combinations as usize * 45];
+            let info = AccountInfo {
+                key: &Pubkey::default(),
+                is_signer: false,
+                is_writable: false,
+                lamports: Rc::new(RefCell::new(&mut lamports)),
+                data: Rc::new(RefCell::new(&mut vector)),
+                owner: &Pubkey::default(),
+                executable: false,
+                rent_epoch: 0,
+            };
+
+            let mut rng = rand::thread_rng();
+            let (map, _) = ZcFnkBVec::new(&info, 0).unwrap();
+
+            assert_eq!(map.validate(), 0, "(0) Invalid height");
+
+            let mut values = HashSet::with_capacity(combinations as usize);
+            let max_height = 1.44 * (combinations as f64).log2();
+
+            for i in 0..combinations {
+                let next = rng.gen_range(0..u32::MAX);
+                map.insert(next, i).expect("Cannot insert into ZcFnkBVec");
+                values.insert(next);
+
+                let height = map.validate();
+
+                if height < 0 {
+                    panic!("(I{}) Incorrect tree state when adding {}", i + 1, next);
+                }
+
+                assert!(
+                    height as f64 <= max_height,
+                    "(I{}) Invalid height when adding {}. Actual: {}, Max: {}",
+                    i + 1,
+                    next,
+                    height,
+                    max_height,
+                );
+
+                assert_eq!(
+                    map.get(&next).expect("Cannot get from ZcFnkBVec"),
+                    Some(i),
+                    "(I{}) Map does not contain {}",
+                    i + 1,
+                    next,
+                );
+            }
+
+            assert_eq!(
+                map.len().expect("Cannot get length from ZcFnkBVec") as usize,
+                values.len(),
+                "Invalid map length"
+            );
+
+            for (i, next) in values.iter().enumerate() {
+                assert!(
+                    map.remove(next)
+                        .expect("Cannot remove from ZcFnkBVec")
+                        .is_some(),
+                    "(R{}) Map does not contain {}",
+                    i + 1,
+                    next,
+                );
+
+                let height = map.validate();
+
+                if height < 0 {
+                    panic!("(R{}) Incorrect tree state when removing {}", i + 1, next);
+                }
+
+                assert!(
+                    height as f64 <= max_height,
+                    "(R{}) Invalid height when removing {}. Actual: {}, Max: {}",
+                    i + 1,
+                    next,
+                    height,
+                    max_height,
+                );
+
+                assert_eq!(
+                    map.get(next).expect("Cannot get from ZcFnkBVec"),
+                    None,
+                    "(R{}) Map still contains {}",
+                    i + 1,
+                    next,
+                );
+            }
+
+            assert_eq!(
+                map.root_position()
+                    .expect("Cannot get root position from ZcFnkBVec"),
+                0,
+                "Root position is not 0"
+            );
+            assert_eq!(
+                map.len().expect("Cannot get len from ZcFnkBVec"),
+                0,
+                "Map is not empty"
+            );
+        }
+    }
 }
