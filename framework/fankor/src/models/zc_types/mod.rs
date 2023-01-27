@@ -110,7 +110,7 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
         }
 
         // Shift bytes
-        bytes.rotate_left(value_size);
+        bytes.copy_within(value_size.., 0);
 
         // Reallocate the buffer
         self.info
@@ -141,7 +141,7 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
         let bytes = &mut original_bytes[self.offset..];
 
         // Shift bytes
-        bytes.rotate_left(length);
+        bytes.copy_within(length.., 0);
 
         // Reallocate the buffer
         self.info.realloc(original_bytes.len() - length, false)?;
@@ -227,6 +227,7 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
                 type_name: std::any::type_name::<Self>(),
             }
         })?;
+        let original_len = original_bytes.len();
 
         match new_size.cmp(&previous_size) {
             Ordering::Less => {
@@ -238,10 +239,10 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
                 // Shift bytes
                 let diff = previous_size - new_size;
                 let bytes = cursor.into_inner();
-                bytes[new_size..].rotate_left(diff);
+                bytes[new_size..].copy_within(diff.., 0);
 
                 // Reallocate the buffer
-                self.info.realloc(original_bytes.len() - diff, false)?;
+                self.info.realloc(original_len - diff, false)?;
             }
             Ordering::Equal => {
                 // Serialize
@@ -252,13 +253,13 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
             Ordering::Greater => {
                 // Reallocate the buffer
                 let diff = new_size - previous_size;
-                self.info.realloc(original_bytes.len() + diff, false)?;
+                self.info.realloc(original_len + diff, false)?;
 
                 // Shift bytes
-                original_bytes[self.offset + previous_size..].rotate_right(diff);
+                let bytes = &mut original_bytes[self.offset..];
+                bytes.copy_within(previous_size..original_len - self.offset, new_size);
 
                 // Serialize
-                let bytes = &mut original_bytes[self.offset..];
                 let mut cursor = Cursor::new(bytes);
                 value.serialize(&mut cursor)?;
             }
