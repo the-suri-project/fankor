@@ -88,6 +88,36 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
         T::ZeroCopyType::read_byte_size_from_bytes(bytes)
     }
 
+    /// Reverses `length` bytes from the current offset expading the buffer and moving
+    /// the rest bytes forward.
+    ///
+    /// # Safety
+    ///
+    /// This method can fail if there is not enough bytes to add.
+    ///
+    /// MAKE SURE THAT THIS IS THE ONLY REFERENCE TO THE SAME ACCOUNT, OTHERWISE
+    /// YOU WILL OVERWRITE DATA.
+    pub fn make_space(&self, length: usize) -> FankorResult<()> {
+        if length == 0 {
+            return Ok(());
+        }
+
+        // Reallocate the buffer
+        let original_len = self.info.data_len();
+        self.info.realloc(original_len + length, false)?;
+
+        // Shift bytes
+        let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
+            FankorErrorCode::ZeroCopyPossibleDeadlock {
+                type_name: std::any::type_name::<Self>(),
+            }
+        })?;
+        let bytes = &mut bytes[self.offset..];
+        bytes.copy_within(0..original_len - self.offset, length);
+
+        Ok(())
+    }
+
     /// Removes the data from the bytes.
     ///
     /// # Safety
@@ -132,19 +162,18 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
             return Ok(());
         }
 
+        // Reallocate the buffer
         let mut original_bytes = self.info.data.try_borrow_mut().map_err(|_| {
             FankorErrorCode::ZeroCopyPossibleDeadlock {
                 type_name: std::any::type_name::<Self>(),
             }
         })?;
 
-        let bytes = &mut original_bytes[self.offset..];
+        self.info.realloc(original_bytes.len() + length, false)?;
 
         // Shift bytes
-        bytes.copy_within(length.., 0);
-
-        // Reallocate the buffer
-        self.info.realloc(original_bytes.len() - length, false)?;
+        let bytes = &mut original_bytes[self.offset..];
+        bytes.copy_within(0..bytes.len() - length, length);
 
         Ok(())
     }
@@ -222,16 +251,16 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
         previous_size: usize,
         new_size: usize,
     ) -> FankorResult<()> {
-        let mut original_bytes = self.info.data.try_borrow_mut().map_err(|_| {
-            FankorErrorCode::ZeroCopyPossibleDeadlock {
-                type_name: std::any::type_name::<Self>(),
-            }
-        })?;
-        let original_len = original_bytes.len();
+        let original_len = self.info.data_len();
 
         match new_size.cmp(&previous_size) {
             Ordering::Less => {
                 // Serialize
+                let mut original_bytes = self.info.data.try_borrow_mut().map_err(|_| {
+                    FankorErrorCode::ZeroCopyPossibleDeadlock {
+                        type_name: std::any::type_name::<Self>(),
+                    }
+                })?;
                 let bytes = &mut original_bytes[self.offset..];
                 let mut cursor = Cursor::new(bytes);
                 value.serialize(&mut cursor)?;
@@ -242,11 +271,18 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
                 bytes[new_size..].copy_within(diff.., 0);
 
                 // Reallocate the buffer
+                drop(original_bytes);
+
                 self.info.realloc(original_len - diff, false)?;
             }
             Ordering::Equal => {
                 // Serialize
-                let bytes = &mut original_bytes[self.offset..];
+                let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
+                    FankorErrorCode::ZeroCopyPossibleDeadlock {
+                        type_name: std::any::type_name::<Self>(),
+                    }
+                })?;
+                let bytes = &mut bytes[self.offset..];
                 let mut cursor = Cursor::new(bytes);
                 value.serialize(&mut cursor)?;
             }
@@ -256,7 +292,12 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
                 self.info.realloc(original_len + diff, false)?;
 
                 // Shift bytes
-                let bytes = &mut original_bytes[self.offset..];
+                let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
+                    FankorErrorCode::ZeroCopyPossibleDeadlock {
+                        type_name: std::any::type_name::<Self>(),
+                    }
+                })?;
+                let bytes = &mut bytes[self.offset..];
                 bytes.copy_within(previous_size..original_len - self.offset, new_size);
 
                 // Serialize

@@ -52,6 +52,7 @@ impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZcFnkBVec<'info, K, V> {
     }
 
     /// Returns the offset of the content vector.
+    #[inline]
     fn content_offset(&self) -> usize {
         self.offset + size_of::<u16>() * 2
     }
@@ -98,7 +99,7 @@ impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZcFnkBVec<'info, K, V> {
         root_position.try_write_value_unchecked(&0)?;
 
         let content = Zc::<u8>::new_unchecked(self.info, self.offset + size_of::<u16>() * 2);
-        content.remove_bytes_unchecked(actual_length as usize * size_of::<Node<K, V>>())?;
+        content.remove_bytes_unchecked(actual_length as usize * Node::<K, V>::byte_size())?;
 
         Ok(())
     }
@@ -119,7 +120,7 @@ impl<
         if root_position == 0 {
             Ok(None)
         } else {
-            let data = self.get_node(root_position)?;
+            let data = self.read_node(root_position)?;
             Ok(Some((data.key, data.value)))
         }
     }
@@ -131,7 +132,7 @@ impl<
         if root_position == 0 {
             Ok(None)
         } else {
-            let data = self.get_node(root_position)?;
+            let data = self.read_node(root_position)?;
             Ok(Some((
                 data.key,
                 Zc::new_unchecked(self.info, self.content_offset() + size_of::<K>()),
@@ -145,9 +146,9 @@ impl<
     ///
     /// # Safety
     /// This method is unsafe because it does not check if the index is in bounds.
-    fn get_node(&self, index: u16) -> FankorResult<Node<K, V>> {
+    fn read_node(&self, index: u16) -> FankorResult<Node<K, V>> {
         let mut offset = self.content_offset();
-        offset += index as usize * size_of::<Node<K, V>>();
+        offset += index as usize * Node::<K, V>::byte_size();
 
         let bytes =
             self.info
@@ -164,9 +165,9 @@ impl<
     ///
     /// # Safety
     /// This method is unsafe because it does not check if the index is in bounds.
-    fn get_node_key(&self, index: u16) -> FankorResult<K> {
+    fn read_node_key(&self, index: u16) -> FankorResult<K> {
         let mut offset = self.content_offset();
-        offset += index as usize * size_of::<Node<K, V>>();
+        offset += index as usize * Node::<K, V>::byte_size();
 
         let bytes =
             self.info
@@ -183,9 +184,9 @@ impl<
     ///
     /// # Safety
     /// This method is unsafe because it does not check if the index is in bounds.
-    fn get_node_value(&self, index: u16) -> FankorResult<V> {
+    fn read_node_value(&self, index: u16) -> FankorResult<V> {
         let mut offset = self.content_offset();
-        offset += index as usize * size_of::<Node<K, V>>();
+        offset += index as usize * Node::<K, V>::byte_size();
         offset += size_of::<K>();
 
         let bytes =
@@ -203,9 +204,9 @@ impl<
     ///
     /// # Safety
     /// This method is unsafe because it does not check if the index is in bounds.
-    fn get_node_left_child_at(&self, index: u16) -> FankorResult<u16> {
+    fn read_node_left_child_at(&self, index: u16) -> FankorResult<u16> {
         let mut offset = self.content_offset();
-        offset += index as usize * size_of::<Node<K, V>>();
+        offset += index as usize * Node::<K, V>::byte_size();
         offset += size_of::<K>() + size_of::<V>();
 
         let bytes =
@@ -223,9 +224,9 @@ impl<
     ///
     /// # Safety
     /// This method is unsafe because it does not check if the index is in bounds.
-    fn get_node_right_child_at(&self, index: u16) -> FankorResult<u16> {
+    fn read_node_right_child_at(&self, index: u16) -> FankorResult<u16> {
         let mut offset = self.content_offset();
-        offset += index as usize * size_of::<Node<K, V>>();
+        offset += index as usize * Node::<K, V>::byte_size();
         offset += size_of::<K>() + size_of::<V>() + size_of::<u16>();
 
         let bytes =
@@ -243,9 +244,9 @@ impl<
     ///
     /// # Safety
     /// This method is unsafe because it does not check if the index is in bounds.
-    fn get_node_height(&self, index: u16) -> FankorResult<u8> {
+    fn read_node_height(&self, index: u16) -> FankorResult<u8> {
         let mut offset = self.content_offset();
-        offset += index as usize * size_of::<Node<K, V>>();
+        offset += index as usize * Node::<K, V>::byte_size();
         offset += size_of::<K>() + size_of::<V>() + size_of::<u16>() * 2;
 
         let bytes =
@@ -263,9 +264,9 @@ impl<
     ///
     /// # Safety
     /// This method is unsafe because it does not check if the index is in bounds.
-    fn get_node_value_zc(&self, index: u16) -> FankorResult<Zc<'info, V>> {
+    fn read_node_value_zc(&self, index: u16) -> FankorResult<Zc<'info, V>> {
         let mut offset = self.content_offset();
-        offset += index as usize * size_of::<Node<K, V>>();
+        offset += index as usize * Node::<K, V>::byte_size();
         Ok(Zc::new_unchecked(self.info, offset + size_of::<K>()))
     }
 
@@ -275,7 +276,7 @@ impl<
     /// This method is unsafe because it does not check if the index is in bounds.
     fn write_node(&self, index: u16, node: &Node<K, V>) -> FankorResult<()> {
         let mut offset = self.content_offset();
-        offset += index as usize * size_of::<Node<K, V>>();
+        offset += index as usize * Node::<K, V>::byte_size();
 
         let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
             FankorErrorCode::ZeroCopyPossibleDeadlock {
@@ -294,13 +295,33 @@ impl<
         Ok(())
     }
 
+    /// Appends a node at the end extending the vector and updating the length.
+    ///
+    /// # Safety
+    /// This method is unsafe because it does not check if the index is in bounds.
+    fn append_node(&self, node: &Node<K, V>) -> FankorResult<()> {
+        let length = self.len()?;
+        let node_size = Node::<K, V>::byte_size();
+        let mut offset = self.content_offset();
+        offset += length as usize * node_size;
+
+        // Realloc the buffer to contain the new value.
+        let cursor = Zc::<()>::new_unchecked(self.info, offset);
+        cursor.make_space(node_size)?;
+
+        self.write_node(length, node)?;
+        self.write_len(length + 1)?;
+
+        Ok(())
+    }
+
     /// Writes the value of a node at `index`.
     ///
     /// # Safety
     /// This method is unsafe because it does not check if the index is in bounds.
     fn write_node_value(&self, index: u16, value: &V) -> FankorResult<()> {
         let mut offset = self.content_offset();
-        offset += index as usize * size_of::<Node<K, V>>();
+        offset += index as usize * Node::<K, V>::byte_size();
         offset += size_of::<K>();
 
         let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
@@ -322,7 +343,7 @@ impl<
     /// This method is unsafe because it does not check if the index is in bounds.
     fn write_node_left_child_at(&self, index: u16, left_child_at: u16) -> FankorResult<()> {
         let mut offset = self.content_offset();
-        offset += index as usize * size_of::<Node<K, V>>();
+        offset += index as usize * Node::<K, V>::byte_size();
         offset += size_of::<K>() + size_of::<V>();
 
         let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
@@ -344,7 +365,7 @@ impl<
     /// This method is unsafe because it does not check if the index is in bounds.
     fn write_node_right_child_at(&self, index: u16, right_child_at: u16) -> FankorResult<()> {
         let mut offset = self.content_offset();
-        offset += index as usize * size_of::<Node<K, V>>();
+        offset += index as usize * Node::<K, V>::byte_size();
         offset += size_of::<K>() + size_of::<V>() + size_of::<u16>();
 
         let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
@@ -366,7 +387,7 @@ impl<
     /// This method is unsafe because it does not check if the index is in bounds.
     fn write_node_height(&self, index: u16, height: u8) -> FankorResult<()> {
         let mut offset = self.content_offset();
-        offset += index as usize * size_of::<Node<K, V>>();
+        offset += index as usize * Node::<K, V>::byte_size();
         offset += size_of::<K>() + size_of::<V>() + size_of::<u16>() * 2;
 
         let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
@@ -389,7 +410,7 @@ impl<
             return Ok(None);
         }
 
-        let mut current_element = self.get_node(root_position - 1)?;
+        let mut current_element = self.read_node(root_position - 1)?;
         loop {
             match key.cmp(&current_element.key) {
                 Ordering::Less => {
@@ -397,14 +418,14 @@ impl<
                         break;
                     }
 
-                    current_element = self.get_node(current_element.left_child_at - 1)?;
+                    current_element = self.read_node(current_element.left_child_at - 1)?;
                 }
                 Ordering::Greater => {
                     if current_element.right_child_at == 0 {
                         break;
                     }
 
-                    current_element = self.get_node(current_element.right_child_at - 1)?;
+                    current_element = self.read_node(current_element.right_child_at - 1)?;
                 }
                 Ordering::Equal => {
                     return Ok(Some(current_element.value));
@@ -424,7 +445,7 @@ impl<
 
         let mut next_position = root_position;
         loop {
-            let current_element = self.get_node(next_position - 1)?;
+            let current_element = self.read_node(next_position - 1)?;
 
             match key.cmp(&current_element.key) {
                 Ordering::Less => {
@@ -447,7 +468,7 @@ impl<
             }
         }
 
-        Ok(Some(self.get_node_value_zc(next_position - 1)?))
+        Ok(Some(self.read_node_value_zc(next_position - 1)?))
     }
 
     /// Returns true if the key is in the map, else false.
@@ -464,8 +485,7 @@ impl<
         let root_position = self.root_position()?;
         if root_position == 0 {
             // Insert node.
-            self.write_node(0, &Node::new(key, value))?;
-            self.write_len(length + 1)?;
+            self.append_node(&Node::new(key, value))?;
             self.write_root_position(length + 1)?;
 
             return Ok(None);
@@ -482,14 +502,13 @@ impl<
         // Go down finding the position where to insert the new node.
         loop {
             let node_position = parents[parent_index];
-            let node = self.get_node(node_position - 1)?;
+            let node = self.read_node(node_position - 1)?;
 
             match node.key.cmp(&key) {
                 Ordering::Greater => {
                     if node.left_child_at == 0 {
                         // Insert node and update parent.
-                        self.write_node(0, &Node::new(key, value))?;
-                        self.write_len(length + 1)?;
+                        self.append_node(&Node::new(key, value))?;
 
                         let new_index = length + 1;
                         self.write_node_left_child_at(node_position - 1, new_index)?;
@@ -504,8 +523,7 @@ impl<
                 Ordering::Less => {
                     if node.right_child_at == 0 {
                         // Insert node and update parent.
-                        self.write_node(0, &Node::new(key, value))?;
-                        self.write_len(length + 1)?;
+                        self.append_node(&Node::new(key, value))?;
 
                         let new_index = length + 1;
                         self.write_node_right_child_at(node_position - 1, new_index)?;
@@ -576,7 +594,7 @@ impl<
         // Go down finding the position of the element to remove.
         loop {
             let node_position = parents[parent_index];
-            let node = self.get_node(node_position - 1)?;
+            let node = self.read_node(node_position - 1)?;
 
             match node.key.cmp(key) {
                 Ordering::Greater => {
@@ -608,12 +626,12 @@ impl<
         // Unlink node to remove.
         {
             // Check if node to-unlink has right sub tree
-            let node_to_remove = self.get_node(to_remove_position - 1)?;
+            let node_to_remove = self.read_node(to_remove_position - 1)?;
             if node_to_remove.right_child_at != 0 {
                 let node_to_remove_parent_index = parent_index;
                 let node_to_remove_direction = parent_left_direction[parent_index];
                 let right_child_position = node_to_remove.right_child_at;
-                let right_node = self.get_node(right_child_position - 1)?;
+                let right_node = self.read_node(right_child_position - 1)?;
 
                 if right_node.left_child_at == 0 {
                     // Replace node by smallest child in right sub tree
@@ -628,7 +646,7 @@ impl<
                     parents[parent_index] = right_child_position;
 
                     // Update right node.
-                    let node_to_remove = self.get_node(to_remove_position - 1)?;
+                    let node_to_remove = self.read_node(to_remove_position - 1)?;
                     let node_to_remove_left_child_at = node_to_remove.left_child_at;
                     self.write_node_left_child_at(
                         right_child_position - 1,
@@ -651,13 +669,13 @@ impl<
                     parent_left_direction[parent_index] = false;
 
                     // Get min node.
-                    let mut min_node = self.get_node(node_to_remove.right_child_at - 1)?;
+                    let mut min_node = self.read_node(node_to_remove.right_child_at - 1)?;
                     while min_node.left_child_at != 0 {
                         parent_index += 1;
                         parents[parent_index] = min_node.left_child_at;
                         parent_left_direction[parent_index] = true;
 
-                        min_node = self.get_node(min_node.left_child_at - 1)?;
+                        min_node = self.read_node(min_node.left_child_at - 1)?;
                     }
 
                     // Replace node to remove in parents by min node.
@@ -666,7 +684,7 @@ impl<
                     // Unlink min node from parent.
                     let min_node_position = parents[parent_index];
                     let min_node_parent_position = parents[parent_index - 1];
-                    let min_node = self.get_node(min_node_position - 1)?;
+                    let min_node = self.read_node(min_node_position - 1)?;
                     let min_node_right_child_at = min_node.right_child_at;
                     debug_assert_eq!(min_node.left_child_at, 0);
 
@@ -683,7 +701,7 @@ impl<
                     }
 
                     // Link min node to node-to-remove's children.
-                    let node_to_remove = self.get_node(to_remove_position - 1)?;
+                    let node_to_remove = self.read_node(to_remove_position - 1)?;
                     let node_to_remove_left_child_at = node_to_remove.left_child_at;
                     let node_to_remove_right_child_at = node_to_remove.right_child_at;
                     self.write_node_left_child_at(
@@ -765,8 +783,8 @@ impl<
 
         // Remove node and swap it with last node.
         let last_node_position = self.len()?;
-        let old_node_value = self.get_node_value(to_remove_position - 1)?;
-        let last_node = self.get_node(last_node_position - 1)?;
+        let old_node_value = self.read_node_value(to_remove_position - 1)?;
+        let last_node = self.read_node(last_node_position - 1)?;
         self.write_node(to_remove_position - 1, &last_node)?;
 
         // Remove bytes from the last element.
@@ -780,11 +798,11 @@ impl<
         if root_position == last_node_position {
             self.write_root_position(to_remove_position)?;
         } else if last_node_position != to_remove_position {
-            let last_node_key = self.get_node_key(to_remove_position - 1)?;
+            let last_node_key = self.read_node_key(to_remove_position - 1)?;
             let mut current_position = root_position;
 
             loop {
-                let node = self.get_node(current_position - 1)?;
+                let node = self.read_node(current_position - 1)?;
 
                 match node.key.cmp(&last_node_key) {
                     Ordering::Greater => {
@@ -841,12 +859,12 @@ impl<
         let mut parent_index = 1u8;
 
         // Get left most node.
-        let mut left_child_at = self.get_node_left_child_at(parents[0] - 1)?;
+        let mut left_child_at = self.read_node_left_child_at(parents[0] - 1)?;
         while left_child_at != 0 {
             parent_index += 1;
             parents[parent_index as usize - 1] = left_child_at;
 
-            left_child_at = self.get_node_left_child_at(left_child_at - 1)?;
+            left_child_at = self.read_node_left_child_at(left_child_at - 1)?;
         }
 
         Ok(Iter {
@@ -873,8 +891,8 @@ impl<
     /// ```
     /// Note `node_position` is always correct.
     fn rotate_left(&self, node_position: u16) -> FankorResult<u16> {
-        let right_position = self.get_node_right_child_at(node_position - 1)?;
-        let node_right_child_at = self.get_node_left_child_at(right_position - 1)?;
+        let right_position = self.read_node_right_child_at(node_position - 1)?;
+        let node_right_child_at = self.read_node_left_child_at(right_position - 1)?;
 
         self.write_node_left_child_at(right_position - 1, node_position)?;
         self.write_node_right_child_at(node_position - 1, node_right_child_at)?;
@@ -896,8 +914,8 @@ impl<
     /// ```
     /// Note `node_position` is always correct.
     fn rotate_right(&self, node_position: u16) -> FankorResult<u16> {
-        let left_position = self.get_node_left_child_at(node_position - 1)?;
-        let node_left_child_at = self.get_node_right_child_at(left_position - 1)?;
+        let left_position = self.read_node_left_child_at(node_position - 1)?;
+        let node_left_child_at = self.read_node_right_child_at(left_position - 1)?;
 
         self.write_node_right_child_at(left_position - 1, node_position)?;
         self.write_node_left_child_at(node_position - 1, node_left_child_at)?;
@@ -925,7 +943,7 @@ impl<
 
         if left_child_height > right_child_height + 1 {
             // Rebalance right.
-            let left_child_at = self.get_node_left_child_at(node_position - 1)?;
+            let left_child_at = self.read_node_left_child_at(node_position - 1)?;
 
             if self.right_height(left_child_at)? > self.left_height(left_child_at)? {
                 let left_child_at = self.rotate_left(left_child_at)?;
@@ -935,7 +953,7 @@ impl<
             Ok((self.rotate_right(node_position)?, true))
         } else if right_child_height > left_child_height + 1 {
             // Rebalance left.
-            let right_child_at = self.get_node_right_child_at(node_position - 1)?;
+            let right_child_at = self.read_node_right_child_at(node_position - 1)?;
 
             if self.left_height(right_child_at)? > self.right_height(right_child_at)? {
                 let right_child_at = self.rotate_right(right_child_at)?;
@@ -952,23 +970,23 @@ impl<
     }
 
     fn left_height(&self, node_position: u16) -> FankorResult<u8> {
-        let left_child_at = self.get_node_left_child_at(node_position - 1)?;
+        let left_child_at = self.read_node_left_child_at(node_position - 1)?;
 
         if left_child_at == 0 {
             Ok(0)
         } else {
-            let height = self.get_node_height(left_child_at - 1)?;
+            let height = self.read_node_height(left_child_at - 1)?;
             Ok(height + 1)
         }
     }
 
     fn right_height(&self, node_position: u16) -> FankorResult<u8> {
-        let right_child_at = self.get_node_right_child_at(node_position - 1)?;
+        let right_child_at = self.read_node_right_child_at(node_position - 1)?;
 
         if right_child_at == 0 {
             Ok(0)
         } else {
-            let height = self.get_node_height(right_child_at - 1)?;
+            let height = self.read_node_height(right_child_at - 1)?;
             Ok(height + 1)
         }
     }
@@ -1046,7 +1064,7 @@ impl<
         let (zc, _) = ZcFnkBVec::<K, V>::new(self.info, self.offset).unwrap();
         let node_position = self.parents[self.parent_index as usize - 1];
         let node = zc
-            .get_node(node_position - 1)
+            .read_node(node_position - 1)
             .expect("Cannot read node from FnkBVec iterator");
         self.parent_index -= 1;
 
@@ -1056,7 +1074,7 @@ impl<
 
             // Get left most node.
             let mut left_child_at = zc
-                .get_node_left_child_at(node.right_child_at - 1)
+                .read_node_left_child_at(node.right_child_at - 1)
                 .expect("Cannot read node from FnkBVec iterator");
 
             while left_child_at != 0 {
@@ -1064,7 +1082,7 @@ impl<
                 self.parents[self.parent_index as usize - 1] = left_child_at;
 
                 left_child_at = zc
-                    .get_node_left_child_at(left_child_at - 1)
+                    .read_node_left_child_at(left_child_at - 1)
                     .expect("Cannot read node from FnkBVec iterator");
             }
         }
