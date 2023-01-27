@@ -154,7 +154,7 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
         if length == 0 {
             return Ok(());
         }
-        
+
         let mut original_bytes = self.info.data.try_borrow_mut().map_err(|_| {
             FankorErrorCode::ZeroCopyPossibleDeadlock {
                 type_name: std::any::type_name::<Self>(),
@@ -217,17 +217,18 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
     /// MAKE SURE THAT THIS IS THE ONLY REFERENCE TO THE SAME ACCOUNT, OTHERWISE
     /// YOU WILL OVERWRITE DATA.
     pub fn try_write_value_unchecked(&self, value: &T) -> FankorResult<()> {
-        let bytes =
+        let original_bytes =
             self.info
                 .data
                 .try_borrow()
                 .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
                     type_name: std::any::type_name::<Self>(),
                 })?;
+        let bytes = &original_bytes[self.offset..];
         let previous_size = T::ZeroCopyType::read_byte_size_from_bytes(&bytes)?;
         let new_size = value.byte_size_from_instance();
 
-        drop(bytes);
+        drop(original_bytes);
 
         self.try_write_value_with_sizes_unchecked(value, previous_size, new_size)
     }
