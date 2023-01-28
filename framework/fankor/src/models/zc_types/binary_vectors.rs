@@ -5,7 +5,6 @@ use crate::utils::bpf_writer::BpfWriter;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use std::cmp::Ordering;
-use std::fmt::Debug;
 use std::marker::PhantomData;
 use std::mem::size_of;
 
@@ -352,12 +351,13 @@ impl<
     /// This method is unsafe because it does not check if the index is in bounds.
     fn append_node(&self, node: &Node<K, V>) -> FankorResult<()> {
         let length = self.len()?;
-        let node_size = Node::<K, V>::byte_size();
-        let mut offset = self.content_offset();
-        offset += length as usize * node_size;
 
         #[cfg(not(test))]
         {
+            let node_size = Node::<K, V>::byte_size();
+            let mut offset = self.content_offset();
+            offset += length as usize * node_size;
+
             // Realloc the buffer to contain the new value.
             let cursor = Zc::<()>::new_unchecked(self.info, offset);
             cursor.make_space(node_size)?;
@@ -1186,9 +1186,9 @@ mod test {
     #[test]
     fn test_iterator() {
         let mut lamports = 0;
-        let mut vector = vec![0u8; 10_000];
 
         for _ in 0..100 {
+            let mut vector = vec![0u8; 10_000];
             let info = AccountInfo {
                 key: &Pubkey::default(),
                 is_signer: false,

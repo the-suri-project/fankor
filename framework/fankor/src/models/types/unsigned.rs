@@ -4,22 +4,40 @@ use std::fmt::Display;
 use std::io::{ErrorKind, Write};
 use std::ops::{Deref, DerefMut};
 
+const FLAG_ENCODING_LIMIT: u64 = 1 << 14; // 2^14
+
 /// Wrapper over an unsigned number that serializes to a variable-length form.
 ///
 /// ## Encoding
 ///
-/// If `bit_len(number) <= 13`: flag encoding
-/// else: length encoding
+/// If the number is less than 2^14, the flag encoding is applied, otherwise the length encoding
+/// is used. The encoding used is determined by the HSB of the first encoded byte so:
+///
+/// ```none
+/// Flag encoding  : 0___ ____
+/// Length encoding: 1___ ____
+/// ```
 ///
 /// ### Flag encoding
 ///
-/// Numbers are encoded in little-endian format using the first bit of each byte to indicate
-/// whether the next byte is part of the number or not.
+/// Numbers are encoded in little-endian format using the second bit of the first byte to indicate
+/// whether the next byte is part of the number (1) or not (0).
+///
+/// ```none
+/// 1 byte : 00nn nnnn           -> Big endian: 00nn nnnn
+/// 2 bytes: 01nn nnnn mmmm mmmm -> Big endian: 00mm mmmm mmnn nnnn
+/// no more cases
+/// ```
 ///
 /// ### Length encoding
 ///
-/// Numbers are encoded in little-endian format using the first byte to indicate the number of
-/// bytes in the number.
+/// Numbers are encoded in little-endian format using the first byte to indicate the actual
+/// length in bytes of the number. The length must be in range [0, 6] which actually represents
+/// the range [2, 8], other values are forbidden.
+///
+/// ```none
+/// 1000 0sss + sss bytes
+/// ```
 #[derive(Debug, Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FnkUInt(pub u64);
 
@@ -137,45 +155,43 @@ impl From<usize> for FnkUInt {
 
 impl BorshSerialize for FnkUInt {
     fn serialize<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
-        let bit_length = 64 - self.0.leading_zeros();
-
-        if bit_length <= 13 {
+        if self.0 < FLAG_ENCODING_LIMIT {
             // Flag encoding.
-            let byte_length = if bit_length <= 6 {
-                1
-            } else {
-                (bit_length - 6 + 8) / 8 + 1
-            };
+            let mut remaining = self.0;
 
             // Write first.
-            let mut byte = (self.0 & 0x3F) as u8;
+            let mut byte = (remaining & 0x3F) as u8;
+            remaining >>= 6;
 
             // Include next flag.
-            if byte_length > 1 {
+            if remaining != 0 {
                 byte |= 0x40;
             }
 
             writer.write_all(&[byte])?;
 
-            // Write remaining bytes.
-            let mut offset = 6;
-            let last = byte_length - 1;
-            for i in 1..byte_length {
-                let mut byte = ((self.0 >> offset) & 0x7F) as u8 | 0x80;
-
-                if i >= last {
-                    byte &= 0x7F;
-                }
-
+            // Write second byte.
+            if remaining != 0 {
+                byte = remaining as u8;
                 writer.write_all(&[byte])?;
-                offset += 7;
             }
         } else {
             // Length encoding.
-            let byte_length = ((bit_length + 8) / 8).min(8);
+            let mut byte_length = 8;
             let bytes = self.0.to_le_bytes();
+
+            for i in (1..8).rev() {
+                if bytes[i] != 0 {
+                    break;
+                }
+
+                byte_length -= 1;
+            }
+
+            debug_assert!((2i32..=8).contains(&byte_length), "Invalid byte length");
+
             let bytes = &bytes.as_slice()[..byte_length as usize];
-            let byte_length = byte_length as u8 | 0x80;
+            let byte_length = (byte_length - 2) as u8 | 0x80;
 
             writer.write_all(&[byte_length])?;
             writer.write_all(bytes)?;
@@ -196,35 +212,24 @@ impl BorshDeserialize for FnkUInt {
         }
 
         let first_byte = buf[0];
-
         if first_byte & 0x80 == 0 {
             // Flag encoding.
             let mut number = (first_byte & 0x3F) as u64;
             *buf = &buf[1..];
 
             if first_byte & 0x40 != 0 {
-                // Read remaining bytes.
-                let mut offset = 6;
-
-                loop {
-                    if buf.is_empty() {
-                        return Err(std::io::Error::new(
-                            ErrorKind::InvalidInput,
-                            "Unexpected length of input",
-                        ));
-                    }
-
-                    let byte = buf[0];
-                    *buf = &buf[1..];
-
-                    number |= ((byte & 0x7F) as u64) << offset;
-
-                    if (byte & 0x80) == 0 {
-                        break;
-                    }
-
-                    offset += 7;
+                // Read second byte.
+                if buf.is_empty() {
+                    return Err(std::io::Error::new(
+                        ErrorKind::InvalidInput,
+                        "Unexpected length of input",
+                    ));
                 }
+
+                let byte = buf[0];
+                *buf = &buf[1..];
+
+                number |= (byte as u64) << 6;
             }
 
             Ok(Self(number))
@@ -232,7 +237,16 @@ impl BorshDeserialize for FnkUInt {
             // Length encoding.
             let byte_length = first_byte & 0x7F;
 
-            if buf.len() < byte_length as usize + 1 {
+            if byte_length >= 7 {
+                return Err(std::io::Error::new(
+                    ErrorKind::InvalidInput,
+                    "Incorrect FnkUInt length",
+                ));
+            }
+
+            let byte_length = byte_length as usize + 2;
+
+            if buf.len() < byte_length + 1 {
                 return Err(std::io::Error::new(
                     ErrorKind::InvalidInput,
                     "Unexpected length of input",
@@ -240,15 +254,14 @@ impl BorshDeserialize for FnkUInt {
             }
 
             let mut number = 0;
-
             let mut offset = 0;
+
             for i in 0..byte_length {
-                let byte = (buf[i as usize + 1] as u64) << offset;
-                number |= byte;
+                number |= (buf[i + 1] as u64) << offset;
                 offset += 8;
             }
 
-            *buf = &buf[byte_length as usize + 1..];
+            *buf = &buf[byte_length + 1..];
             Ok(Self(number))
         }
     }
@@ -260,22 +273,27 @@ impl AccountSize for FnkUInt {
     }
 
     fn actual_account_size(&self) -> usize {
-        let bit_length = 64 - self.0.leading_zeros();
-
-        if bit_length <= 13 {
+        if self.0 < FLAG_ENCODING_LIMIT {
             // Flag encoding.
-            let byte_length = if bit_length <= 6 {
-                1
+            if self.0 >> 6 != 0 {
+                2
             } else {
-                (bit_length - 6 + 8) / 8 + 1
-            };
-
-            byte_length as usize
+                1
+            }
         } else {
             // Length encoding.
-            let byte_length = ((bit_length + 8) / 8).min(8);
+            let mut byte_length = 9; // 8 bytes + 1 byte for length.
+            let bytes = self.0.to_le_bytes();
 
-            (byte_length + 1) as usize
+            for i in (1..8).rev() {
+                if bytes[i] != 0 {
+                    break;
+                }
+
+                byte_length -= 1;
+            }
+
+            byte_length
         }
     }
 }
@@ -310,11 +328,24 @@ mod test {
             let fnk_number = FnkUInt::from(number);
             assert_eq!(fnk_number.get_usize(), Some(number));
         }
+
+        let fnk_number = FnkUInt::from(u8::MAX as u64 + 1);
+        assert_eq!(fnk_number.get_u8(), None);
+
+        let fnk_number = FnkUInt::from(u16::MAX as u64 + 1);
+        assert_eq!(fnk_number.get_u8(), None);
+        assert_eq!(fnk_number.get_u16(), None);
+
+        let fnk_number = FnkUInt::from(u32::MAX as u64 + 1);
+        assert_eq!(fnk_number.get_u8(), None);
+        assert_eq!(fnk_number.get_u16(), None);
+        assert_eq!(fnk_number.get_u32(), None);
     }
 
     #[test]
-    fn test_serialize_as_one_byte_flag_format() {
-        for number in [0u8, 1, 42, 63] {
+    fn test_serialize_flag_format_one_byte() {
+        let max = 1u8 << 6;
+        for number in 0..max {
             let mut buffer = Vec::new();
             let mut cursor = Cursor::new(&mut buffer);
             let fnk_number = FnkUInt::from(number);
@@ -323,81 +354,14 @@ mod test {
                 .unwrap_or_else(|_| panic!("Failed to serialize for {}", number));
 
             assert_eq!(buffer, vec![number]);
+            assert_eq!(fnk_number.actual_account_size(), 1);
         }
     }
 
     #[test]
-    fn test_serialize_as_two_bytes_flag_format() {
-        let number = 0b0001_0101_0101_0101u64; // 5461
-        let mut buffer = Vec::new();
-        let mut cursor = Cursor::new(&mut buffer);
-        let fnk_number = FnkUInt::from(number);
-        fnk_number
-            .serialize(&mut cursor)
-            .expect("Failed to serialize");
-
-        assert_eq!(buffer, vec![0b0101_0101, 0b0101_0101]);
-    }
-
-    #[test]
-    fn test_serialize_as_two_bytes_length_format() {
-        let number = 0x2AAAu64;
-        let mut buffer = Vec::new();
-        let mut cursor = Cursor::new(&mut buffer);
-        let fnk_number = FnkUInt::from(number);
-        fnk_number
-            .serialize(&mut cursor)
-            .expect("Failed to serialize");
-
-        assert_eq!(buffer, vec![2u8 | 0x80, 0b1010_1010, 0b10_1010]);
-    }
-
-    #[test]
-    fn test_serialize_as_bytes_length_format() {
-        let mut number = 0x1AAu64;
-        for i in 3u8..9 {
-            number = (number << 8) | 0xAA;
-
-            let mut buffer = Vec::new();
-            let mut cursor = Cursor::new(&mut buffer);
-            let fnk_number = FnkUInt::from(number);
-            fnk_number
-                .serialize(&mut cursor)
-                .unwrap_or_else(|_| panic!("Failed to serialize for {}", i));
-
-            let mut result = vec![i | 0x80];
-            result.resize(i as usize, 0b1010_1010);
-            result.push(0b1);
-
-            assert_eq!(buffer, result, "Incorrect result for {}", i);
-        }
-
-        let number = u64::MAX;
-        let mut buffer = Vec::new();
-        let mut cursor = Cursor::new(&mut buffer);
-        let fnk_number = FnkUInt::from(number);
-        fnk_number
-            .serialize(&mut cursor)
-            .expect("Failed to serialize");
-
-        let mut result = vec![8u8 | 0x80];
-        result.resize(9, 0b1111_1111);
-
-        assert_eq!(buffer, result, "Incorrect result for max");
-    }
-
-    #[test]
-    fn test_deserialize() {
-        for number in [
-            0u64,
-            1,
-            u8::MAX as u64,
-            u16::MAX as u64,
-            u32::MAX as u64,
-            usize::MAX as u64,
-            u64::MAX / 2,
-            u64::MAX,
-        ] {
+    fn test_serialize_flag_format_two_bytes() {
+        let min = 1 << 6;
+        for number in min..FLAG_ENCODING_LIMIT {
             let mut buffer = Vec::new();
             let mut cursor = Cursor::new(&mut buffer);
             let fnk_number = FnkUInt::from(number);
@@ -405,23 +369,78 @@ mod test {
                 .serialize(&mut cursor)
                 .unwrap_or_else(|_| panic!("Failed to serialize for {}", number));
 
-            let mut de_buf = buffer.as_slice();
-            let deserialized = FnkUInt::deserialize(&mut de_buf)
-                .unwrap_or_else(|_| panic!("Failed to deserialize for {}", number));
-
-            assert_eq!(
-                deserialized.get_u64(),
-                number,
-                "Incorrect result for {}",
-                number
-            );
-            assert!(de_buf.is_empty(), "Buffer not empty for {}", number);
+            let first_byte = (0x40 | number & 0x3F) as u8;
+            let second_byte = (number >> 6) as u8;
+            assert_eq!(buffer.len(), 2);
+            assert_eq!(buffer[0], first_byte);
+            assert_eq!(buffer[1], second_byte);
+            assert_eq!(fnk_number.actual_account_size(), 2);
         }
     }
 
     #[test]
-    fn test_deserialize_long() {
-        for number in 64u64..1000 {
+    fn test_serialize_length_format() {
+        // Three bytes
+        let num_bytes = 2;
+        for number in [1u64 << 14, u16::MAX as u64] {
+            let mut buffer = Vec::new();
+            let mut cursor = Cursor::new(&mut buffer);
+            let fnk_number = FnkUInt::from(number);
+            fnk_number
+                .serialize(&mut cursor)
+                .unwrap_or_else(|_| panic!("Failed to serialize for {}", number));
+
+            let length = (0x80 | (num_bytes - 2)) as u8;
+            assert_eq!(buffer.len(), num_bytes + 1);
+            assert_eq!(buffer[0], length);
+            assert_eq!(&buffer[1..], &number.to_le_bytes()[..num_bytes]);
+            assert_eq!(fnk_number.actual_account_size(), num_bytes + 1);
+        }
+
+        // Rest
+        for num_bytes in 3..=8 {
+            let low = 1u64 << ((num_bytes - 1) << 3);
+            let high = ((1u128 << (num_bytes << 3)) - 1) as u64;
+
+            for number in [low, high] {
+                let mut buffer = Vec::new();
+                let mut cursor = Cursor::new(&mut buffer);
+                let fnk_number = FnkUInt::from(number);
+                fnk_number
+                    .serialize(&mut cursor)
+                    .unwrap_or_else(|_| panic!("Failed to serialize for {}", number));
+
+                let length = (0x80 | (num_bytes - 2)) as u8;
+                assert_eq!(buffer.len(), num_bytes + 1);
+                assert_eq!(buffer[0], length);
+                assert_eq!(&buffer[1..], &number.to_le_bytes()[..num_bytes]);
+                assert_eq!(fnk_number.actual_account_size(), num_bytes + 1);
+            }
+        }
+    }
+
+    #[test]
+    fn test_deserialize() {
+        for number in [
+            0u64,
+            1,
+            1 << 6 - 1,
+            1 << 6,
+            1 << 14 - 1,
+            1 << 14,
+            1 << 16,
+            1 << 24,
+            1 << 32,
+            1 << 40,
+            1 << 48,
+            1 << 56,
+            u8::MAX as u64,
+            u16::MAX as u64,
+            u32::MAX as u64,
+            usize::MAX as u64,
+            u64::MAX / 2,
+            u64::MAX,
+        ] {
             let mut buffer = Vec::new();
             let mut cursor = Cursor::new(&mut buffer);
             let fnk_number = FnkUInt::from(number);
