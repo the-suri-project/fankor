@@ -26,6 +26,9 @@ pub struct Field {
     pub pda_program_id: Option<TokenStream>,
     pub constraints: Vec<DataAndError>,
     pub data: Vec<Data>,
+    
+    // Bool = with args?
+    pub validate: Option<bool>,
 }
 
 pub enum FieldKind {
@@ -67,6 +70,7 @@ impl Field {
             pda_program_id: None,
             constraints: Vec::new(),
             data: Vec::new(),
+            validate: None,
         };
 
         new_field.parse_attributes(field.attrs, false)?;
@@ -103,6 +107,7 @@ impl Field {
                     pda_program_id: None,
                     constraints: Vec::new(),
                     data: Vec::new(),
+                    validate: None,
                 };
 
                 new_field.parse_attributes(variant.attrs, true)?;
@@ -573,6 +578,18 @@ impl Field {
                                 value: quote! {#value},
                             });
                         }
+                        "validate" => {
+                            return Err(Error::new(
+                                    name.span(),
+                                    "The validate argument is only allowed without values, i.e. #[validate]",
+                                ));
+                        }
+                        "validate_with_args" => {
+                            return Err(Error::new(
+                                    name.span(),
+                                    "The validate_with_args argument is only allowed without values, i.e. #[validate_with_args]",
+                                ));
+                        }
                         _ => {
                             return Err(Error::new(name.span(), "Unknown argument"));
                         }
@@ -764,6 +781,54 @@ impl Field {
                                 name.span(),
                                 "The data argument must use a value: data = <expr>",
                             ));
+                        }
+                        "validate" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The validate argument is not allowed in enums",
+                                ));
+                            }
+
+                            if self.validate.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The validate argument can only be defined once",
+                                ));
+                            }
+
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The validate argument cannot have an error field",
+                                ));
+                            }
+
+                            self.validate = Some(false);
+                        }
+                        "validate_with_args" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The validate_with_args argument is not allowed in enums",
+                                ));
+                            }
+
+                            if self.validate.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The validate_with_args argument can only be defined once",
+                                ));
+                            }
+
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The validate_with_args argument cannot have an error field",
+                                ));
+                            }
+
+                            self.validate = Some(true);
                         }
                         _ => {
                             return Err(Error::new(name.span(), "Unknown argument"));

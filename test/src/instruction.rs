@@ -61,6 +61,9 @@ pub struct InstructionStructAccounts<'info> {
 
     pub other_enum: Box<InstructionEnumAccounts<'info>>,
 
+    #[account(validate)]
+    pub custom: InstructionStructAccountsWithoutAssociatedType<'info>,
+
     // Must be placed in the last position.
     #[account(min = 2)]
     #[account(max = 5)]

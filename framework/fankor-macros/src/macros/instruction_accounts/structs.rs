@@ -1,5 +1,5 @@
 use quote::{format_ident, quote};
-use syn::ItemStruct;
+use syn::{Error, ItemStruct};
 
 use crate::Result;
 
@@ -34,6 +34,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
     });
 
     let mut pda_methods = Vec::new();
+    let mut field_validations = Vec::new();
     let try_from_fn_conditions = mapped_fields.iter().map(|v| {
         let name = &v.name;
         let name_str = name.to_string();
@@ -272,7 +273,26 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
             }}
         });
 
-        if !account_info_conditions.is_empty() || !constraints_conditions.is_empty() {
+        if let Some(with_args) = v.validate {
+            if !with_args {
+                field_validations.push(quote! {{
+                    self.#name.validate(context)?;
+                }})
+            } else {
+                if ixn_args_type.is_empty() {
+                    return Err(Error::new(
+                        name.span(),
+                        "The validate_with_args argument requires the instruction's argument #[account(args = <type>)]",
+                    ));
+                }
+
+                field_validations.push(quote! {{
+                    self.#name.validate(context, args)?;
+                }})
+            }
+        }
+
+        let result = if !account_info_conditions.is_empty() || !constraints_conditions.is_empty() {
             let account_info_conditions = if account_info_conditions.is_empty() {
                 quote! {}
             } else {
@@ -316,8 +336,10 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                 #min
                 #max
             }
-        }
-    });
+        };
+
+        Ok(result)
+    }).collect::<Result<Vec<_>>>()?;
 
     let fields = item.fields.iter().map(|v| &v.ident);
 
@@ -460,6 +482,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
     } else {
         quote! { args }
     };
+
     let initial_validation = &instruction_arguments.initial_validation.map(|v| match v {
         Validation::Implicit => {
             quote! {
@@ -468,6 +491,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         }
         Validation::Explicit(v) => v,
     });
+
     let final_validation = &instruction_arguments.final_validation.map(|v| match v {
         Validation::Implicit => {
             quote! {
@@ -510,6 +534,8 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                 #ixn_args_type
             ) -> ::fankor::errors::FankorResult<()> {
                 use ::fankor::traits::InstructionAccount;
+
+                #(#field_validations)*
 
                 #initial_validation
 
