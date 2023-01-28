@@ -52,18 +52,26 @@ pub(crate) fn make_rent_exempt<'info>(
         }
         Ordering::Equal => Ok(()),
         Ordering::Greater => {
-            // TODO this does not work if after this call a CPI is made with just one of
-            //      these accounts. When finding a solution
-            // // Transfer tokens from the account to the payer.
-            // let lamports = current_balance - needed_balance;
-            //
-            // let payer_lamports = payer.lamports();
-            // let info_lamports = info.lamports();
-            //
-            // **info.lamports.borrow_mut() = info_lamports.checked_sub(lamports).unwrap();
-            // **payer.lamports.borrow_mut() = payer_lamports.checked_add(lamports).unwrap();
+            // Transfer tokens from the account to the payer.
+            let lamports = current_balance - needed_balance;
 
-            Ok(())
+            let payer_lamports = payer.lamports();
+            let info_lamports = info.lamports();
+
+            **info.lamports.borrow_mut() = info_lamports.checked_sub(lamports).unwrap();
+            **payer.lamports.borrow_mut() = payer_lamports.checked_add(lamports).unwrap();
+
+            // If we do not do this no-op CPI and another CPI is made with just one of these
+            // accounts it will rise an error.
+            cpi::system_program::transfer(
+                program,
+                CpiTransfer {
+                    from: payer.clone(),
+                    to: info.clone(),
+                },
+                0,
+                &[],
+            )
         }
     }
 }
