@@ -19,7 +19,7 @@ pub(crate) const MAX_HEIGHT: usize = 23; // 1,44 * log2(MAX_NODES) / MAX_NODES =
 ///
 /// The maximum number of nodes are 2^16-1. If it is exceeded, it will
 /// panic.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct FnkBVec<K, V> {
     nodes: Vec<Node<K, V>>,
 
@@ -763,11 +763,29 @@ impl<K: Copy, V: Copy> AccountSize for FnkBVec<K, V> {
     }
 }
 
+impl<K: PartialEq, V: PartialEq> PartialEq for FnkBVec<K, V> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.nodes.len() != other.len() {
+            return false;
+        }
+
+        for (a, b) in self.iter().zip(other.iter()) {
+            if a != b {
+                return false;
+            }
+        }
+
+        true
+    }
+}
+
+impl<K: Eq, V: Eq> Eq for FnkBVec<K, V> {}
+
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-#[derive(Debug, Clone, PartialEq, Eq, BorshSerialize, BorshDeserialize)]
+#[derive(Debug, Clone, BorshSerialize, BorshDeserialize)]
 pub(crate) struct Node<K, V> {
     pub key: K,
     pub value: V,
@@ -1006,5 +1024,36 @@ mod test {
                 "Value is not the same"
             );
         }
+    }
+
+    #[test]
+    fn test_equal() {
+        let mut map1 = FnkBVec::new();
+        let mut map2 = FnkBVec::new();
+
+        assert_eq!(map1, map2);
+
+        map1.insert(1, 1);
+        assert_ne!(map1, map2);
+
+        map2.insert(1, 1);
+        assert_eq!(map1, map2);
+
+        map2.insert(1, 2);
+        assert_ne!(map1, map2);
+
+        let mut map2 = FnkBVec::new();
+        map2.insert(2, 1);
+        assert_ne!(map1, map2);
+
+        let mut map1 = FnkBVec::new();
+        let mut map2 = FnkBVec::new();
+
+        map1.insert(1, 1);
+        map1.insert(2, 2);
+
+        map2.insert(2, 2);
+        map2.insert(1, 1);
+        assert_eq!(map1, map2);
     }
 }
