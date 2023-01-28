@@ -23,16 +23,18 @@ pub(crate) fn make_rent_exempt<'info>(
         .into());
     }
 
-    let original_size = unsafe { info.original_data_len() };
-
-    if new_size == original_size {
-        return Ok(());
+    if !info.is_writable {
+        return Err(FankorErrorCode::ReadonlyAccountModification {
+            address: *info.key,
+            action: "make rent-exempt",
+        }
+        .into());
     }
 
     let rent = Rent::get()?;
     let needed_balance = rent.minimum_balance(new_size);
-
     let current_balance = info.lamports();
+
     match current_balance.cmp(&needed_balance) {
         Ordering::Less => {
             // Transfer funds to the account.
@@ -50,11 +52,16 @@ pub(crate) fn make_rent_exempt<'info>(
         }
         Ordering::Equal => Ok(()),
         Ordering::Greater => {
-            // Transfer tokens from the account to the payer.
-            let lamports = current_balance - needed_balance;
-
-            **payer.lamports.borrow_mut() += lamports;
-            **info.lamports.borrow_mut() -= lamports;
+            // TODO this does not work if after this call a CPI is made with just one of
+            //      these accounts. When finding a solution
+            // // Transfer tokens from the account to the payer.
+            // let lamports = current_balance - needed_balance;
+            //
+            // let payer_lamports = payer.lamports();
+            // let info_lamports = info.lamports();
+            //
+            // **info.lamports.borrow_mut() = info_lamports.checked_sub(lamports).unwrap();
+            // **payer.lamports.borrow_mut() = payer_lamports.checked_add(lamports).unwrap();
 
             Ok(())
         }

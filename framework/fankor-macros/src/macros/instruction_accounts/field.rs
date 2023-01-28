@@ -26,7 +26,7 @@ pub struct Field {
     pub pda_program_id: Option<TokenStream>,
     pub constraints: Vec<DataAndError>,
     pub data: Vec<Data>,
-    
+
     // Bool = with args?
     pub validate: Option<bool>,
 }

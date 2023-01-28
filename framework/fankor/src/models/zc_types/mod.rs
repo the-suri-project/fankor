@@ -225,7 +225,7 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
                     type_name: std::any::type_name::<Self>(),
                 })?;
         let bytes = &original_bytes[self.offset..];
-        let previous_size = T::ZeroCopyType::read_byte_size_from_bytes(&bytes)?;
+        let previous_size = T::ZeroCopyType::read_byte_size_from_bytes(bytes)?;
         let new_size = value.byte_size_from_instance();
 
         drop(original_bytes);
