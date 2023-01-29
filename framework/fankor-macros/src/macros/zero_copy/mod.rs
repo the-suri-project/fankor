@@ -283,7 +283,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                     });
 
                                     quote! {
-                                        let #field_name = Zc::new_unchecked(info, __offset);
+                                        let #field_name = Zc::new_unchecked(info, __offset + size);
                                         size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
                                     }
                                 });
@@ -307,7 +307,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                     });
 
                                     quote! {
-                                        let #field_name = Zc::new_unchecked(info, __offset);
+                                        let #field_name = Zc::new_unchecked(info, __offset + size);
                                         size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
                                     }
                                 });
