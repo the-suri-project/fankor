@@ -83,7 +83,7 @@ pub fn ts_gen(input: &Item, account_discriminants_name: &Ident) -> Result<TokenS
 
             // STATIC METHODS ---------------------------------------------------------
 
-            static async getOnChainAccountByAddress(
+            static async fetchAccountByAddress(
                 connection: solana.Connection,
                 address: solana.PublicKey
             ): Promise<fnk.AccountResult<{}> | null> {{
@@ -107,6 +107,37 @@ pub fn ts_gen(input: &Item, account_discriminants_name: &Ident) -> Result<TokenS
                 return null;
             }}
 
+            static async fetchManyAccountsByAddress(connection: solana.Connection,
+                addresses: solana.PublicKey[]): Promise<(fnk.AccountResult<{}> | null)[]> {{
+                const accounts = await connection.getMultipleAccountsInfo(addresses, connection.commitment);
+
+                const result: (fnk.AccountResult<{}> | null)[] = [];
+
+                for (let i = 0; i < accounts.length; i++) {{
+                    const address = addresses[i];
+                    const account = accounts[i];
+
+                    if (account) {{
+                        if (account.owner == ID) {{
+                            let buf = account.data;
+                            let data = this.deserialize(buf);
+                            result.push({{
+                                address,
+                                account,
+                                data,
+                            }});
+                        }} else {{
+
+                            result.push(null);
+                        }}
+                    }} else {{
+                        result.push(null);
+                    }}
+                }}
+
+                return result;
+            }}
+
             static deserialize(buffer: Buffer, offset?: number) {{
                 const reader = new fnk.FnkBorshReader(buffer, offset);
                 return {}.deserialize(reader);
@@ -118,6 +149,8 @@ pub fn ts_gen(input: &Item, account_discriminants_name: &Ident) -> Result<TokenS
         schema_constant_name,
         name_str,
         equals_method_conditions.join(" && "),
+        name_str,
+        name_str,
         name_str,
         schema_constant_name,
     );
