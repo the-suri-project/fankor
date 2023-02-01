@@ -96,7 +96,13 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             let ts_schema = format!(
                 "export class {} implements fnk.FnkBorshSchema<{}> {{
-                    innerSchema = fnk.TStruct([{}] as const);
+                    innerSchema = null as any as fnk.StructSchema<any>;
+
+                    // METHODS ----------------------------------------------------------------
+
+                    initSchema() {{
+                        this.innerSchema = fnk.TStruct([{}] as const);
+                    }}
 
                     // METHODS ----------------------------------------------------------------
 
@@ -399,9 +405,13 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             let ts_schema = format!(
                 "export class {} implements fnk.FnkBorshSchema<{}> {{
-                    innerSchema = fnk.TEnum([{}] as const);
+                    innerSchema = null as any as fnk.EnumSchema<any>;
 
                     // METHODS ----------------------------------------------------------------
+
+                    initSchema() {{
+                        this.innerSchema = fnk.TEnum([{}] as const);
+                    }}
 
                     serialize(writer: fnk.FnkBorshWriter, value: {}) {{
                         this.innerSchema.serialize(writer, value);
