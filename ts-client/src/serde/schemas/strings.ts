@@ -1,4 +1,4 @@
-import encoding from 'text-encoding-utf-8';
+import * as encoding from 'text-encoding-utf-8';
 import { FnkBorshReader } from '../deserializer';
 import { FnkBorshWriter } from '../serializer';
 import { FnkBorshError } from '../errors';
