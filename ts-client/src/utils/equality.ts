@@ -1,17 +1,25 @@
 import BN from 'bn.js';
 import { numberToBN } from './numbers';
-import { Keypair } from '@solana/web3.js';
+import { Keypair, PublicKey } from '@solana/web3.js';
 
 export function equals(a: any, b: any): boolean {
     if (a === b) {
         return true;
     }
 
-    if ((a as any).equals) {
-        if (Object.getPrototypeOf(a) === Object.getPrototypeOf(b)) {
-            return a.equals(b);
-        }
+    if (a === null) {
+        return b === null;
+    }
 
+    if (b === null) {
+        return false;
+    }
+
+    if (a === undefined) {
+        return b === undefined;
+    }
+
+    if (b === undefined) {
         return false;
     }
 
@@ -23,11 +31,19 @@ export function equals(a: any, b: any): boolean {
         return false;
     }
 
+    if (b instanceof BN || typeof b === 'number' || typeof b === 'bigint') {
+        return false;
+    }
+
     if (a instanceof Uint8Array) {
         if (b instanceof Uint8Array) {
             return a.length === b.length && a.every((v, i) => v === b[i]);
         }
 
+        return false;
+    }
+
+    if (b instanceof Uint8Array) {
         return false;
     }
 
@@ -40,6 +56,26 @@ export function equals(a: any, b: any): boolean {
         }
 
         return false;
+    }
+
+    if (b instanceof Keypair) {
+        return false;
+    }
+
+    if (a instanceof PublicKey) {
+        if (b instanceof PublicKey) {
+            return a.equals(b);
+        }
+
+        return false;
+    }
+
+    if (b instanceof PublicKey) {
+        return false;
+    }
+
+    if ((a as any).equals) {
+        return a.equals(b);
     }
 
     if (Array.isArray(a) && Array.isArray(b)) {
