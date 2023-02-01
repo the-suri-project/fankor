@@ -96,12 +96,14 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             let ts_schema = format!(
                 "export class {} implements fnk.FnkBorshSchema<{}> {{
-                    innerSchema = null as any as fnk.StructSchema<any>;
+                    innerSchema = null as any as ReturnType<{}['initSchema']>;
 
                     // METHODS ----------------------------------------------------------------
 
                     initSchema() {{
-                        this.innerSchema = fnk.TStruct([{}] as const);
+                        const innerSchema = fnk.TStruct([{}] as const);
+                        this.innerSchema = innerSchema;
+                        return innerSchema;
                     }}
 
                     // METHODS ----------------------------------------------------------------
@@ -117,6 +119,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 }}",
                 schema_name,
                 name_str,
+                schema_name,
                 ts_schema_fields.join(","),
                 name_str,
                 name_str,
@@ -136,6 +139,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     return () => {{
                         if (variable === null) {{
                             variable = new {}();
+                            variable.initSchema();
                         }}
 
                         return variable
@@ -405,12 +409,14 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             let ts_schema = format!(
                 "export class {} implements fnk.FnkBorshSchema<{}> {{
-                    innerSchema = null as any as fnk.EnumSchema<any>;
+                    innerSchema = null as any as ReturnType<{}['initSchema']>;
 
                     // METHODS ----------------------------------------------------------------
 
                     initSchema() {{
-                        this.innerSchema = fnk.TEnum([{}] as const);
+                        const innerSchema = fnk.TEnum([{}] as const);
+                        this.innerSchema = innerSchema;
+                        return innerSchema;
                     }}
 
                     serialize(writer: fnk.FnkBorshWriter, value: {}) {{
@@ -424,6 +430,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 }}",
                 schema_name,
                 name_str,
+                schema_name,
                 ts_schema_fields.join(","),
                 name_str,
                 name_str,
@@ -443,6 +450,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     return () => {{
                         if (variable === null) {{
                             variable = new {}();
+                            variable.initSchema();
                         }}
 
                         return variable
