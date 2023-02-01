@@ -93,7 +93,7 @@ pub fn ts_gen(input: &Item, account_discriminants_name: &Ident) -> Result<TokenS
                 );
 
                 if (account) {{
-                    if (account.owner == ID) {{
+                    if (fnk.equals(ID, account.owner)) {{
                         let buf = account.data;
                         let data = this.deserialize(buf);
                         return {{
@@ -118,7 +118,7 @@ pub fn ts_gen(input: &Item, account_discriminants_name: &Ident) -> Result<TokenS
                     const account = accounts[i];
 
                     if (account) {{
-                        if (account.owner == ID) {{
+                        if (fnk.equals(ID, account.owner)) {{
                             let buf = account.data;
                             let data = this.deserialize(buf);
                             result.push({{
