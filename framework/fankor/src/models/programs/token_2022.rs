@@ -32,13 +32,13 @@ impl ProgramType for Token2022 {
 // ----------------------------------------------------------------------------
 
 impl_account!(
-    token: Mint2022,
+    token2022: Mint2022,
     spl_token_2022::state::Mint,
     &spl_token_2022::ID,
 );
 
 impl_account!(
-    token: TokenAccount2022,
+    token2022: TokenAccount2022,
     spl_token_2022::state::Account,
     &spl_token_2022::ID,
 );
