@@ -7,8 +7,7 @@ const ZERO = new BN(0);
 const MAX_VALUE = new BN('18446744073709551615'); // 2^64 - 1
 const BN_0x3F = new BN(0x3f);
 const BN_0x40 = new BN(0x40);
-const BN_0x7F = new BN(0x7f);
-const BN_0x80 = new BN(0x80);
+const FLAG_ENCODING_LIMIT = new BN(1).shln(14); // 2^14
 
 export class FnkUIntSchema implements FnkBorshSchema<BN> {
     // METHODS ----------------------------------------------------------------
@@ -22,84 +21,74 @@ export class FnkUIntSchema implements FnkBorshSchema<BN> {
             throw new RangeError('FnkUInt cannot be greater than 2^64 - 1');
         }
 
-        let bit_length =
-            64 -
-            (value.toString(2).padStart(64, '0').match(/^0*/)?.[0]?.length ||
-                0);
-
-        if (bit_length <= 13) {
+        if (value.lt(FLAG_ENCODING_LIMIT)) {
             // Flag encoding.
-            let byte_length =
-                bit_length <= 6 ? 1 : Math.floor((bit_length - 6 + 8) / 8) + 1;
+            let remaining = value;
 
             // Write first.
             let byte = value.and(BN_0x3F);
+            remaining = remaining.shrn(6);
 
             // Include next flag.
-            if (byte_length > 1) {
+            if (!remaining.isZero()) {
                 byte = byte.or(BN_0x40);
             }
 
             writer.writeByte(byte.toNumber());
 
-            // Write remaining bytes.
-            let offset = 6;
-            let last = byte_length - 1;
-            for (let i = 1; i < byte_length; i += 1) {
-                let byte = value.shrn(offset).and(BN_0x7F).or(BN_0x80);
-
-                if (i >= last) {
-                    byte = byte.and(BN_0x7F);
-                }
-
-                writer.writeByte(byte.toNumber());
-                offset += 7;
+            // Write second byte.
+            if (!remaining.isZero()) {
+                writer.writeByte(remaining.toNumber());
             }
         } else {
             // Length encoding.
-            let byte_length = Math.min(Math.floor((bit_length + 8) / 8), 8);
-            const bytes = value
-                .toArrayLike(Buffer, 'le', 8)
-                .slice(0, byte_length);
-            byte_length = byte_length | 0x80;
+            let byteLength = 8;
+            let bytes = value.toArrayLike(Buffer, 'le', 8);
 
-            writer.writeByte(byte_length);
+            for (let i = 7; i >= 0; i -= 1) {
+                if (bytes[i] != 0) {
+                    break;
+                }
+
+                byteLength -= 1;
+            }
+
+            bytes = bytes.slice(0, byteLength);
+            byteLength = (byteLength - 2) | 0x80;
+
+            writer.writeByte(byteLength);
             writer.writeBuffer(bytes);
         }
     }
 
     deserialize(reader: FnkBorshReader): BN {
-        let first_byte = reader.readByte();
+        let firstByte = reader.readByte();
 
-        if ((first_byte & 0x80) == 0) {
+        if ((firstByte & 0x80) === 0) {
             // Flag encoding.
-            let number = new BN(first_byte & 0x3f);
+            let number = new BN(firstByte & 0x3f);
 
-            if ((first_byte & 0x40) != 0) {
-                // Read remaining bytes.
-                let offset = 6;
-
-                while (true) {
-                    let byte = reader.readByte();
-                    number = number.or(new BN(byte & 0x7f).shln(offset));
-
-                    if ((byte & 0x80) == 0) {
-                        break;
-                    }
-
-                    offset += 7;
-                }
+            if ((firstByte & 0x40) !== 0) {
+                // Read second byte.
+                let byte = reader.readByte();
+                number = number.or(new BN(byte).shln(6));
             }
 
             return number;
         } else {
             // Length encoding.
-            let byte_length = first_byte & 0x7f;
+            let byteLength = firstByte & 0x7f;
+
+            if (byteLength >= 7) {
+                throw new RangeError('Incorrect FnkUInt length');
+            }
+
+            byteLength += 2;
 
             let number = ZERO;
-
             let offset = 0;
-            for (let i = 0; i < byte_length; i += 1) {
+
+            for (let i = 0; i < byteLength; i += 1) {
                 let byte = new BN(reader.readByte()).shln(offset);
                 number = number.or(byte);
                 offset += 8;

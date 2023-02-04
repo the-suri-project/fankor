@@ -5,13 +5,12 @@ import { FnkBorshSchema } from '../../borsh';
 
 const ZERO = new BN(0);
 const MIN_VALUE = new BN('-9223372036854775808'); // -2^63
-const MIN_VALUE_ABS = new BN('9223372036854775808'); // 2^63
+const MIN_I64_ABS = new BN('9223372036854775808'); // 2^63
 const MAX_VALUE = new BN('9223372036854775807'); // 2^63 - 1
 const BN_0x1F = new BN(0x1f);
 const BN_0x20 = new BN(0x20);
 const BN_0x40 = new BN(0x40);
-const BN_0x7F = new BN(0x7f);
-const BN_0x80 = new BN(0x80);
+const FLAG_ENCODING_LIMIT = new BN(1).shln(13); // 2^13
 
 export class FnkIntSchema implements FnkBorshSchema<BN> {
     // METHODS ----------------------------------------------------------------
@@ -28,120 +27,107 @@ export class FnkIntSchema implements FnkBorshSchema<BN> {
         let isNegative = value.isNeg();
         value = value.abs();
 
-        let bit_length =
-            64 -
-            (value.toString(2).padStart(64, '0').match(/^0*/)?.[0]?.length ||
-                0);
-
-        if (bit_length <= 12) {
+        if (value.lt(FLAG_ENCODING_LIMIT)) {
             // Flag encoding.
-            let byte_length =
-                bit_length <= 5 ? 1 : Math.floor((bit_length - 5 + 8) / 8) + 1;
+            let remaining = value;
 
             // Write first.
             let byte = value.and(BN_0x1F);
+            remaining = remaining.shrn(5);
 
             // Include next flag.
-            if (byte_length > 1) {
+            if (!remaining.isZero()) {
                 byte = byte.or(BN_0x40);
             }
 
-            // Negative flag.
+            // Include sign bit.
             if (isNegative) {
                 byte = byte.or(BN_0x20);
             }
 
             writer.writeByte(byte.toNumber());
 
-            // Write remaining bytes.
-            let offset = 5;
-            let last = byte_length - 1;
-            for (let i = 1; i < byte_length; i += 1) {
-                let byte = value.shrn(offset).and(BN_0x7F).or(BN_0x80);
-
-                if (i >= last) {
-                    byte = byte.and(BN_0x7F);
-                }
-
-                writer.writeByte(byte.toNumber());
-                offset += 7;
+            // Write second byte.
+            if (!remaining.isZero()) {
+                writer.writeByte(remaining.toNumber());
             }
         } else {
             // Length encoding.
-            let byte_length = Math.min(Math.floor((bit_length + 8) / 8), 8);
-            const bytes = value
-                .toArrayLike(Buffer, 'le', 8)
-                .slice(0, byte_length);
-            byte_length = byte_length | 0x80;
+            let byteLength = 8;
+            let bytes = value.toArrayLike(Buffer, 'le', 8);
 
-            // Negative flag.
-            if (isNegative) {
-                byte_length = byte_length | 0x40;
+            for (let i = 7; i >= 0; i -= 1) {
+                if (bytes[i] != 0) {
+                    break;
+                }
+
+                byteLength -= 1;
             }
 
-            writer.writeByte(byte_length);
+            bytes = bytes.slice(0, byteLength);
+            byteLength = (byteLength - 2) | 0x80;
+
+            // Include sign bit.
+            if (isNegative) {
+                byteLength |= 0x40;
+            }
+
+            writer.writeByte(byteLength);
             writer.writeBuffer(bytes);
         }
     }
 
     deserialize(reader: FnkBorshReader): BN {
-        let first_byte = reader.readByte();
+        let firstByte = reader.readByte();
 
-        if ((first_byte & 0x80) == 0) {
+        if ((firstByte & 0x80) === 0) {
             // Flag encoding.
-            let number = new BN(first_byte & 0x1f);
+            let number = new BN(firstByte & 0x1f);
 
-            if ((first_byte & 0x40) != 0) {
-                // Read remaining bytes.
-                let offset = 5;
-
-                while (true) {
-                    let byte = reader.readByte();
-                    number = number.or(new BN(byte & 0x7f).shln(offset));
-
-                    if ((byte & 0x80) == 0) {
-                        break;
-                    }
-
-                    offset += 7;
-                }
+            if ((firstByte & 0x40) !== 0) {
+                // Read second byte.
+                let byte = reader.readByte();
+                number = number.or(new BN(byte).shln(5));
             }
 
-            // Negative.
-            if ((first_byte & 0x20) != 0) {
-                return number.neg();
-            } else {
-                return number;
+            // Process sign bit.
+            if ((firstByte & 0x20) !== 0) {
+                number = number.neg();
             }
+
+            return number;
         } else {
             // Length encoding.
-            let byte_length = first_byte & 0x3f;
+            let byteLength = firstByte & 0x3f;
+
+            if (byteLength >= 7) {
+                throw new RangeError('Incorrect FnkInt length');
+            }
+
+            byteLength += 2;
 
             let number = ZERO;
-
             let offset = 0;
-            for (let i = 0; i < byte_length; i += 1) {
+
+            for (let i = 0; i < byteLength; i += 1) {
                 let byte = new BN(reader.readByte()).shln(offset);
                 number = number.or(byte);
                 offset += 8;
             }
 
-            // Negative.
-            if ((first_byte & 0x40) != 0) {
-                if (number.eq(MIN_VALUE_ABS)) {
-                    return MIN_VALUE;
-                } else if (number.gt(MAX_VALUE)) {
-                    throw new RangeError('Number underflow');
-                } else {
-                    return number.neg();
+            if ((firstByte & 0x40) === 0) {
+                if (number.gt(MAX_VALUE)) {
+                    throw new RangeError('Incorrect FnkInt value');
                 }
             } else {
-                if (number.gt(MAX_VALUE)) {
-                    throw new RangeError('Number overflow');
+                if (number.lte(MIN_I64_ABS)) {
+                    number = number.neg();
+                } else {
+                    throw new RangeError('Incorrect FnkInt value');
                 }
-
-                return number;
             }
+
+            return number;
         }
     }
 }
