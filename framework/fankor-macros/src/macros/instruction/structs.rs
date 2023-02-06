@@ -29,10 +29,11 @@ pub fn process_struct(
         let name = &v.name;
         let ty = &v.ty;
         let attrs = &v.attrs;
+        let vis = &v.vis;
 
         quote! {
             #(#attrs)*
-            #name: #ty
+            #vis #name: #ty
         }
     });
 
@@ -513,6 +514,8 @@ pub fn process_struct(
                 metas: &mut Vec<AccountMeta>,
                 infos: &mut Vec<AccountInfo<'info>>,
             ) -> FankorResult<()> {
+                use ::fankor::prelude::borsh::BorshSerialize;
+
                 #instructions_type_discriminant
 
                 #(#cpi_fn_elements)*
@@ -532,6 +535,8 @@ pub fn process_struct(
                 writer: &mut W,
                 metas: &mut Vec<::fankor::prelude::solana_program::instruction::AccountMeta>
             ) -> ::fankor::errors::FankorResult<()> {
+                use ::fankor::prelude::borsh::BorshSerialize;
+
                 #instructions_type_discriminant
 
                 #(#lpi_fn_elements)*

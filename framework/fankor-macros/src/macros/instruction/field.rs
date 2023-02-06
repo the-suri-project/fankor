@@ -4,13 +4,17 @@ use syn::parse::{Parse, ParseStream};
 use syn::parse_quote::ParseQuote;
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{Attribute, Error, Expr, Fields, GenericArgument, PathArguments, Token, Type, Variant};
+use syn::{
+    Attribute, Error, Expr, Fields, GenericArgument, PathArguments, Token, Type, Variant,
+    Visibility,
+};
 
 use crate::Result;
 
 pub struct Field {
     pub name: Ident,
     pub ty: Type,
+    pub vis: Visibility,
     pub kind: FieldKind,
     // Attributes.
     pub owner: Option<TokenStream>,
@@ -53,6 +57,7 @@ impl Field {
             name: field.ident.unwrap(),
             kind: discriminate_type(&field.ty),
             ty: field.ty,
+            vis: field.vis,
             owner: None,
             address: None,
             initialized: None,
@@ -88,6 +93,7 @@ impl Field {
                     name: variant.ident,
                     kind: discriminate_type(&ty),
                     ty,
+                    vis: Visibility::Inherited,
                     owner: None,
                     address: None,
                     initialized: None,

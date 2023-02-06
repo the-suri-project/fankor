@@ -2,7 +2,6 @@ use crate::accounts::*;
 use crate::arguments::*;
 use crate::errors::Errors;
 use crate::program::TestProgramDiscriminant;
-use fankor::prelude::borsh::BorshSerialize;
 use fankor::prelude::*;
 use std::cmp::Ordering;
 
