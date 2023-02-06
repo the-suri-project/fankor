@@ -443,8 +443,14 @@ pub fn process_struct(
     });
 
     // Result
-    let instructions_type_discriminant_name =
-        format_ident!("{}Discriminant", arguments.instructions_type_name);
+    let instructions_type_discriminant =
+        if let Some(instructions_type_name) = &arguments.instructions_type_name {
+            let discriminant_name = format_ident!("{}Discriminant", instructions_type_name);
+            quote! { #discriminant_name::#name.code().serialize(writer)?; }
+        } else {
+            quote! {}
+        };
+
     let result = quote! {
         #(#attributes)*
         #visibility struct #name #ty_generics #where_clause {
@@ -507,7 +513,7 @@ pub fn process_struct(
                 metas: &mut Vec<AccountMeta>,
                 infos: &mut Vec<AccountInfo<'info>>,
             ) -> FankorResult<()> {
-                #instructions_type_discriminant_name::#name.code().serialize(writer)?;
+                #instructions_type_discriminant
 
                 #(#cpi_fn_elements)*
                 Ok(())
@@ -526,7 +532,7 @@ pub fn process_struct(
                 writer: &mut W,
                 metas: &mut Vec<::fankor::prelude::solana_program::instruction::AccountMeta>
             ) -> ::fankor::errors::FankorResult<()> {
-                #instructions_type_discriminant_name::#name.code().serialize(writer)?;
+                #instructions_type_discriminant
 
                 #(#lpi_fn_elements)*
                 Ok(())

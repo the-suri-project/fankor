@@ -168,3 +168,14 @@ impl<'info> EnumAccountsWithoutArgs<'info> {
         Ok(())
     }
 }
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+#[instruction]
+#[allow(dead_code)]
+pub struct AuxiliarInstruction<'info> {
+    pub args: Argument<InstructionArgs>,
+    pub account: Account<'info, StructAccountData>,
+}
