@@ -2,14 +2,13 @@ use crate::errors::FankorResult;
 use crate::models::FankorContext;
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
+use solana_program::pubkey::Pubkey;
+use std::io::Write;
 
-/// Trait for account wrappers.
-pub trait InstructionAccount<'info>: Sized {
-    type CPI: CpiInstructionAccount<'info>;
-    type LPI: LpiInstructionAccount;
-
-    /// Method to get the minimum number of accounts needed to decode the instruction account.
-    fn min_accounts() -> usize;
+/// Trait for instruction definitions.
+pub trait Instruction<'info>: Sized {
+    type CPI: CpiInstruction<'info>;
+    type LPI: LpiInstruction;
 
     /// Verifies the account info with specific data.
     #[allow(unused_variables)]
@@ -22,6 +21,7 @@ pub trait InstructionAccount<'info>: Sized {
 
     fn try_from(
         context: &'info FankorContext<'info>,
+        data: &mut &[u8],
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self>;
 }
@@ -65,17 +65,19 @@ impl<'a, 'info> AccountInfoVerification<'a, 'info> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-pub trait CpiInstructionAccount<'info> {
-    fn to_account_metas_and_infos(
+pub trait CpiInstruction<'info> {
+    fn serialize_into_instruction_parts<W: Write>(
         &self,
+        writer: &mut W,
         metas: &mut Vec<AccountMeta>,
         infos: &mut Vec<AccountInfo<'info>>,
     ) -> FankorResult<()>;
 }
 
-impl<'info> CpiInstructionAccount<'info> for AccountInfo<'info> {
-    fn to_account_metas_and_infos(
+impl<'info> CpiInstruction<'info> for AccountInfo<'info> {
+    fn serialize_into_instruction_parts<W: Write>(
         &self,
+        _writer: &mut W,
         metas: &mut Vec<AccountMeta>,
         infos: &mut Vec<AccountInfo<'info>>,
     ) -> FankorResult<()> {
@@ -89,28 +91,30 @@ impl<'info> CpiInstructionAccount<'info> for AccountInfo<'info> {
     }
 }
 
-impl<'info, T: CpiInstructionAccount<'info>> CpiInstructionAccount<'info> for Option<T> {
-    fn to_account_metas_and_infos(
+impl<'info, T: CpiInstruction<'info>> CpiInstruction<'info> for Option<T> {
+    fn serialize_into_instruction_parts<W: Write>(
         &self,
+        writer: &mut W,
         metas: &mut Vec<AccountMeta>,
         infos: &mut Vec<AccountInfo<'info>>,
     ) -> FankorResult<()> {
         if let Some(v) = self {
-            v.to_account_metas_and_infos(metas, infos)?;
+            v.serialize_into_instruction_parts(writer, metas, infos)?;
         }
 
         Ok(())
     }
 }
 
-impl<'info, T: CpiInstructionAccount<'info>> CpiInstructionAccount<'info> for Vec<T> {
-    fn to_account_metas_and_infos(
+impl<'info, T: CpiInstruction<'info>> CpiInstruction<'info> for Vec<T> {
+    fn serialize_into_instruction_parts<W: Write>(
         &self,
+        writer: &mut W,
         metas: &mut Vec<AccountMeta>,
         infos: &mut Vec<AccountInfo<'info>>,
     ) -> FankorResult<()> {
         for v in self {
-            v.to_account_metas_and_infos(metas, infos)?;
+            v.serialize_into_instruction_parts(writer, metas, infos)?;
         }
 
         Ok(())
@@ -121,12 +125,20 @@ impl<'info, T: CpiInstructionAccount<'info>> CpiInstructionAccount<'info> for Ve
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-pub trait LpiInstructionAccount {
-    fn to_account_metas(&self, metas: &mut Vec<AccountMeta>) -> FankorResult<()>;
+pub trait LpiInstruction {
+    fn serialize_into_instruction_parts<W: Write>(
+        &self,
+        writer: &mut W,
+        metas: &mut Vec<AccountMeta>,
+    ) -> FankorResult<()>;
 }
 
-impl LpiInstructionAccount for solana_program::pubkey::Pubkey {
-    fn to_account_metas(&self, metas: &mut Vec<AccountMeta>) -> FankorResult<()> {
+impl LpiInstruction for Pubkey {
+    fn serialize_into_instruction_parts<W: Write>(
+        &self,
+        _writer: &mut W,
+        metas: &mut Vec<AccountMeta>,
+    ) -> FankorResult<()> {
         metas.push(AccountMeta {
             pubkey: *self,
             is_writable: false,
@@ -136,20 +148,28 @@ impl LpiInstructionAccount for solana_program::pubkey::Pubkey {
     }
 }
 
-impl<T: LpiInstructionAccount> LpiInstructionAccount for Option<T> {
-    fn to_account_metas(&self, metas: &mut Vec<AccountMeta>) -> FankorResult<()> {
+impl<T: LpiInstruction> LpiInstruction for Option<T> {
+    fn serialize_into_instruction_parts<W: Write>(
+        &self,
+        writer: &mut W,
+        metas: &mut Vec<AccountMeta>,
+    ) -> FankorResult<()> {
         if let Some(v) = self {
-            v.to_account_metas(metas)?;
+            v.serialize_into_instruction_parts(writer, metas)?;
         }
 
         Ok(())
     }
 }
 
-impl<T: LpiInstructionAccount> LpiInstructionAccount for Vec<T> {
-    fn to_account_metas(&self, metas: &mut Vec<AccountMeta>) -> FankorResult<()> {
+impl<T: LpiInstruction> LpiInstruction for Vec<T> {
+    fn serialize_into_instruction_parts<W: Write>(
+        &self,
+        writer: &mut W,
+        metas: &mut Vec<AccountMeta>,
+    ) -> FankorResult<()> {
         for v in self {
-            v.to_account_metas(metas)?;
+            v.serialize_into_instruction_parts(writer, metas)?;
         }
 
         Ok(())

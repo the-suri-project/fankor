@@ -1,16 +1,11 @@
-use crate::errors::FankorResult;
+use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
-use crate::traits::{AccountInfoVerification, InstructionAccount};
+use crate::traits::{AccountInfoVerification, Instruction};
 use solana_program::account_info::AccountInfo;
 
-impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Vec<T> {
+impl<'info, T: Instruction<'info>> Instruction<'info> for Vec<T> {
     type CPI = Vec<T::CPI>;
     type LPI = Vec<T::LPI>;
-
-    #[inline(always)]
-    fn min_accounts() -> usize {
-        0 // Because can be any size.
-    }
 
     fn verify_account_infos<'a>(
         &self,
@@ -26,22 +21,24 @@ impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Vec<T> {
     #[inline(never)]
     fn try_from(
         context: &'info FankorContext<'info>,
+        buf: &mut &[u8],
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
-        let mut result = Vec::new();
+        if buf.is_empty() {
+            return Err(FankorErrorCode::NotEnoughDataToDeserializeInstruction.into());
+        }
+
+        let size = buf[0] as usize;
+        let mut result = Vec::with_capacity(size);
+        let mut new_buf = &buf[1..];
         let mut new_accounts = *accounts;
 
-        loop {
-            let mut step_accounts = new_accounts;
-            if let Ok(account) = T::try_from(context, &mut step_accounts) {
-                new_accounts = step_accounts;
-                result.push(account);
-            } else {
-                break;
-            }
+        for _ in 0..size {
+            result.push(T::try_from(context, &mut new_buf, &mut new_accounts)?);
         }
 
         *accounts = new_accounts;
+        *buf = new_buf;
 
         Ok(result)
     }

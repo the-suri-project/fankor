@@ -12,7 +12,7 @@ crate-type = ["cdylib", "lib"]
 
 [features]
 no-entrypoint = ["fankor/no-entrypoint"]
-library = ["fankor/library"]
+library = ["no-entrypoint", "fankor/library"]
 test = ["fankor/test"]
 ts-gen = ["fankor/ts-gen"]
 

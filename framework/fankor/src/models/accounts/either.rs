@@ -1,11 +1,13 @@
-use crate::errors::FankorResult;
+use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{Account, DefaultAccount, FankorContext, UninitializedAccount, ZcAccount};
 use crate::prelude::PdaChecker;
-use crate::traits::{AccountInfoVerification, CpiInstructionAccount, InstructionAccount};
+use crate::traits::{AccountInfoVerification, CpiInstruction, Instruction};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
+use std::any::type_name;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
+use std::io::Write;
 
 /// Alias for the common case of having either an actual account or its uninitialized counterpart.
 pub type MaybeUninitializedAccount<'info, T> =
@@ -35,7 +37,7 @@ pub enum Either<L, R> {
     Right(R),
 }
 
-impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> Either<L, R> {
+impl<'info, L: Instruction<'info>, R: Instruction<'info>> Either<L, R> {
     // GETTERS -----------------------------------------------------------------
 
     pub fn is_left(&self) -> bool {
@@ -91,16 +93,9 @@ impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> Either<L
     }
 }
 
-impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> InstructionAccount<'info>
-    for Either<L, R>
-{
+impl<'info, L: Instruction<'info>, R: Instruction<'info>> Instruction<'info> for Either<L, R> {
     type CPI = CpiEither<L::CPI, R::CPI>;
     type LPI = LpiEither<L::LPI, R::LPI>;
-
-    #[inline]
-    fn min_accounts() -> usize {
-        L::min_accounts().min(R::min_accounts())
-    }
 
     fn verify_account_infos<'a>(
         &self,
@@ -115,16 +110,43 @@ impl<'info, L: InstructionAccount<'info>, R: InstructionAccount<'info>> Instruct
     #[inline(never)]
     fn try_from(
         context: &'info FankorContext<'info>,
+        buf: &mut &[u8],
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
-        let mut new_accounts = *accounts;
-        match L::try_from(context, &mut new_accounts) {
-            Ok(l) => {
-                *accounts = new_accounts;
-                Ok(Either::Left(l))
-            }
-            Err(_) => Ok(Either::Right(R::try_from(context, accounts)?)),
+        if buf.is_empty() {
+            return Err(FankorErrorCode::NotEnoughDataToDeserializeInstruction.into());
         }
+
+        let result = match buf[0] {
+            0 => {
+                let mut new_buf = &buf[1..];
+                let mut new_accounts = *accounts;
+                let result = Either::Left(L::try_from(context, &mut new_buf, &mut new_accounts)?);
+
+                *accounts = new_accounts;
+                *buf = new_buf;
+
+                result
+            }
+            1 => {
+                let mut new_buf = &buf[1..];
+                let mut new_accounts = *accounts;
+                let result = Either::Right(R::try_from(context, &mut new_buf, &mut new_accounts)?);
+
+                *accounts = new_accounts;
+                *buf = new_buf;
+
+                result
+            }
+            _ => {
+                return Err(FankorErrorCode::InstructionDidNotDeserialize {
+                    account: type_name::<Self>().to_string(),
+                }
+                .into())
+            }
+        };
+
+        Ok(result)
     }
 }
 
@@ -137,9 +159,7 @@ impl<'info, L: PdaChecker<'info>, R: PdaChecker<'info>> PdaChecker<'info> for Ei
     }
 }
 
-impl<'info, L: Debug + InstructionAccount<'info>, R: Debug + InstructionAccount<'info>> Debug
-    for Either<L, R>
-{
+impl<'info, L: Debug + Instruction<'info>, R: Debug + Instruction<'info>> Debug for Either<L, R> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Either::Left(v) => f
@@ -165,17 +185,18 @@ pub enum CpiEither<L, R> {
     Right(R),
 }
 
-impl<'info, L: CpiInstructionAccount<'info>, R: CpiInstructionAccount<'info>>
-    CpiInstructionAccount<'info> for CpiEither<L, R>
+impl<'info, L: CpiInstruction<'info>, R: CpiInstruction<'info>> CpiInstruction<'info>
+    for CpiEither<L, R>
 {
-    fn to_account_metas_and_infos(
+    fn serialize_into_instruction_parts<W: Write>(
         &self,
+        writer: &mut W,
         metas: &mut Vec<AccountMeta>,
         infos: &mut Vec<AccountInfo<'info>>,
     ) -> FankorResult<()> {
         match self {
-            CpiEither::Left(v) => v.to_account_metas_and_infos(metas, infos),
-            CpiEither::Right(v) => v.to_account_metas_and_infos(metas, infos),
+            CpiEither::Left(v) => v.serialize_into_instruction_parts(writer, metas, infos),
+            CpiEither::Right(v) => v.serialize_into_instruction_parts(writer, metas, infos),
         }
     }
 }
@@ -189,13 +210,17 @@ pub enum LpiEither<L, R> {
     Right(R),
 }
 
-impl<L: crate::traits::LpiInstructionAccount, R: crate::traits::LpiInstructionAccount>
-    crate::traits::LpiInstructionAccount for LpiEither<L, R>
+impl<L: crate::traits::LpiInstruction, R: crate::traits::LpiInstruction>
+    crate::traits::LpiInstruction for LpiEither<L, R>
 {
-    fn to_account_metas(&self, metas: &mut Vec<AccountMeta>) -> FankorResult<()> {
+    fn serialize_into_instruction_parts<W: Write>(
+        &self,
+        writer: &mut W,
+        metas: &mut Vec<AccountMeta>,
+    ) -> FankorResult<()> {
         match self {
-            LpiEither::Left(v) => v.to_account_metas(metas),
-            LpiEither::Right(v) => v.to_account_metas(metas),
+            LpiEither::Left(v) => v.serialize_into_instruction_parts(writer, metas),
+            LpiEither::Right(v) => v.serialize_into_instruction_parts(writer, metas),
         }
     }
 }

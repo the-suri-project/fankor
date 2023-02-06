@@ -1,21 +1,43 @@
 use crate::models::{
-    Account, CopyType, DefaultAccount, Either, Program, Rest, SysvarAccount, UncheckedAccount,
-    UninitializedAccount, ZcAccount,
+    Account, Argument, CopyType, DefaultAccount, Either, Program, Rest, SysvarAccount,
+    UncheckedAccount, UninitializedAccount, ZcAccount,
 };
 use crate::prelude::ProgramType;
 use crate::traits::AccountType;
-use crate::ts_gen::accounts::TsInstructionAccountGen;
-use crate::ts_gen::types::TsTypesCache;
+use crate::ts_gen::accounts::TsInstructionGen;
+use crate::ts_gen::types::{TsTypeGen, TsTypesCache};
 use solana_program::sysvar::SysvarId;
 use std::borrow::Cow;
 
-impl<'info, T: AccountType> TsInstructionAccountGen for Account<'info, T> {
+impl<'info, T: AccountType> TsInstructionGen for Account<'info, T> {
     fn value_type() -> Cow<'static, str> {
         Cow::Borrowed("solana.PublicKey")
     }
 }
 
-impl<T: TsInstructionAccountGen> TsInstructionAccountGen for Box<T> {
+impl<T: TsTypeGen> TsInstructionGen for Argument<T> {
+    fn value_type() -> Cow<'static, str> {
+        T::value_type()
+    }
+
+    fn generate_type(registered_types: &mut TsTypesCache) -> Cow<'static, str> {
+        T::generate_type(registered_types)
+    }
+
+    fn get_account_metas(
+        value: Cow<'static, str>,
+        _signer: bool,
+        _writable: bool,
+    ) -> Cow<'static, str> {
+        Cow::Owned(format!(
+            "{}.serialize(writer, {});",
+            T::schema_name(),
+            value
+        ))
+    }
+}
+
+impl<T: TsInstructionGen> TsInstructionGen for Box<T> {
     fn value_type() -> Cow<'static, str> {
         Cow::Borrowed("solana.PublicKey")
     }
@@ -33,7 +55,7 @@ impl<T: TsInstructionAccountGen> TsInstructionAccountGen for Box<T> {
     }
 }
 
-impl<'info> TsInstructionAccountGen for DefaultAccount<'info> {
+impl<'info> TsInstructionGen for DefaultAccount<'info> {
     fn value_type() -> Cow<'static, str> {
         Cow::Borrowed("solana.PublicKey | undefined")
     }
@@ -51,9 +73,7 @@ impl<'info> TsInstructionAccountGen for DefaultAccount<'info> {
     }
 }
 
-impl<L: TsInstructionAccountGen, R: TsInstructionAccountGen> TsInstructionAccountGen
-    for Either<L, R>
-{
+impl<L: TsInstructionGen, R: TsInstructionGen> TsInstructionGen for Either<L, R> {
     fn value_type() -> Cow<'static, str> {
         let left = L::value_type();
         let right = R::value_type();
@@ -90,7 +110,13 @@ impl<L: TsInstructionAccountGen, R: TsInstructionAccountGen> TsInstructionAccoun
             R::get_external_account_metas(value, signer, writable)
         } else {
             Cow::Owned(format!(
-                "if ({}.type === 'Left') {{ {} }} else {{ {} }}",
+                "if ({}.type === 'Left') {{
+                    writer.writeByte(0);
+                    {}
+                }} else {{
+                    writer.writeByte(1);
+                    {}
+                }}",
                 value,
                 L::get_external_account_metas(
                     Cow::Owned(format!("{}.value", value)),
@@ -107,7 +133,7 @@ impl<L: TsInstructionAccountGen, R: TsInstructionAccountGen> TsInstructionAccoun
     }
 }
 
-impl<T: TsInstructionAccountGen> TsInstructionAccountGen for Option<T> {
+impl<T: TsInstructionGen> TsInstructionGen for Option<T> {
     fn value_type() -> Cow<'static, str> {
         Cow::Owned(format!("{} | null", T::value_type()))
     }
@@ -126,14 +152,19 @@ impl<T: TsInstructionAccountGen> TsInstructionAccountGen for Option<T> {
         writable: bool,
     ) -> Cow<'static, str> {
         Cow::Owned(format!(
-            "if ({}) {{ {} }}",
+            "if ({}) {{
+                writer.writeByte(1);
+                {}
+            }} else {{
+                writer.writeByte(0);
+            }}",
             value.clone(),
             T::get_external_account_metas(value, signer, writable),
         ))
     }
 }
 
-impl<'info, T: ProgramType> TsInstructionAccountGen for Program<'info, T> {
+impl<'info, T: ProgramType> TsInstructionGen for Program<'info, T> {
     fn value_type() -> Cow<'static, str> {
         Cow::Borrowed("solana.PublicKey | undefined")
     }
@@ -151,7 +182,7 @@ impl<'info, T: ProgramType> TsInstructionAccountGen for Program<'info, T> {
     }
 }
 
-impl<'info> TsInstructionAccountGen for Rest<'info> {
+impl<'info> TsInstructionGen for Rest<'info> {
     fn value_type() -> Cow<'static, str> {
         Cow::Borrowed("solana.PublicKey[]")
     }
@@ -168,7 +199,7 @@ impl<'info> TsInstructionAccountGen for Rest<'info> {
     }
 }
 
-impl<'info, T: SysvarId> TsInstructionAccountGen for SysvarAccount<'info, T> {
+impl<'info, T: SysvarId> TsInstructionGen for SysvarAccount<'info, T> {
     fn value_type() -> Cow<'static, str> {
         Cow::Borrowed("solana.PublicKey | undefined")
     }
@@ -186,19 +217,19 @@ impl<'info, T: SysvarId> TsInstructionAccountGen for SysvarAccount<'info, T> {
     }
 }
 
-impl<'info> TsInstructionAccountGen for UncheckedAccount<'info> {
+impl<'info> TsInstructionGen for UncheckedAccount<'info> {
     fn value_type() -> Cow<'static, str> {
         Cow::Borrowed("solana.PublicKey")
     }
 }
 
-impl<'info> TsInstructionAccountGen for UninitializedAccount<'info> {
+impl<'info> TsInstructionGen for UninitializedAccount<'info> {
     fn value_type() -> Cow<'static, str> {
         Cow::Borrowed("solana.PublicKey")
     }
 }
 
-impl<T: TsInstructionAccountGen> TsInstructionAccountGen for Vec<T> {
+impl<T: TsInstructionGen> TsInstructionGen for Vec<T> {
     fn value_type() -> Cow<'static, str> {
         Cow::Owned(format!("{}[]", T::value_type()))
     }
@@ -224,7 +255,7 @@ impl<T: TsInstructionAccountGen> TsInstructionAccountGen for Vec<T> {
     }
 }
 
-impl<'info, T: AccountType + CopyType<'info>> TsInstructionAccountGen for ZcAccount<'info, T> {
+impl<'info, T: AccountType + CopyType<'info>> TsInstructionGen for ZcAccount<'info, T> {
     fn value_type() -> Cow<'static, str> {
         Cow::Borrowed("solana.PublicKey")
     }

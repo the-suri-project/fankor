@@ -4,7 +4,7 @@ use std::borrow::Cow;
 
 mod account_impls;
 
-pub trait TsInstructionAccountGen {
+pub trait TsInstructionGen {
     // STATIC METHODS ---------------------------------------------------------
 
     /// Gets the type of the account.

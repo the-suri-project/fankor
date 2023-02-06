@@ -1,16 +1,12 @@
-use crate::errors::FankorResult;
+use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
-use crate::traits::{AccountInfoVerification, InstructionAccount, PdaChecker};
+use crate::traits::{AccountInfoVerification, Instruction, PdaChecker};
 use solana_program::account_info::AccountInfo;
+use std::any::type_name;
 
-impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Option<T> {
+impl<'info, T: Instruction<'info>> Instruction<'info> for Option<T> {
     type CPI = Option<T::CPI>;
     type LPI = Option<T::LPI>;
-
-    #[inline(always)]
-    fn min_accounts() -> usize {
-        0 // Because None does not require any accounts.
-    }
 
     fn verify_account_infos<'a>(
         &self,
@@ -25,16 +21,34 @@ impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Option<T
     #[inline(never)]
     fn try_from(
         context: &'info FankorContext<'info>,
+        buf: &mut &[u8],
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
-        let mut new_accounts = *accounts;
-        match T::try_from(context, &mut new_accounts) {
-            Ok(v) => {
-                *accounts = new_accounts;
-                Ok(Some(v))
-            }
-            Err(_) => Ok(None),
+        if buf.is_empty() {
+            return Err(FankorErrorCode::NotEnoughDataToDeserializeInstruction.into());
         }
+
+        let result = match buf[0] {
+            0 => {
+                let mut new_buf = &buf[1..];
+                let mut new_accounts = *accounts;
+                let result = Some(T::try_from(context, &mut new_buf, &mut new_accounts)?);
+
+                *accounts = new_accounts;
+                *buf = new_buf;
+
+                result
+            }
+            1 => None,
+            _ => {
+                return Err(FankorErrorCode::InstructionDidNotDeserialize {
+                    account: type_name::<Self>().to_string(),
+                }
+                .into())
+            }
+        };
+
+        Ok(result)
     }
 }
 

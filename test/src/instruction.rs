@@ -1,27 +1,29 @@
 use crate::accounts::*;
 use crate::arguments::*;
 use crate::errors::Errors;
+use crate::program::TestProgramDiscriminant;
+use fankor::prelude::borsh::BorshSerialize;
 use fankor::prelude::*;
 use std::cmp::Ordering;
 
-#[derive(InstructionAccounts)]
-#[account(args = InstructionArgs)]
-#[account(initial_validation)]
-#[account(final_validation)]
-pub struct InstructionStructAccounts<'info> {
+#[instruction(program = TestProgram, initial_validation, final_validation)]
+#[allow(dead_code)]
+pub struct StructAccounts<'info> {
+    pub args: Argument<InstructionArgs>,
+
     #[account(owner = &crate::ID)]
     #[account(writable)]
     #[account(executable)]
     #[account(rent_exempt)]
     #[account(signer)]
-    #[account(pda = [crate::ID.as_ref(), &self.account2.data().value1.to_le_bytes(), &args.arg2.to_le_bytes()])]
+    #[account(pda = [crate::ID.as_ref(), &self.account2.data().value1.to_le_bytes(), &self.args.arg2.to_le_bytes()])]
     pub account1: Account<'info, StructAccountData>,
 
     #[account(writable = false)]
     #[account(executable = false)]
     #[account(rent_exempt = false)]
     #[account(signer = false)]
-    #[account(pda = [crate::ID.as_ref(), &self.account2.data().value1.to_le_bytes(), &args.arg2.to_le_bytes()])]
+    #[account(pda = [crate::ID.as_ref(), &self.account2.data().value1.to_le_bytes(), &self.args.arg2.to_le_bytes()])]
     #[account(pda_program_id = &crate::ID)]
     pub account2: Account<'info, StructAccountData>,
 
@@ -38,56 +40,36 @@ pub struct InstructionStructAccounts<'info> {
 
     pub list: Vec<Account<'info, StructAccountData>>,
 
-    #[account(min = 2)]
-    pub list2: Vec<Account<'info, StructAccountData>>,
-
-    #[account(min = 2)]
-    #[account(max = 5)]
-    pub list3: Vec<Account<'info, StructAccountData>>,
-
-    #[account(size = 15)]
-    pub list4: Vec<Account<'info, StructAccountData>>,
-
-    #[account(max = 5)]
-    pub list5: Vec<Account<'info, StructAccountData>>,
-
     pub either: Either<Account<'info, StructAccountData>, Account<'info, StructAccountData2>>,
 
     pub uninitialized: UninitializedAccount<'info>,
 
     pub maybe_uninitialized: MaybeUninitializedAccount<'info, StructAccountData>,
 
-    pub other_struct: Box<InstructionStructAccountsWithoutAssociatedType<'info>>,
+    pub other_struct: Box<StructAccountsWithoutAssociatedType<'info>>,
 
-    pub other_enum: Box<InstructionEnumAccounts<'info>>,
+    pub other_enum: Box<EnumAccounts<'info>>,
 
-    #[account(validate)]
-    pub custom: InstructionStructAccountsWithoutAssociatedType<'info>,
+    pub custom: StructAccountsWithoutAssociatedType<'info>,
 
     // Must be placed in the last position.
-    #[account(min = 2)]
-    #[account(max = 5)]
     #[account(writable)]
     pub rest: Rest<'info>,
 }
 
 #[allow(dead_code)]
-impl<'info> InstructionStructAccounts<'info> {
+impl<'info> StructAccounts<'info> {
     // METHODS ----------------------------------------------------------------
 
-    pub fn initial_validation(
-        &self,
-        _context: &FankorContext<'info>,
-        _args: &InstructionArgs,
-    ) -> FankorResult<()> {
+    pub fn processor(self, _context: FankorContext<'info>) -> FankorResult<()> {
         Ok(())
     }
 
-    pub fn final_validation(
-        &self,
-        _context: &FankorContext<'info>,
-        _args: &InstructionArgs,
-    ) -> FankorResult<()> {
+    pub fn initial_validation(&self, _context: &FankorContext<'info>) -> FankorResult<()> {
+        Ok(())
+    }
+
+    pub fn final_validation(&self, _context: &FankorContext<'info>) -> FankorResult<()> {
         Ok(())
     }
 }
@@ -96,10 +78,11 @@ impl<'info> InstructionStructAccounts<'info> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-#[derive(InstructionAccounts)]
-#[account(initial_validation)]
-#[account(final_validation)]
-pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
+#[instruction(program = TestProgram, initial_validation, final_validation)]
+#[allow(dead_code)]
+pub struct StructAccountsWithoutAssociatedType<'info> {
+    pub args: Argument<InstructionArgs>,
+
     #[account(constraint = (1 + 1).cmp(&2) == Ordering::Equal)]
     #[account(pda = AssociatedToken::get_pda_seeds(self.account.address(), self.boxed_zc_account.address()))]
     #[account(pda_program_id = AssociatedToken::address())]
@@ -125,8 +108,12 @@ pub struct InstructionStructAccountsWithoutAssociatedType<'info> {
 }
 
 #[allow(dead_code)]
-impl<'info> InstructionStructAccountsWithoutAssociatedType<'info> {
+impl<'info> StructAccountsWithoutAssociatedType<'info> {
     // METHODS ----------------------------------------------------------------
+
+    pub fn processor(self, _context: FankorContext<'info>) -> FankorResult<()> {
+        Ok(())
+    }
 
     pub fn initial_validation(&self, _context: &FankorContext<'info>) -> FankorResult<()> {
         Ok(())
@@ -141,27 +128,43 @@ impl<'info> InstructionStructAccountsWithoutAssociatedType<'info> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-#[derive(InstructionAccounts)]
-#[account(args = InstructionArgs)]
-#[non_exhaustive]
-pub enum InstructionEnumAccounts<'info> {
-    Struct1(InstructionStructAccounts<'info>),
+#[instruction(program = TestProgram)]
+pub enum EnumAccounts<'info> {
+    Struct1(StructAccounts<'info>),
 
-    Struct2(InstructionStructAccounts<'info>),
+    Struct2(StructAccounts<'info>),
 
-    OptionalAccount(Option<InstructionStructAccounts<'info>>),
+    OptionalAccount(Option<StructAccounts<'info>>),
+}
+
+#[allow(dead_code)]
+impl<'info> EnumAccounts<'info> {
+    // METHODS ----------------------------------------------------------------
+
+    pub fn processor(self, _context: FankorContext<'info>) -> FankorResult<()> {
+        Ok(())
+    }
 }
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-#[derive(InstructionAccounts)]
-#[non_exhaustive]
-pub enum InstructionEnumAccountsWithoutArgs<'info> {
-    Struct1(InstructionStructAccountsWithoutAssociatedType<'info>),
+#[instruction(program = TestProgram)]
+pub enum EnumAccountsWithoutArgs<'info> {
+    Struct1(StructAccountsWithoutAssociatedType<'info>),
 
-    Struct2(InstructionStructAccountsWithoutAssociatedType<'info>),
+    Struct2(StructAccountsWithoutAssociatedType<'info>),
 
-    OptionalAccount(Option<InstructionStructAccountsWithoutAssociatedType<'info>>),
+    #[discriminant = 5]
+    OptionalAccount(Option<StructAccountsWithoutAssociatedType<'info>>),
+}
+
+#[allow(dead_code)]
+impl<'info> EnumAccountsWithoutArgs<'info> {
+    // METHODS ----------------------------------------------------------------
+
+    pub fn processor(self, _context: FankorContext<'info>) -> FankorResult<()> {
+        Ok(())
+    }
 }

@@ -20,15 +20,11 @@ pub struct Field {
     pub executable: Option<TokenStream>,
     pub rent_exempt: Option<TokenStream>,
     pub signer: Option<TokenStream>,
-    pub min: Option<TokenStream>,
-    pub max: Option<TokenStream>,
     pub pda: Option<DataAndError>,
     pub pda_program_id: Option<TokenStream>,
     pub constraints: Vec<DataAndError>,
     pub data: Vec<Data>,
-
-    // Bool = with args?
-    pub validate: Option<bool>,
+    pub attrs: Vec<Attribute>,
 }
 
 pub enum FieldKind {
@@ -64,13 +60,11 @@ impl Field {
             executable: None,
             rent_exempt: None,
             signer: None,
-            min: None,
-            max: None,
             pda: None,
             pda_program_id: None,
             constraints: Vec::new(),
             data: Vec::new(),
-            validate: None,
+            attrs: Vec::new(),
         };
 
         new_field.parse_attributes(field.attrs, false)?;
@@ -101,13 +95,11 @@ impl Field {
                     executable: None,
                     rent_exempt: None,
                     signer: None,
-                    min: None,
-                    max: None,
                     pda: None,
                     pda_program_id: None,
                     constraints: Vec::new(),
                     data: Vec::new(),
-                    validate: None,
+                    attrs: Vec::new(),
                 };
 
                 new_field.parse_attributes(variant.attrs, true)?;
@@ -122,10 +114,9 @@ impl Field {
     }
 
     fn parse_attributes(&mut self, mut attrs: Vec<Attribute>, is_enum: bool) -> Result<()> {
-        let mut size_attr = false;
-
         while let Some(attribute) = attrs.pop() {
             if !attribute.path.is_ident("account") {
+                self.attrs.push(attribute);
                 continue;
             }
 
@@ -312,101 +303,6 @@ impl Field {
                             }
 
                             self.signer = Some(quote! {#value});
-                        }
-                        "min" => {
-                            if is_enum {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The min argument is not allowed in enums",
-                                ));
-                            }
-
-                            if size_attr {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The min argument is incompatible with the size argument",
-                                ));
-                            }
-
-                            if self.min.is_some() {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The min argument can only be defined once",
-                                ));
-                            }
-
-                            if meta.error.is_some() {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The min argument cannot have an error field",
-                                ));
-                            }
-
-                            self.min = Some(quote! {#value});
-                        }
-                        "max" => {
-                            if is_enum {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The max argument is not allowed in enums",
-                                ));
-                            }
-
-                            if size_attr {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The max argument is incompatible with the size argument",
-                                ));
-                            }
-
-                            if self.max.is_some() {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The max argument can only be defined once",
-                                ));
-                            }
-
-                            if meta.error.is_some() {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The max argument cannot have an error field",
-                                ));
-                            }
-
-                            self.max = Some(quote! {#value});
-                        }
-                        "size" => {
-                            if is_enum {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The size argument is not allowed in enums",
-                                ));
-                            }
-
-                            if size_attr {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The size argument can only be defined once",
-                                ));
-                            }
-
-                            if self.min.is_some() || self.max.is_some() {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The size argument is incompatible with the min and max arguments",
-                                ));
-                            }
-
-                            if meta.error.is_some() {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The size argument cannot have an error field",
-                                ));
-                            }
-
-                            self.min = Some(quote! {#value});
-                            self.max = Some(quote! {#value});
-                            size_attr = true;
                         }
                         "pda" => {
                             if is_enum {
@@ -782,54 +678,6 @@ impl Field {
                                 "The data argument must use a value: data = <expr>",
                             ));
                         }
-                        "validate" => {
-                            if is_enum {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The validate argument is not allowed in enums",
-                                ));
-                            }
-
-                            if self.validate.is_some() {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The validate argument can only be defined once",
-                                ));
-                            }
-
-                            if meta.error.is_some() {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The validate argument cannot have an error field",
-                                ));
-                            }
-
-                            self.validate = Some(false);
-                        }
-                        "validate_with_args" => {
-                            if is_enum {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The validate_with_args argument is not allowed in enums",
-                                ));
-                            }
-
-                            if self.validate.is_some() {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The validate_with_args argument can only be defined once",
-                                ));
-                            }
-
-                            if meta.error.is_some() {
-                                return Err(Error::new(
-                                    name.span(),
-                                    "The validate_with_args argument cannot have an error field",
-                                ));
-                            }
-
-                            self.validate = Some(true);
-                        }
                         _ => {
                             return Err(Error::new(name.span(), "Unknown argument"));
                         }
@@ -898,34 +746,11 @@ pub fn check_fields(fields: &[Field]) -> Result<()> {
     let mut rest_field = false;
     for field in fields {
         match &field.kind {
-            FieldKind::Other => {
+            FieldKind::Other | FieldKind::Option(_) | FieldKind::Vec(_) => {
                 if rest_field {
                     return Err(Error::new(
                         field.name.span(),
-                        "The rest field cannot be placed after other fields",
-                    ));
-                }
-
-                if field.min.is_some() || field.max.is_some() {
-                    return Err(Error::new(
-                        field.name.span(),
-                        "The min, max and size attributes are compatible only with Vec and Rest types",
-                    ));
-                }
-            }
-            FieldKind::Option(_) => {
-                if rest_field {
-                    return Err(Error::new(
-                        field.name.span(),
-                        "The rest field cannot be placed after other fields",
-                    ));
-                }
-            }
-            FieldKind::Vec(_) => {
-                if rest_field {
-                    return Err(Error::new(
-                        field.name.span(),
-                        "The rest field cannot be placed after other fields",
+                        "The rest field cannot be placed before other fields",
                     ));
                 }
             }

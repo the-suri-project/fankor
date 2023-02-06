@@ -6,6 +6,7 @@ pub use crate::models::*;
 pub use crate::traits::*;
 #[cfg(feature = "ts-gen")]
 pub use crate::ts_gen;
+pub use crate::utils::type_id_of;
 pub use borsh;
 pub use bs58;
 pub use fankor_macros::*;

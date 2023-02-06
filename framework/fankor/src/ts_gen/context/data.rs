@@ -1,6 +1,5 @@
-use crate::ts_gen::accounts::TsInstructionAccountGen;
+use crate::ts_gen::accounts::TsInstructionGen;
 use crate::ts_gen::types::{TsTypeGen, TsTypesCache};
-use convert_case::{Case, Converter};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
@@ -94,7 +93,7 @@ impl DataContext {
     }
 
     /// Adds an instruction account.
-    pub fn add_instruction_account<T: TsInstructionAccountGen>(&mut self) -> Result<(), String> {
+    pub fn add_instruction_account<T: TsInstructionGen>(&mut self) -> Result<(), String> {
         let name = T::value_type();
 
         if self.accounts.contains(&name) {
@@ -104,7 +103,7 @@ impl DataContext {
         T::generate_type(&mut self.account_types);
 
         let get_metas_method = format!(
-            "function getMetasOf{}(accounts: {}, accountMetas: solana.AccountMeta[]) {{
+            "function getMetasOf{}(accounts: {}, accountMetas: solana.AccountMeta[], writer: fnk.FnkBorshWriter) {{
                 {}
             }}",
             name,
@@ -119,13 +118,12 @@ impl DataContext {
     }
 
     /// Adds a program method.
-    pub fn add_program_method<T: TsInstructionAccountGen>(
+    pub fn add_program_method<T: TsInstructionGen>(
         &mut self,
-        name: &'static str,
-        discriminant: u8,
+        discriminant_name: &'static str,
+        variant_name: &'static str,
     ) -> Result<(), String> {
-        let case_converter = Converter::new().from_case(Case::Snake).to_case(Case::Camel);
-        let name = Cow::Owned(case_converter.convert(format!("create_{}_instruction", name)));
+        let name = Cow::Owned(format!("create{}Instruction", variant_name));
 
         if self.program_methods.contains_key(&name) {
             return Err(format!("Duplicated program method: '{}'", name));
@@ -134,58 +132,19 @@ impl DataContext {
         let accounts_type = T::value_type();
         let method = format!(
             "export function {}(accounts: {}) {{
-                const data = Buffer.from([{}]);
+                const data = Buffer.from([{}.{}]);
+                const writer = new fnk.FnkBorshWriter(data);
                 const accountMetas: solana.AccountMeta[] = [];
 
-                getMetasOf{}(accounts, accountMetas);
+                getMetasOf{}(accounts, accountMetas, writer);
 
                 return new solana.TransactionInstruction({{
                     keys: accountMetas,
                     programId: ID,
-                    data
+                    data: writer.toBuffer()
                 }});
             }}",
-            name, accounts_type, discriminant, accounts_type,
-        );
-
-        self.program_methods.insert(name, Cow::Owned(method));
-
-        Ok(())
-    }
-
-    /// Adds a program method.
-    pub fn add_program_method_with_args<T: TsInstructionAccountGen, A: TsTypeGen>(
-        &mut self,
-        name: &'static str,
-        discriminant: u8,
-    ) -> Result<(), String> {
-        let case_converter = Converter::new().from_case(Case::Snake).to_case(Case::Camel);
-        let name = Cow::Owned(case_converter.convert(format!("create_{}_instruction", name)));
-
-        if self.program_methods.contains_key(&name) {
-            return Err(format!("Duplicated program method: '{}'", name));
-        }
-
-        let accounts_type = T::value_type();
-        let method = format!(
-            "export function {}(accounts: {}, args: {}) {{
-                const argsBuffer = args.serialize();
-                const data = Buffer.concat([Buffer.from([{}]), argsBuffer]);
-                const accountMetas: solana.AccountMeta[] = [];
-
-                getMetasOf{}(accounts, accountMetas);
-
-                return new solana.TransactionInstruction({{
-                    keys: accountMetas,
-                    programId: ID,
-                    data
-                }});
-            }}",
-            name,
-            accounts_type,
-            A::value_type(),
-            discriminant,
-            accounts_type,
+            name, accounts_type, discriminant_name, variant_name, accounts_type,
         );
 
         self.program_methods.insert(name, Cow::Owned(method));

@@ -10,6 +10,7 @@ pub use unchecked_account::*;
 pub use uninitialized::*;
 pub use vector::*;
 pub use zero_copy::*;
+pub use argument::*;
 
 mod account;
 mod boxed;
@@ -23,3 +24,4 @@ mod unchecked_account;
 mod uninitialized;
 mod vector;
 mod zero_copy;
+mod argument;

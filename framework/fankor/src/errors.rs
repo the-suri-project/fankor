@@ -99,6 +99,10 @@ pub enum FankorErrorCode {
     #[msg("Failed to deserialize the account: {}", account)]
     AccountDidNotDeserialize { account: String },
 
+    /// Failed to deserialize the instruction account
+    #[msg("Failed to deserialize the instruction account: {}", account)]
+    InstructionDidNotDeserialize { account: String },
+
     /// Cannot modify an account that is not owned by the current program
     #[msg(
         "Cannot {} an account that is not owned by the current program: {}",
@@ -176,6 +180,10 @@ pub enum FankorErrorCode {
     /// There are not enough accounts to deserialize the instruction
     #[msg("There are not enough accounts to deserialize the instruction")]
     NotEnoughAccountKeys,
+
+    /// There is not enough data to deserialize the instruction
+    #[msg("There is not enough data to deserialize the instruction")]
+    NotEnoughDataToDeserializeInstruction,
 
     /// The instruction expects no accounts
     #[msg("The instruction expects no accounts")]

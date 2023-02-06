@@ -1,22 +1,20 @@
-use crate::macros::instruction_accounts::arguments::{InstructionArguments, Validation};
+use crate::fnk_syn::FnkMetaArgumentList;
+use crate::macros::instruction::arguments::{InstructionArguments, Validation};
 use quote::{format_ident, quote};
-use syn::spanned::Spanned;
-use syn::{Error, ItemEnum};
+use syn::ItemEnum;
 
 use crate::Result;
 
-use crate::macros::instruction_accounts::field::{check_fields, Field, FieldKind};
+use crate::macros::instruction::field::{check_fields, Field, FieldKind};
 
-pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
-    let instruction_arguments = InstructionArguments::from(&item.attrs)?;
+pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_macro::TokenStream> {
+    let arguments = InstructionArguments::from(args)?;
     let name = &item.ident;
-    let vis = &item.vis;
+    let name_str = name.to_string();
+    let discriminant_name = format_ident!("{}Discriminant", name);
+    let visibility = &item.vis;
+    let attributes = &item.attrs;
     let (impl_generics, ty_generics, where_clause) = item.generics.split_for_impl();
-    let ixn_args_type = instruction_arguments
-        .args
-        .clone()
-        .map(|args| quote! { args: &#args })
-        .unwrap_or_default();
 
     let mapped_fields = item
         .variants
@@ -25,70 +23,76 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
         .collect::<Result<Vec<Field>>>()?;
     check_fields(&mapped_fields)?;
 
-    let try_from_fn_deserialize = mapped_fields
-        .iter()
-        .map(|v| {
-            let variant_name = &v.name;
-            let ty = &v.ty;
+    let mut final_enum_variants = Vec::with_capacity(mapped_fields.len());
+    let mut try_from_method_deserialize = Vec::with_capacity(mapped_fields.len());
+    let mut variant_consts = Vec::with_capacity(mapped_fields.len());
+    let mut validate_method_variants = Vec::with_capacity(mapped_fields.len());
+    let mut discriminants = Vec::new();
 
-            quote!{
-                if accounts_len >= <#ty as ::fankor::traits::InstructionAccount>::min_accounts() {
-                    let mut accounts_aux = *accounts;
-                    match <#ty as ::fankor::traits::InstructionAccount>::try_from(context, &mut accounts_aux) {
-                        Ok(v) => {
-                            *accounts = accounts_aux;
+    for mapped_field in &mapped_fields {
+        let variant_name = &mapped_field.name;
+        let ty = &mapped_field.ty;
+        let attrs = &mapped_field.attrs;
+        let const_name = format_ident!("{}Discriminant", variant_name);
 
-                            return Ok(#name::#variant_name(v));
-                        },
-                        Err(e) => {
-                            err = e;
-                        }
-                    }
-                }
+        final_enum_variants.push(quote! {
+            #(#attrs)*
+            #variant_name(#ty)
+        });
+
+        variant_consts.push(quote! {
+            pub const #const_name: u8 = #discriminant_name::#variant_name.code();
+        });
+
+        try_from_method_deserialize.push(quote! {
+            #const_name => {
+                let mut new_buf = &buf[1..];
+                let mut new_accounts = *accounts;
+                let result = <#ty as ::fankor::traits::Instruction>::try_from(context, &mut new_buf, &mut new_accounts)?;
+
+                *accounts = new_accounts;
+                *buf = new_buf;
+
+                #name::#variant_name(result)
             }
         });
 
-    let try_from_fn_conditions = mapped_fields
-        .iter()
-        .map(|v| {
-            let variant_name = &v.name;
-
-            let args = if ixn_args_type.is_empty() {
-                quote! {}
-            } else {
-                quote! { args }
-            };
-
-            match &v.kind {
-                // Rest is placed here because the instruction struct can be named like that.
-                FieldKind::Other | FieldKind::Rest => Ok(quote! {
-                    Self::#variant_name(v) => {
-                        v.validate(context, #args)?;
+        validate_method_variants.push(match &mapped_field.kind {
+            // Rest is placed here because the instruction struct can be named like that.
+            FieldKind::Other | FieldKind::Rest => quote! {
+                Self::#variant_name(v) => {
+                    v.validate(context)?;
+                }
+            },
+            FieldKind::Option(_) => quote! {
+                Self::#variant_name(v) => {
+                    if let Some(v) = v {
+                        v.validate(context)?;
                     }
-                }),
-                FieldKind::Option(_) => Ok(quote! {
-                    Self::#variant_name(v) => {
-                        if let Some(v) = v {
-                            v.validate(context, #args)?;
-                        }
+                }
+            },
+            FieldKind::Vec(_) => quote! {
+                Self::#variant_name(v) => {
+                    for v2 in v {
+                        v2.validate(context)?;
                     }
-                }),
-                FieldKind::Vec(v) => Err(Error::new(
-                    v.span(),
-                    "Vec is not supported for instruction enums",
-                )),
-            }
-        })
-        .collect::<Result<Vec<_>>>()?;
+                }
+            },
+        });
 
-    // CpiInstructionAccount implementation
+        discriminants.push(quote!(
+            Self::#variant_name{..} => #discriminant_name::#variant_name
+        ));
+    }
+
+    // CpiInstruction implementation
     let cpi_name = format_ident!("Cpi{}", name);
     let cpi_fields = mapped_fields.iter().map(|v| {
         let name = &v.name;
         let ty = &v.ty;
 
         quote! {
-            #name(<#ty as ::fankor::traits::InstructionAccount<'info>>::CPI)
+            #name(<#ty as ::fankor::traits::Instruction<'info>>::CPI)
         }
     });
     let cpi_fn_elements = mapped_fields
@@ -126,7 +130,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                 quote! {
                     #cpi_name::#variant_name(v) => {
                         let from = metas.len();
-                        ::fankor::traits::CpiInstructionAccount::to_account_metas_and_infos(v, metas, infos)?;
+                        ::fankor::traits::CpiInstruction::serialize_into_instruction_parts(v, writer, metas, infos)?;
                         let to = metas.len();
                         #writable_let
                         #signer_let
@@ -139,19 +143,19 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
                 }
             } else {
                 quote! {
-                    #cpi_name::#variant_name(v) => ::fankor::traits::CpiInstructionAccount::to_account_metas_and_infos(v, metas, infos)?
+                    #cpi_name::#variant_name(v) => ::fankor::traits::CpiInstruction::serialize_into_instruction_parts(v, writer, metas, infos)?
                 }
             }
         });
 
-    // LpiInstructionAccount implementation
+    // LpiInstruction implementation
     let lpi_name = format_ident!("Lpi{}", name);
     let lpi_fields = mapped_fields.iter().map(|v| {
         let name = &v.name;
         let ty = &v.ty;
 
         quote! {
-            #name(<#ty as ::fankor::traits::InstructionAccount<'info>>::LPI)
+            #name(<#ty as ::fankor::traits::Instruction<'info>>::LPI)
         }
     });
     let lpi_fn_elements = mapped_fields.iter().map(|v| {
@@ -188,7 +192,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
             quote! {
                 #lpi_name::#variant_name(v) => {
                     let from = metas.len();
-                    ::fankor::traits::LpiInstructionAccount::to_account_metas(v, metas)?;
+                    ::fankor::traits::LpiInstruction::serialize_into_instruction_parts(v, writer, metas)?;
                     let to = metas.len();
                     #writable_let
                     #signer_let
@@ -201,122 +205,86 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
             }
         } else {
             quote! {
-                #lpi_name::#variant_name(v) => ::fankor::traits::LpiInstructionAccount::to_account_metas(v, metas)?
-            }
-        }
-    });
-
-    // Min accounts.
-    let min_accounts_fn_elements = mapped_fields.iter().map(|v| {
-        let ty = &v.ty;
-
-        match &v.kind {
-            FieldKind::Other => {
-                quote! {
-                    min_accounts = min_accounts.min(<#ty as ::fankor::traits::InstructionAccount>::min_accounts());
-                }
-            }
-            FieldKind::Option(ty) => {
-                if let Some(min) = &v.min {
-                    quote! {
-                        min_accounts = min_accounts.min(#min * <#ty>::min_accounts());
-                    }
-                } else {
-                    quote! {
-                        min_accounts = min_accounts.min(<#ty as ::fankor::traits::InstructionAccount>::min_accounts());
-                    }
-                }
-            }
-            FieldKind::Vec(ty) => {
-                if let Some(min) = &v.min {
-                    quote! {
-                        min_accounts = min_accounts.min(#min * <#ty>::min_accounts());
-                    }
-                } else {
-                    quote! {
-                        min_accounts = min_accounts.min(<#ty as ::fankor::traits::InstructionAccount>::min_accounts());
-                    }
-                }
-            }
-            FieldKind::Rest => {
-                if let Some(min) = &v.min {
-                    quote! {
-                        min_accounts = min_accounts.min(#min);
-                    }
-                } else {
-                    quote! {
-                        min_accounts = min_accounts.min(<#ty as ::fankor::traits::InstructionAccount>::min_accounts());
-                    }
-                }
+                #lpi_name::#variant_name(v) => ::fankor::traits::LpiInstruction::serialize_into_instruction_parts(v, writer, metas)?
             }
         }
     });
 
     // Validations.
-    let validation_args = if ixn_args_type.is_empty() {
-        quote! {}
-    } else {
-        quote! { args }
-    };
-    let initial_validation = &instruction_arguments.initial_validation.map(|v| match v {
+    let initial_validation = &arguments.initial_validation.map(|v| match v {
         Validation::Implicit => {
             quote! {
-                self.initial_validation(context, #validation_args)?;
+                self.initial_validation(context)?;
             }
         }
         Validation::Explicit(v) => v,
     });
-    let final_validation = &instruction_arguments.final_validation.map(|v| match v {
+    let final_validation = &arguments.final_validation.map(|v| match v {
         Validation::Implicit => {
             quote! {
-                self.final_validation(context, #validation_args)?;
+                self.final_validation(context)?;
             }
         }
         Validation::Explicit(v) => v,
     });
 
     // Result
-    let min_accounts = if mapped_fields.is_empty() {
-        0
-    } else {
-        usize::MAX
-    };
+    let instructions_type_discriminant_name =
+        format_ident!("{}Discriminant", arguments.instructions_type_name);
     let result = quote! {
+        #[derive(EnumDiscriminants)]
+        #[non_exhaustive]
+        #[repr(u8)]
+        #(#attributes)*
+        #visibility enum #name #ty_generics #where_clause {
+            #(#final_enum_variants,)*
+        }
+
         #[automatically_derived]
-        impl #impl_generics ::fankor::traits::InstructionAccount<'info> for #name #ty_generics #where_clause {
+        impl #impl_generics ::fankor::traits::Instruction<'info> for #name #ty_generics #where_clause {
             type CPI = #cpi_name <'info>;
             type LPI = #lpi_name <'info>;
 
-            fn min_accounts() -> usize {
-                let mut min_accounts = #min_accounts;
-                #(#min_accounts_fn_elements)*
-                min_accounts
-            }
-
+            #[allow(non_upper_case_globals)]
             fn try_from(
                 context: &'info FankorContext<'info>,
+                buf: &mut &[u8],
                 accounts: &mut &'info [AccountInfo<'info>],
             ) -> ::fankor::errors::FankorResult<Self> {
-                let mut err: ::fankor::errors::Error = ::fankor::errors::FankorErrorCode::NotEnoughAccountKeys.into();
-                let accounts_len = accounts.len();
+                if buf.is_empty() {
+                    return Err(FankorErrorCode::NotEnoughDataToDeserializeInstruction.into());
+                }
 
-                #(#try_from_fn_deserialize)*
+                #(#variant_consts)*
+                let result = match buf[0] {
+                    #(#try_from_method_deserialize)*
+                    _ => {
+                        return Err(FankorErrorCode::InstructionDidNotDeserialize {
+                            account: #name_str.to_string(),
+                        }
+                        .into())
+                    }
+                };
 
-                Err(err)
+                // Validate instruction.
+                result.validate(context)?;
+
+                Ok(result)
             }
         }
 
         #[automatically_derived]
         impl #impl_generics #name #ty_generics #where_clause {
-            pub fn validate(
+            fn validate(
                 &self,
                 context: &'info FankorContext<'info>,
-                #ixn_args_type
             ) -> ::fankor::errors::FankorResult<()> {
+                use ::fankor::traits::Instruction;
+
                 #initial_validation
 
                 match self {
-                    #(#try_from_fn_conditions)*
+                    #(#validate_method_variants)*
                 }
 
                 #final_validation
@@ -326,17 +294,31 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
         }
 
         #[automatically_derived]
-        #vis enum #cpi_name <'info> {
+        #visibility enum #cpi_name <'info> {
             #(#cpi_fields),*
         }
 
         #[automatically_derived]
-        impl <'info> ::fankor::traits::CpiInstructionAccount<'info> for #cpi_name <'info> {
-            fn to_account_metas_and_infos(
+        impl <'info> #cpi_name <'info> {
+            #[inline(always)]
+            pub const fn discriminant(&self) -> #discriminant_name {
+                match self {
+                    #(#discriminants,)*
+                }
+            }
+        }
+
+        #[automatically_derived]
+        impl <'info> ::fankor::traits::CpiInstruction<'info> for #cpi_name <'info> {
+            fn serialize_into_instruction_parts<W: std::io::Write>(
                 &self,
+                writer: &mut W,
                 metas: &mut Vec<AccountMeta>,
                 infos: &mut Vec<AccountInfo<'info>>,
             ) -> FankorResult<()> {
+                #instructions_type_discriminant_name::#name.code().serialize(writer)?;
+                self.discriminant().code().serialize(writer)?;
+
                 match self {
                     #(#cpi_fn_elements),*
                 }
@@ -346,13 +328,30 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
         }
 
         #[automatically_derived]
-        #vis enum #lpi_name <'info>{
+        #visibility enum #lpi_name <'info>{
             #(#lpi_fields),*
         }
 
         #[automatically_derived]
-        impl <'info> ::fankor::traits::LpiInstructionAccount for #lpi_name <'info> {
-            fn to_account_metas(&self, metas: &mut Vec<::fankor::prelude::solana_program::instruction::AccountMeta>) -> ::fankor::errors::FankorResult<()> {
+        impl <'info> #lpi_name <'info> {
+            #[inline(always)]
+            pub const fn discriminant(&self) -> #discriminant_name {
+                match self {
+                    #(#discriminants,)*
+                }
+            }
+        }
+
+        #[automatically_derived]
+        impl <'info> ::fankor::traits::LpiInstruction for #lpi_name <'info> {
+            fn serialize_into_instruction_parts<W: std::io::Write>(
+                &self,
+                writer: &mut W,
+                metas: &mut Vec<::fankor::prelude::solana_program::instruction::AccountMeta>
+            ) -> ::fankor::errors::FankorResult<()> {
+                #instructions_type_discriminant_name::#name.code().serialize(writer)?;
+                self.discriminant().code().serialize(writer)?;
+
                 match self {
                     #(#lpi_fn_elements),*
                 }
@@ -369,6 +368,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
     let mut ts_type_names = Vec::new();
     let mut metas_fields = Vec::new();
     let ts_types = mapped_fields.iter().map(|v| {
+        let variant_name = &v.name;
         let name = format!("{}_{}", name_str, v.name);
         let ty = &v.ty;
         let types_replacement_str = format!("_r_interface_types_{}_r_", name);
@@ -376,11 +376,11 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
 
         ts_type_names.push(name.clone());
         type_replacements.push(quote! {
-             .replace(#types_replacement_str, &< #ty as TsInstructionAccountGen>::generate_type(registered_types))
+             .replace(#types_replacement_str, &< #ty as TsInstructionGen>::generate_type(registered_types))
         });
-        metas_fields.push(format!("case '{}': {} break;", v.name, metas_replacement_str));
+        metas_fields.push(format!("case '{}': writer.writeByte({}.{}); {} break;", v.name, discriminant_name, variant_name, metas_replacement_str));
         metas_replacements.push(quote! {
-             .replace(#metas_replacement_str, &< #ty as TsInstructionAccountGen>::get_external_account_metas(Cow::Owned(format!("{}.value", value)), false, false))
+             .replace(#metas_replacement_str, &< #ty as TsInstructionGen>::get_external_account_metas(Cow::Owned(format!("{}.value", value)), false, false))
         });
 
         format!("export interface {} {{ type: '{}', value: {} }}", name, v.name, types_replacement_str)
@@ -399,7 +399,8 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
         metas_fields.join(""),
     );
 
-    let get_metas_of_replacement_str = format!("getMetasOf{}(_r_value_r_,accountMetas);", name_str);
+    let get_metas_of_replacement_str =
+        format!("getMetasOf{}(_r_value_r_,accountMetas, writer);", name_str);
     let test_name = format_ident!("__ts_gen_test__instruction_accounts_{}", name_str);
     let test_name_str = test_name.to_string();
     let result = quote! {
@@ -410,12 +411,12 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
         #[allow(non_snake_case)]
         pub mod #test_name {
             use super::*;
-            use ::fankor::prelude::ts_gen::accounts::TsInstructionAccountGen;
+            use ::fankor::prelude::ts_gen::accounts::TsInstructionGen;
             use ::fankor::prelude::ts_gen::types::TsTypesCache;
             use std::borrow::Cow;
 
             #[automatically_derived]
-            impl #impl_generics TsInstructionAccountGen for #name #ty_generics #where_clause {
+            impl #impl_generics TsInstructionGen for #name #ty_generics #where_clause {
                 fn value_type() -> Cow<'static, str> {
                     Cow::Borrowed(#name_str)
                 }
@@ -455,7 +456,7 @@ pub fn process_enum(item: ItemEnum) -> Result<proc_macro::TokenStream> {
 
             #[test]
             fn build() {
-                 // Register action.
+                // Register action.
                 crate::__ts_gen_test__setup::BUILD_CONTEXT.register_action(#test_name_str, file!(), move |action_context| {
                     action_context.add_instruction_account::<#name>().unwrap();
                 })

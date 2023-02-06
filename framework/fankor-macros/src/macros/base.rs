@@ -1,14 +1,15 @@
+use crate::fnk_syn::FnkMetaArgumentList;
 use crate::Result;
 use quote::quote;
 use syn::spanned::Spanned;
-use syn::{AttributeArgs, Error, Item};
+use syn::{Error, Item};
 
-pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenStream> {
+pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::TokenStream> {
     // Process arguments.
     if !args.is_empty() {
         return Err(Error::new(
             input.span(),
-            "base macro does not accept arguments",
+            "fankor_base macro does not accept arguments",
         ));
     }
 

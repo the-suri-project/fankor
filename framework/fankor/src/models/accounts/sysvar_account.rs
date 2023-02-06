@@ -1,6 +1,6 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
-use crate::traits::{AccountInfoVerification, InstructionAccount, PdaChecker};
+use crate::traits::{AccountInfoVerification, Instruction, PdaChecker};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::pubkey::Pubkey;
@@ -88,14 +88,9 @@ impl<'info, T: SysvarId> SysvarAccount<'info, T> {
     }
 }
 
-impl<'info, T: SysvarId> InstructionAccount<'info> for SysvarAccount<'info, T> {
+impl<'info, T: SysvarId> Instruction<'info> for SysvarAccount<'info, T> {
     type CPI = AccountInfo<'info>;
     type LPI = Pubkey;
-
-    #[inline(always)]
-    fn min_accounts() -> usize {
-        1
-    }
 
     fn verify_account_infos<'a>(
         &self,
@@ -107,6 +102,7 @@ impl<'info, T: SysvarId> InstructionAccount<'info> for SysvarAccount<'info, T> {
     #[inline(never)]
     fn try_from(
         context: &'info FankorContext<'info>,
+        _buf: &mut &[u8],
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
         if accounts.is_empty() {

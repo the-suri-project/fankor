@@ -1,6 +1,8 @@
+use crate::fnk_syn::FnkMetaArgumentList;
 use proc_macro::TokenStream;
-use syn::{parse_macro_input, AttributeArgs, Item, LitStr};
+use syn::{parse_macro_input, Item, LitStr};
 
+mod fnk_syn;
 mod macros;
 mod utils;
 
@@ -88,7 +90,7 @@ pub fn zero_copy(input: TokenStream) -> TokenStream {
 /// - `TsGen`
 #[proc_macro_attribute]
 pub fn accounts(args: TokenStream, input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(args as AttributeArgs);
+    let args = parse_macro_input!(args as FnkMetaArgumentList);
     let input = parse_macro_input!(input as Item);
 
     match macros::accounts::processor(args, input) {
@@ -108,7 +110,7 @@ pub fn accounts(args: TokenStream, input: TokenStream) -> TokenStream {
 /// - `TsGen`
 #[proc_macro_attribute]
 pub fn account(args: TokenStream, input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(args as AttributeArgs);
+    let args = parse_macro_input!(args as FnkMetaArgumentList);
     let input = parse_macro_input!(input as Item);
 
     match macros::account::processor(args, input) {
@@ -182,12 +184,15 @@ pub fn enum_discriminants(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-/// Derives the `InstructionAccount` trait for the given struct/enum.
-#[proc_macro_derive(InstructionAccounts, attributes(account))]
-pub fn instruction_accounts(input: TokenStream) -> TokenStream {
+/// Derives the `Instruction` trait for the given struct/enum as well as:
+/// - `EnumDiscriminants` if it is an enum
+/// - `TsGen`
+#[proc_macro_attribute]
+pub fn instruction(args: TokenStream, input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(args as FnkMetaArgumentList);
     let input = parse_macro_input!(input as Item);
 
-    match macros::instruction_accounts::processor(input) {
+    match macros::instruction::processor(args, input) {
         Ok(v) => v,
         Err(e) => e.to_compile_error().into(),
     }
@@ -200,7 +205,7 @@ pub fn instruction_accounts(input: TokenStream) -> TokenStream {
 /// This macro defines an error list from an enum.
 #[proc_macro_attribute]
 pub fn error_code(args: TokenStream, input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(args as AttributeArgs);
+    let args = parse_macro_input!(args as FnkMetaArgumentList);
     let input = parse_macro_input!(input as Item);
 
     match macros::error::processor(args, input) {
@@ -228,14 +233,14 @@ pub fn error_code(args: TokenStream, input: TokenStream) -> TokenStream {
 /// fn my_instruction(program_id: &Pubkey, accounts: &[AccountInfo], instruction_data: &[u8]) -> Result<RESULT>;
 /// ```
 ///
-/// Being `ACCOUNT` a type that implements the `InstructionAccount` trait and being `ARGS` and `RESULT` types
+/// Being `ACCOUNT` a type that implements the `Instruction` trait and being `ARGS` and `RESULT` types
 /// that implement the `FankorSerialize` and `FankorDeserialize` traits.
 ///
 /// If `RESULT` is different from `()` then the instruction will store the result in the intermediate buffer as
 /// the instruction result.
 #[proc_macro_attribute]
 pub fn program(args: TokenStream, input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(args as AttributeArgs);
+    let args = parse_macro_input!(args as FnkMetaArgumentList);
     let input = parse_macro_input!(input as Item);
 
     match macros::program::processor(args, input) {
@@ -256,7 +261,7 @@ pub fn program(args: TokenStream, input: TokenStream) -> TokenStream {
 /// - `TsGen`
 #[proc_macro_attribute]
 pub fn fankor_base(args: TokenStream, input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(args as AttributeArgs);
+    let args = parse_macro_input!(args as FnkMetaArgumentList);
     let input = parse_macro_input!(input as Item);
 
     match macros::base::processor(args, input) {
@@ -273,7 +278,7 @@ pub fn fankor_base(args: TokenStream, input: TokenStream) -> TokenStream {
 /// the TypeScript generated code.
 #[proc_macro_attribute]
 pub fn constant(args: TokenStream, input: TokenStream) -> TokenStream {
-    let args = parse_macro_input!(args as AttributeArgs);
+    let args = parse_macro_input!(args as FnkMetaArgumentList);
     let input = parse_macro_input!(input as Item);
 
     match macros::constant::processor(args, input) {

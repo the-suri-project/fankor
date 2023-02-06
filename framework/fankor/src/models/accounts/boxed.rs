@@ -1,17 +1,11 @@
 use crate::errors::FankorResult;
 use crate::models::FankorContext;
-use crate::traits::{AccountInfoVerification, InstructionAccount, PdaChecker};
+use crate::traits::{AccountInfoVerification, Instruction, PdaChecker};
 use solana_program::account_info::AccountInfo;
 
-impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Box<T> {
+impl<'info, T: Instruction<'info>> Instruction<'info> for Box<T> {
     type CPI = AccountInfo<'info>;
     type LPI = solana_program::pubkey::Pubkey;
-
-    #[inline]
-    fn min_accounts() -> usize {
-        // Prevents infinite recursion.
-        0
-    }
 
     fn verify_account_infos<'a>(
         &self,
@@ -24,9 +18,10 @@ impl<'info, T: InstructionAccount<'info>> InstructionAccount<'info> for Box<T> {
     #[inline(never)]
     fn try_from(
         context: &'info FankorContext<'info>,
+        buf: &mut &[u8],
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
-        Ok(Box::new(T::try_from(context, accounts)?))
+        Ok(Box::new(T::try_from(context, buf, accounts)?))
     }
 }
 

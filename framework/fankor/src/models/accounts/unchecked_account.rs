@@ -1,6 +1,6 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{FankorContext, Program, System};
-use crate::traits::{AccountInfoVerification, InstructionAccount, PdaChecker};
+use crate::traits::{AccountInfoVerification, Instruction, PdaChecker};
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use crate::utils::rent::make_rent_exempt;
@@ -180,14 +180,9 @@ impl<'info> UncheckedAccount<'info> {
     }
 }
 
-impl<'info> InstructionAccount<'info> for UncheckedAccount<'info> {
+impl<'info> Instruction<'info> for UncheckedAccount<'info> {
     type CPI = AccountInfo<'info>;
     type LPI = Pubkey;
-
-    #[inline(always)]
-    fn min_accounts() -> usize {
-        1
-    }
 
     fn verify_account_infos<'a>(
         &self,
@@ -199,6 +194,7 @@ impl<'info> InstructionAccount<'info> for UncheckedAccount<'info> {
     #[inline(never)]
     fn try_from(
         context: &'info FankorContext<'info>,
+        _buf: &mut &[u8],
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
         if accounts.is_empty() {

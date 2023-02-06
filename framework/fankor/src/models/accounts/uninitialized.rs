@@ -2,9 +2,7 @@ use crate::cpi;
 use crate::cpi::system_program::CpiCreateAccount;
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{Account, FankorContext, Program, System};
-use crate::traits::{
-    AccountInfoVerification, AccountSize, AccountType, InstructionAccount, PdaChecker,
-};
+use crate::traits::{AccountInfoVerification, AccountSize, AccountType, Instruction, PdaChecker};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::pubkey::Pubkey;
@@ -219,14 +217,9 @@ impl<'info> UninitializedAccount<'info> {
     }
 }
 
-impl<'info> InstructionAccount<'info> for UninitializedAccount<'info> {
+impl<'info> Instruction<'info> for UninitializedAccount<'info> {
     type CPI = AccountInfo<'info>;
     type LPI = Pubkey;
-
-    #[inline(always)]
-    fn min_accounts() -> usize {
-        1
-    }
 
     fn verify_account_infos<'a>(
         &self,
@@ -238,6 +231,7 @@ impl<'info> InstructionAccount<'info> for UninitializedAccount<'info> {
     #[inline(never)]
     fn try_from(
         context: &'info FankorContext<'info>,
+        _buf: &mut &[u8],
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
         if accounts.is_empty() {

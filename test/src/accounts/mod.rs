@@ -13,12 +13,12 @@ pub enum ProgramAccount {
     ZeroCopyStructAccountData,
 }
 
-#[accounts(base = "ProgramAccount")]
+#[accounts(base = ProgramAccount)]
 pub enum ProgramAccountSubSet {
     StructAccountData,
 }
 
-#[accounts(base = "ProgramAccount")]
+#[accounts(base = ProgramAccount)]
 pub enum ProgramAccountZeroSubSet {
     StructAccountData,
     ZeroCopyStructAccountData,

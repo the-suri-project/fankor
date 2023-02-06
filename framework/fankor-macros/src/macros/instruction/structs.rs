@@ -1,21 +1,22 @@
+use crate::fnk_syn::FnkMetaArgumentList;
+use convert_case::{Case, Converter};
 use quote::{format_ident, quote};
-use syn::{Error, ItemStruct};
+use syn::ItemStruct;
 
 use crate::Result;
 
-use crate::macros::instruction_accounts::arguments::{InstructionArguments, Validation};
-use crate::macros::instruction_accounts::field::{check_fields, Field};
+use crate::macros::instruction::arguments::{InstructionArguments, Validation};
+use crate::macros::instruction::field::{check_fields, Field};
 
-pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
-    let instruction_arguments = InstructionArguments::from(&item.attrs)?;
+pub fn process_struct(
+    args: FnkMetaArgumentList,
+    item: ItemStruct,
+) -> Result<proc_macro::TokenStream> {
+    let arguments = InstructionArguments::from(args)?;
     let name = &item.ident;
-    let vis = &item.vis;
+    let visibility = &item.vis;
+    let attributes = &item.attrs;
     let (impl_generics, ty_generics, where_clause) = item.generics.split_for_impl();
-    let ixn_args_type = instruction_arguments
-        .args
-        .clone()
-        .map(|args| quote! { args: &#args })
-        .unwrap_or_default();
 
     let mapped_fields = item
         .fields
@@ -24,18 +25,28 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         .collect::<Result<Vec<Field>>>()?;
     check_fields(&mapped_fields)?;
 
+    let final_fields = mapped_fields.iter().map(|v| {
+        let name = &v.name;
+        let ty = &v.ty;
+        let attrs = &v.attrs;
+
+        quote! {
+            #(#attrs)*
+            #name: #ty
+        }
+    });
+
     let try_from_fn_deserialize = mapped_fields.iter().map(|v| {
         let name = &v.name;
         let ty = &v.ty;
 
         quote! {
-            let #name = <#ty as ::fankor::traits::InstructionAccount>::try_from(context, accounts)?;
+            let #name = <#ty as ::fankor::traits::Instruction>::try_from(context, buf, accounts)?;
         }
     });
 
     let mut pda_methods = Vec::new();
-    let mut field_validations = Vec::new();
-    let try_from_fn_conditions = mapped_fields.iter().map(|v| {
+    let validate_method_fields = mapped_fields.iter().map(|v| {
         let name = &v.name;
         let name_str = name.to_string();
 
@@ -181,7 +192,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
             let seeds = &pda.data;
 
             pda_methods.push(quote! {
-                pub fn #pda_method_name(&self, context: &FankorContext<'info>, #ixn_args_type) -> FankorResult<Vec<Vec<u8>>> {
+                pub fn #pda_method_name(&self, context: &FankorContext<'info>) -> FankorResult<Vec<Vec<u8>>> {
                     let info = match self.#name.pda_info() {
                         Some(v) => v,
                         None => return Err(::fankor::errors::FankorErrorCode::MissingSeedsAccount.into()),
@@ -243,55 +254,6 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
             }});
         }
 
-        let min = v.min.as_ref().map(|min| {
-            quote! {{
-                let expected = #min;
-                let actual = self.#name.len();
-
-                if actual < expected {
-                    return Err(::fankor::errors::FankorErrorCode::AccountConstraintMinimumMismatch {
-                        actual,
-                        expected,
-                        account: #name_str,
-                    }.into());
-                }
-            }}
-        });
-
-        let max = v.max.as_ref().map(|max| {
-            quote! {{
-                let expected = #max;
-                let actual = self.#name.len();
-
-                if actual > expected {
-                    return Err(::fankor::errors::FankorErrorCode::AccountConstraintMaximumMismatch {
-                        actual,
-                        expected,
-                        account: #name_str,
-                    }.into());
-                }
-            }}
-        });
-
-        if let Some(with_args) = v.validate {
-            if !with_args {
-                field_validations.push(quote! {{
-                    self.#name.validate(context)?;
-                }})
-            } else {
-                if ixn_args_type.is_empty() {
-                    return Err(Error::new(
-                        name.span(),
-                        "The validate_with_args argument requires the instruction's argument #[account(args = <type>)]",
-                    ));
-                }
-
-                field_validations.push(quote! {{
-                    self.#name.validate(context, args)?;
-                }})
-            }
-        }
-
         let result = if !account_info_conditions.is_empty() || !constraints_conditions.is_empty() {
             let account_info_conditions = if account_info_conditions.is_empty() {
                 quote! {}
@@ -325,16 +287,10 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
                 #constraints_conditions
 
                 self.#name.verify_account_infos(&mut verification_config)?;
-
-                #min
-                #max
             }
         } else {
             quote! {
                 #(#data)*
-
-                #min
-                #max
             }
         };
 
@@ -343,14 +299,14 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
 
     let fields = item.fields.iter().map(|v| &v.ident);
 
-    // CpiInstructionAccount implementation
+    // CpiInstruction implementation
     let cpi_name = format_ident!("Cpi{}", name);
     let cpi_fields = mapped_fields.iter().map(|v| {
         let name = &v.name;
         let ty = &v.ty;
 
         quote! {
-            pub #name:<#ty as ::fankor::traits::InstructionAccount<'info>>::CPI
+            pub #name:<#ty as ::fankor::traits::Instruction<'info>>::CPI
         }
     });
     let cpi_fn_elements = mapped_fields.iter().map(|v| {
@@ -387,7 +343,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
             quote! {
                 {
                     let from = metas.len();
-                    ::fankor::traits::CpiInstructionAccount::to_account_metas_and_infos(&self.#name, metas, infos)?;
+                    ::fankor::traits::CpiInstruction::serialize_into_instruction_parts(&self.#name, writer, metas, infos)?;
                     let to = metas.len();
                     #writable_let
                     #signer_let
@@ -400,19 +356,19 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
             }
         } else {
             quote! {
-               ::fankor::traits::CpiInstructionAccount::to_account_metas_and_infos(&self.#name, metas, infos)?;
+               ::fankor::traits::CpiInstruction::serialize_into_instruction_parts(&self.#name, writer, metas, infos)?;
             }
         }
     });
 
-    // LpiInstructionAccount implementation
+    // LpiInstruction implementation
     let lpi_name = format_ident!("Lpi{}", name);
     let lpi_fields = mapped_fields.iter().map(|v| {
         let name = &v.name;
         let ty = &v.ty;
 
         quote! {
-            pub #name:<#ty as ::fankor::traits::InstructionAccount<'info>>::LPI
+            pub #name:<#ty as ::fankor::traits::Instruction<'info>>::LPI
         }
     });
     let lpi_fn_elements = mapped_fields.iter().map(|v| {
@@ -449,7 +405,7 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
             quote! {
                 {
                     let from = metas.len();
-                    ::fankor::traits::LpiInstructionAccount::to_account_metas(&self.#name, metas)?;
+                    ::fankor::traits::LpiInstruction::serialize_into_instruction_parts(&self.#name, writer, metas)?;
                     let to = metas.len();
                     #writable_let
                     #signer_let
@@ -462,84 +418,73 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
             }
         } else {
             quote! {
-                ::fankor::traits::LpiInstructionAccount::to_account_metas(&self.#name, metas)?;
+                ::fankor::traits::LpiInstruction::serialize_into_instruction_parts(&self.#name, writer, metas)?;
             }
         }
     });
 
-    // Min accounts.
-    let min_accounts_fn_elements = mapped_fields.iter().map(|v| {
-        let ty = &v.ty;
-
-        quote! {
-            min_accounts += <#ty as ::fankor::traits::InstructionAccount>::min_accounts();
-        }
-    });
-
     // Validations.
-    let validation_args = if ixn_args_type.is_empty() {
-        quote! {}
-    } else {
-        quote! { args }
-    };
-
-    let initial_validation = &instruction_arguments.initial_validation.map(|v| match v {
+    let initial_validation = &arguments.initial_validation.map(|v| match v {
         Validation::Implicit => {
             quote! {
-                self.initial_validation(context, #validation_args)?;
+                self.initial_validation(context)?;
             }
         }
         Validation::Explicit(v) => v,
     });
 
-    let final_validation = &instruction_arguments.final_validation.map(|v| match v {
+    let final_validation = &arguments.final_validation.map(|v| match v {
         Validation::Implicit => {
             quote! {
-                self.final_validation(context, #validation_args)?;
+                self.final_validation(context)?;
             }
         }
         Validation::Explicit(v) => v,
     });
 
     // Result
+    let instructions_type_discriminant_name =
+        format_ident!("{}Discriminant", arguments.instructions_type_name);
     let result = quote! {
+        #(#attributes)*
+        #visibility struct #name #ty_generics #where_clause {
+            #(#final_fields,)*
+        }
+
         #[automatically_derived]
-        impl #impl_generics ::fankor::traits::InstructionAccount<'info> for #name #ty_generics #where_clause {
+        impl #impl_generics ::fankor::traits::Instruction<'info> for #name #ty_generics #where_clause {
             type CPI = #cpi_name <'info>;
             type LPI = #lpi_name <'info>;
 
-            fn min_accounts() -> usize {
-                let mut min_accounts = 0;
-                #(#min_accounts_fn_elements)*
-                min_accounts
-            }
-
             fn try_from(
                 context: &'info FankorContext<'info>,
+                buf: &mut &[u8],
                 accounts: &mut &'info [AccountInfo<'info>],
             ) -> ::fankor::errors::FankorResult<Self> {
                 #(#try_from_fn_deserialize)*
 
-                Ok(Self {
+                let result = Self {
                     #(#fields),*
-                })
+                };
+
+                // Validate instruction.
+                result.validate(context)?;
+
+                Ok(result)
             }
         }
 
         #[automatically_derived]
         impl #impl_generics #name #ty_generics #where_clause {
-            pub fn validate(
+            fn validate(
                 &self,
                 context: &'info FankorContext<'info>,
-                #ixn_args_type
             ) -> ::fankor::errors::FankorResult<()> {
-                use ::fankor::traits::InstructionAccount;
-
-                #(#field_validations)*
+                use ::fankor::traits::Instruction;
 
                 #initial_validation
 
-                #(#try_from_fn_conditions)*
+                #(#validate_method_fields)*
 
                 #final_validation
 
@@ -550,30 +495,39 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         }
 
         #[automatically_derived]
-        #vis struct #cpi_name <'info> {
+        #visibility struct #cpi_name <'info> {
             #(#cpi_fields),*
         }
 
         #[automatically_derived]
-        impl <'info> ::fankor::traits::CpiInstructionAccount<'info> for #cpi_name <'info> {
-            fn to_account_metas_and_infos(
+        impl <'info> ::fankor::traits::CpiInstruction<'info> for #cpi_name <'info> {
+            fn serialize_into_instruction_parts<W: std::io::Write>(
                 &self,
+                writer: &mut W,
                 metas: &mut Vec<AccountMeta>,
                 infos: &mut Vec<AccountInfo<'info>>,
             ) -> FankorResult<()> {
+                #instructions_type_discriminant_name::#name.code().serialize(writer)?;
+
                 #(#cpi_fn_elements)*
                 Ok(())
             }
         }
 
         #[automatically_derived]
-        #vis struct #lpi_name <'info> {
+        #visibility struct #lpi_name <'info> {
             #(#lpi_fields),*
         }
 
         #[automatically_derived]
-        impl <'info> ::fankor::traits::LpiInstructionAccount for #lpi_name <'info> {
-            fn to_account_metas(&self, metas: &mut Vec<::fankor::prelude::solana_program::instruction::AccountMeta>) -> ::fankor::errors::FankorResult<()> {
+        impl <'info> ::fankor::traits::LpiInstruction for #lpi_name <'info> {
+            fn serialize_into_instruction_parts<W: std::io::Write>(
+                &self,
+                writer: &mut W,
+                metas: &mut Vec<::fankor::prelude::solana_program::instruction::AccountMeta>
+            ) -> ::fankor::errors::FankorResult<()> {
+                #instructions_type_discriminant_name::#name.code().serialize(writer)?;
+
                 #(#lpi_fn_elements)*
                 Ok(())
             }
@@ -585,24 +539,26 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
     let mut type_replacements = Vec::new();
     let mut metas_replacements = Vec::new();
     let mut metas_fields = Vec::new();
+    let case_converter = Converter::new().from_case(Case::Snake).to_case(Case::Camel);
     let ts_types = mapped_fields.iter().map(|v| {
         let ty = &v.ty;
+        let field_name = case_converter.convert(v.name.to_string());
         let types_replacement_str = format!("_r_interface_types_{}_r_", v.name);
         let metas_replacement_str = format!("_r_interface_metas_{}_r_", v.name);
         let writable = v.writable.clone().unwrap_or(quote! { false });
         let signer = v.signer.clone().unwrap_or(quote! { false });
 
         type_replacements.push(quote! {
-             .replace(#types_replacement_str, &< #ty as TsInstructionAccountGen>::generate_type(registered_types))
+             .replace(#types_replacement_str, &< #ty as TsInstructionGen>::generate_type(registered_types))
         });
         metas_fields.push(metas_replacement_str.clone());
 
-        let value_str = format!("{{}}.{}", v.name);
+        let value_str = format!("{{}}.{}", field_name);
         metas_replacements.push(quote! {
-             .replace(#metas_replacement_str, &< #ty as TsInstructionAccountGen>::get_external_account_metas(Cow::Owned(format!(#value_str, value)), #signer, #writable))
+             .replace(#metas_replacement_str, &< #ty as TsInstructionGen>::get_external_account_metas(Cow::Owned(format!(#value_str, value)), #signer, #writable))
         });
 
-        format!("{}: {}", v.name, types_replacement_str)
+        format!("{}: {}", field_name, types_replacement_str)
     }).collect::<Vec<_>>();
 
     let ts_type = format!(
@@ -612,7 +568,8 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
     );
 
     let ts_metas = metas_fields.join("");
-    let get_metas_of_replacement_str = format!("getMetasOf{}(_r_value_r_,accountMetas);", name_str);
+    let get_metas_of_replacement_str =
+        format!("getMetasOf{}(_r_value_r_,accountMetas, writer);", name_str);
     let test_name = format_ident!("__ts_gen_test__instruction_accounts_{}", name_str);
     let test_name_str = test_name.to_string();
     let result = quote! {
@@ -623,12 +580,12 @@ pub fn process_struct(item: ItemStruct) -> Result<proc_macro::TokenStream> {
         #[allow(non_snake_case)]
         pub mod #test_name {
             use super::*;
-            use ::fankor::prelude::ts_gen::accounts::TsInstructionAccountGen;
+            use ::fankor::prelude::ts_gen::accounts::TsInstructionGen;
             use ::fankor::prelude::ts_gen::types::TsTypesCache;
             use std::borrow::Cow;
 
             #[automatically_derived]
-            impl #impl_generics TsInstructionAccountGen for #name #ty_generics #where_clause {
+            impl #impl_generics TsInstructionGen for #name #ty_generics #where_clause {
                 fn value_type() -> Cow<'static, str> {
                     Cow::Borrowed(#name_str)
                 }

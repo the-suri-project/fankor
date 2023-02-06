@@ -1,10 +1,10 @@
-use convert_case::{Case, Converter};
 use quote::{format_ident, quote};
 use syn::spanned::Spanned;
-use syn::{AttributeArgs, Error, Item};
+use syn::{Error, Item};
 
 use crate::Result;
 
+use crate::fnk_syn::FnkMetaArgumentList;
 use crate::macros::program::programs::Program;
 use cpi::build_cpi;
 use lpi::build_lpi;
@@ -13,147 +13,78 @@ mod cpi;
 mod lpi;
 mod programs;
 
-pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenStream> {
-    let case_converter = Converter::new()
-        .from_case(Case::Snake)
-        .to_case(Case::Pascal);
-
-    // Process arguments.
-    if !args.is_empty() {
-        return Err(Error::new(
-            input.span(),
-            "program macro does not accept arguments",
-        ));
-    }
-
+pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::TokenStream> {
     // Process input.
     let item = match input {
-        Item::Impl(v) => v,
+        Item::Enum(v) => v,
         _ => {
             return Err(Error::new(
                 input.span(),
-                "program macro can only be applied to impl declarations",
+                "program macro can only be applied to an enum declaration",
             ));
         }
     };
 
-    let program = Program::from(item)?;
+    let program = Program::from(args, item)?;
     let name = &program.name;
     let discriminant_name = format_ident!("{}Discriminant", program.name);
     let name_str = name.to_string();
-    let item = &program.item;
 
     let program_entry_name = format_ident!("__fankor_internal__program_{}_entry", name);
     let program_try_entry_name = format_ident!("__fankor_internal__program_{}_try_entry", name);
 
-    let mut discriminant_fields = Vec::new();
-    let discriminants = program
+    let program_methods = program
         .methods
         .iter()
         .map(|v| {
-            let name = format_ident!(
-                "{}",
-                case_converter.convert(v.name.to_string()),
-                span = v.name.span()
-            );
-            let discriminant = &v.discriminant;
-
-            discriminant_fields.push(name.clone());
+            let variant_name = &v.name;
+            let attrs = &v.attrs;
 
             quote! {
-                Self::#name => #discriminant
+                #(#attrs)*
+                #variant_name
             }
         })
         .collect::<Vec<_>>();
 
     let mut discriminant_constants = Vec::new();
     let dispatch_methods = program.methods.iter().map(|v| {
-        let discriminant = format_ident!(
-            "{}",
-            case_converter.convert(v.name.to_string()),
-            span = v.name.span()
-        );
-        let fn_name = &v.name;
-        let account_type = &v.account_type;
-
-        let (arguments_tokens, validation_call, method_call) = if let Some(argument_type) = &v.argument_type {
-            let arguments_tokens = quote! {
-                let mut ix_data = ix_data;
-                let arguments: #argument_type = ::fankor::prelude::borsh::BorshDeserialize::deserialize(&mut ix_data)?;
-            };
-
-            let validation_call = if v.validation_with_args {
-                quote! {
-                    accounts.validate(&context, &arguments)?;
-                }
-            } else {
-                quote! {
-                    accounts.validate(&context)?;
-                }
-            };
-
-            let method_call = quote! {
-                #name::#fn_name(context.clone(), accounts, arguments)?
-            };
-
-            (arguments_tokens, validation_call, method_call)
-        } else {
-            let arguments_tokens = quote! {};
-
-            let validation_call = quote! {
-                accounts.validate(&context)?;
-            };
-
-            let method_call = quote! {
-                #name::#fn_name(context.clone(), accounts)?
-            };
-
-            (arguments_tokens, validation_call, method_call)
-        };
-
-        let result = if v.result_type.is_some() {
-            quote! {
-                ::fankor::prelude::solana_program::program::set_return_data(&::fankor::prelude::borsh::BorshSerialize::try_to_vec(&result).unwrap());
-            }
-        } else {
-            quote! {}
-        };
-
-        let instruction_msg = format!("Instruction: {}", v.pascal_name);
+        let variant_name = &v.name;
+        let instruction_msg = format!("Instruction: {}", v.name);
 
         discriminant_constants.push(quote! {
-            const #discriminant: u8 = #discriminant_name::#discriminant.code();
+            const #variant_name: u8 = #discriminant_name::#variant_name.code();
         });
 
         quote! {
-            #discriminant => {
+            #variant_name => {
                 ::fankor::prelude::msg!(#instruction_msg);
 
-                #arguments_tokens
-
+                let mut ix_data = ix_data;
                 let mut ix_accounts = accounts;
-                let accounts = <#account_type as fankor::traits::InstructionAccount>::try_from(&context, &mut ix_accounts)?;
+                let accounts = <#variant_name<'info> as fankor::traits::Instruction>::try_from(&context, &mut ix_data, &mut ix_accounts)?;
 
                 if ix_accounts.len() != 0 {
                     return Err(::fankor::errors::FankorErrorCode::UnusedAccounts.into());
                 }
 
-                #validation_call
+                let result = accounts.processor(context.clone())?;
 
-                let result = #method_call;
-                #result
+                // Write return data.
+                if type_id_of(&result) != type_id_of(&()) {
+                    ::fankor::prelude::solana_program::program::set_return_data(&::fankor::prelude::borsh::BorshSerialize::try_to_vec(&result).unwrap());
+                }
 
                 Ok(())
             }
         }
     }).collect::<Vec<_>>();
 
-    let dispatch_default = if let Some(fallback_method) = &program.fallback_method {
-        let fn_name = &fallback_method.name;
+    let dispatch_default = if let Some(fallback_method_call) = &program.fallback_method_call {
         quote! {
             _ => {
                 ::fankor::prelude::msg!("Instruction: Fallback");
-                #name::#fn_name(program_id, accounts, data)
+                #fallback_method_call
             }
         }
     } else {
@@ -166,12 +97,14 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let lpi_mod = build_lpi(&program)?;
 
     let result = quote! {
-        #[derive(Debug, Copy, Clone)]
-        pub struct #name;
-
         #[automatically_derived]
         #[allow(dead_code)]
-        #item
+        #[derive(Debug, Copy, Clone, EnumDiscriminants)]
+        #[non_exhaustive]
+        #[repr(u8)]
+        pub enum #name {
+            #(#program_methods,)*
+        }
 
         #[automatically_derived]
         #[cfg(any(test, feature = "test"))]
@@ -275,25 +208,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
             }
         }
 
-        #[allow(dead_code)]
-        #[automatically_derived]
-        #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-        #[non_exhaustive]
-        #[repr(u8)]
-        pub enum #discriminant_name {
-            #(#discriminant_fields,)*
-        }
-
-        #[automatically_derived]
-        impl #discriminant_name {
-            #[inline(always)]
-            pub const fn code(&self) -> u8 {
-                match self {
-                    #(#discriminants,)*
-                }
-            }
-        }
-
         #[cfg(not(feature = "library"))]
         #cpi_mod
 
@@ -306,24 +220,12 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         .methods
         .iter()
         .map(|v| {
-            let discriminant = format_ident!(
-                "{}",
-                case_converter.convert(v.name.to_string()),
-                span = v.name.span()
-            );
-
             let name = &v.name;
             let name_str = name.to_string();
-            let ty = &v.account_type;
+            let discriminant_name_str = discriminant_name.to_string();
 
-            if let Some(argument_type) = &v.argument_type {
-                quote! {
-                    action_context.add_program_method_with_args::<#ty, #argument_type>(#name_str, #discriminant_name::#discriminant.code()).unwrap();
-                }
-            }else {
-                quote! {
-                    action_context.add_program_method::<#ty>(#name_str, #discriminant_name::#discriminant.code()).unwrap();
-                }
+            quote! {
+                action_context.add_program_method::<#name<'info>>(#discriminant_name_str, #name_str).unwrap();
             }
         })
         .collect::<Vec<_>>();
@@ -338,7 +240,7 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[allow(non_snake_case)]
         pub mod #test_name {
             use super::*;
-            use ::fankor::prelude::ts_gen::accounts::TsInstructionAccountGen;
+            use ::fankor::prelude::ts_gen::accounts::TsInstructionGen;
             use ::fankor::prelude::ts_gen::types::TsTypesCache;
             use std::borrow::Cow;
 

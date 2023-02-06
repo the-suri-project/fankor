@@ -2,10 +2,11 @@ use convert_case::{Boundary, Case, Converter};
 use quote::{format_ident, quote};
 use std::collections::HashSet;
 use syn::spanned::Spanned;
-use syn::{parse_quote, AttributeArgs, Error, Item};
+use syn::{parse_quote, Error, Item};
 
 use crate::Result;
 
+use crate::fnk_syn::FnkMetaArgumentList;
 use crate::macros::accounts::arguments::AccountsArguments;
 use crate::macros::accounts::variant::AccountVariant;
 use crate::macros::enum_discriminants::get_discriminant;
@@ -13,7 +14,7 @@ use crate::macros::enum_discriminants::get_discriminant;
 mod arguments;
 mod variant;
 
-pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenStream> {
+pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::TokenStream> {
     // Process input.
     let enum_item = match input {
         Item::Enum(v) => v,
@@ -26,12 +27,11 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     };
 
     // Process arguments.
-    let arguments = AccountsArguments::from(args, &enum_item)?;
+    let arguments = AccountsArguments::from(args)?;
 
     let name = enum_item.ident;
     let name_str = name.to_string();
     let discriminant_name = format_ident!("{}Discriminant", name);
-    let attrs = &arguments.attrs;
 
     assert!(
         !enum_item.variants.is_empty(),
@@ -270,7 +270,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
     let result = quote! {
         #(#const_asserts)*
 
-        #(#attrs)*
         #derive_enum_discriminants
         #[derive(FankorSerialize, FankorDeserialize, TsGen)]
         #[non_exhaustive]

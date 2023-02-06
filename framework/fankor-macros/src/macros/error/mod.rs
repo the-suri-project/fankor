@@ -1,17 +1,18 @@
 use quote::{format_ident, quote};
 use std::collections::HashSet;
 use syn::spanned::Spanned;
-use syn::{AttributeArgs, Error, Fields, Item};
+use syn::{Error, Fields, Item};
 
 use crate::Result;
 
+use crate::fnk_syn::FnkMetaArgumentList;
 use crate::macros::error::arguments::ErrorArguments;
 use crate::macros::error::variant::ErrorVariant;
 
 mod arguments;
 mod variant;
 
-pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenStream> {
+pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::TokenStream> {
     // Process input.
     let enum_item = match input {
         Item::Enum(v) => v,
@@ -28,7 +29,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
 
     let name = enum_item.ident;
     let discriminant_name = format_ident!("{}Discriminant", name);
-    let attrs = &attributes.attrs;
 
     // Parse fields taking into account whether any variant is deprecated or not.
     let mut last_deprecated = false;
@@ -211,7 +211,6 @@ pub fn processor(args: AttributeArgs, input: Item) -> Result<proc_macro::TokenSt
         #[derive(::std::fmt::Debug, ::std::clone::Clone)]
         #[repr(u32)]
         #ts_gen
-        #(#attrs)*
         #[non_exhaustive]
         #visibility enum #name #ty_generics #where_clause {
             #(#final_enum_variants,)*

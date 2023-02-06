@@ -1,7 +1,7 @@
 use crate::errors::{Error, FankorErrorCode, FankorResult};
 use crate::models::{Account, FankorContext, FankorContextExitAction, Program, System, Zc};
 use crate::prelude::CopyType;
-use crate::traits::{AccountInfoVerification, AccountType, InstructionAccount, PdaChecker};
+use crate::traits::{AccountInfoVerification, AccountType, Instruction, PdaChecker};
 use crate::utils::bpf_writer::BpfWriter;
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
@@ -394,14 +394,9 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
     }
 }
 
-impl<'info, T: AccountType + CopyType<'info>> InstructionAccount<'info> for ZcAccount<'info, T> {
+impl<'info, T: AccountType + CopyType<'info>> Instruction<'info> for ZcAccount<'info, T> {
     type CPI = AccountInfo<'info>;
     type LPI = Pubkey;
-
-    #[inline(always)]
-    fn min_accounts() -> usize {
-        1
-    }
 
     fn verify_account_infos<'a>(
         &self,
@@ -413,6 +408,7 @@ impl<'info, T: AccountType + CopyType<'info>> InstructionAccount<'info> for ZcAc
     #[inline(never)]
     fn try_from(
         context: &'info FankorContext<'info>,
+        _buf: &mut &[u8],
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
         if accounts.is_empty() {

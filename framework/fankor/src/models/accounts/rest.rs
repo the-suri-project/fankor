@@ -1,6 +1,6 @@
 use crate::errors::FankorResult;
 use crate::models::FankorContext;
-use crate::traits::{AccountInfoVerification, InstructionAccount};
+use crate::traits::{AccountInfoVerification, Instruction};
 use solana_program::account_info::AccountInfo;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
@@ -45,14 +45,9 @@ impl<'info> Rest<'info> {
     }
 }
 
-impl<'info> InstructionAccount<'info> for Rest<'info> {
+impl<'info> Instruction<'info> for Rest<'info> {
     type CPI = Vec<AccountInfo<'info>>;
     type LPI = Vec<solana_program::pubkey::Pubkey>;
-
-    #[inline(always)]
-    fn min_accounts() -> usize {
-        0 // Because can be any size.
-    }
 
     fn verify_account_infos<'a>(
         &self,
@@ -68,6 +63,7 @@ impl<'info> InstructionAccount<'info> for Rest<'info> {
     #[inline(never)]
     fn try_from(
         context: &'info FankorContext<'info>,
+        _buf: &mut &[u8],
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
         let result = Rest::new(context, accounts)?;
