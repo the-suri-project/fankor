@@ -89,10 +89,6 @@ impl<'info, T: Instruction<'info>> Instruction<'info> for MaybeUninitialized<'in
         buf: &mut &[u8],
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
-        if buf.is_empty() {
-            return Err(FankorErrorCode::NotEnoughDataToDeserializeInstruction.into());
-        }
-
         let result = match <T as Instruction>::try_from(context, buf, accounts) {
             Ok(v) => Self::Init(v),
             Err(_) => Self::Uninit(<UninitializedAccount as Instruction>::try_from(
