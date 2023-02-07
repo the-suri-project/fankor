@@ -12,14 +12,14 @@ pub fn build_lpi(program: &Program) -> Result<TokenStream> {
 
         quote! {
             pub fn #method_name<'info>(accounts: <#type_name<'info> as ::fankor::traits::Instruction<'info>>::LPI) -> ::fankor::errors::FankorResult<::fankor::prelude::solana_program::instruction::Instruction> {
-                let mut data = Cursor::new(vec![#discriminant_name::#type_name.code()]);
+                let mut data = vec![#discriminant_name::#type_name.code()];
                 let mut metas = Vec::new();
                 ::fankor::traits::LpiInstruction::serialize_into_instruction_parts(&accounts, &mut data, &mut metas)?;
 
                 Ok(::fankor::prelude::solana_program::instruction::Instruction {
                     program_id: crate::ID,
                     accounts: metas,
-                    data: data.into_inner()
+                    data
                 })
             }
         }

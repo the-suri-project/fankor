@@ -22,7 +22,7 @@ pub fn build_cpi(program: &Program) -> Result<TokenStream> {
 
         quote! {
             pub fn #method_name<'info>(_program: &::fankor::models::Program<super::#program_name>, accounts: <#type_name<'info> as ::fankor::traits::Instruction<'info>>::CPI, signer_seeds: &[&[&[u8]]]) -> ::fankor::errors::FankorResult<#result_param> {
-                let mut data = Cursor::new(vec![#discriminant_name::#type_name.code()]);
+                let mut data = vec![#discriminant_name::#type_name.code()];
                 let mut metas = Vec::new();
                 let mut infos = Vec::new();
                 ::fankor::traits::CpiInstruction::serialize_into_instruction_parts(&accounts, &mut data, &mut metas, &mut infos)?;
@@ -30,7 +30,7 @@ pub fn build_cpi(program: &Program) -> Result<TokenStream> {
                 let instruction = ::fankor::prelude::solana_program::instruction::Instruction {
                     program_id: *<super::#program_name as ::fankor::traits::ProgramType>::address(),
                     accounts: metas,
-                    data: data.into_inner(),
+                    data
                 };
 
                 ::fankor::prelude::solana_program::program::invoke_signed(&instruction, &infos, signer_seeds)
