@@ -114,7 +114,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
                     #name_str,
                     crate::ID,
                     Some(
-                        |first_instruction_account: usize,
+                        |first_instruction_account: ::solana_program_test::IndexOfAccount,
                             invoke_context: &mut ::solana_program_test::InvokeContext| {
                             ::solana_program_test::builtin_process_instruction(
                                 |program_id: &::fankor::prelude::Pubkey,
