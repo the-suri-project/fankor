@@ -76,16 +76,11 @@ impl<'info> TsInstructionGen for DefaultAccount<'info> {
 
 impl<L: TsInstructionGen, R: TsInstructionGen> TsInstructionGen for Either<L, R> {
     fn value_type() -> Cow<'static, str> {
-        let left = L::value_type();
-        let right = R::value_type();
-
-        if left == right || left.starts_with(format!("{} | ", right).as_str()) {
-            left
-        } else if right.starts_with(format!("{} | ", left).as_str()) {
-            right
-        } else {
-            Cow::Owned(format!("fnk.Either<{}, {}>", left, right))
-        }
+        Cow::Owned(format!(
+            "fnk.Either<{}, {}>",
+            L::value_type(),
+            R::value_type()
+        ))
     }
 
     fn generate_type(registered_types: &mut TsTypesCache) -> Cow<'static, str> {
@@ -102,35 +97,18 @@ impl<L: TsInstructionGen, R: TsInstructionGen> TsInstructionGen for Either<L, R>
         signer: bool,
         writable: bool,
     ) -> Cow<'static, str> {
-        let left = L::value_type();
-        let right = R::value_type();
-
-        if left == right || left.starts_with(format!("{} | ", right).as_str()) {
-            L::get_external_account_metas(value, signer, writable)
-        } else if right.starts_with(format!("{} | ", left).as_str()) {
-            R::get_external_account_metas(value, signer, writable)
-        } else {
-            Cow::Owned(format!(
-                "if ({}.type === 'Left') {{
+        Cow::Owned(format!(
+            "if ({}.type === 'Left') {{
                     writer.writeByte(0);
                     {}
                 }} else {{
                     writer.writeByte(1);
                     {}
                 }}",
-                value,
-                L::get_external_account_metas(
-                    Cow::Owned(format!("{}.value", value)),
-                    signer,
-                    writable
-                ),
-                R::get_external_account_metas(
-                    Cow::Owned(format!("{}.value", value)),
-                    signer,
-                    writable
-                ),
-            ))
-        }
+            value,
+            L::get_external_account_metas(Cow::Owned(format!("{}.value", value)), signer, writable),
+            R::get_external_account_metas(Cow::Owned(format!("{}.value", value)), signer, writable),
+        ))
     }
 }
 
