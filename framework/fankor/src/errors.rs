@@ -323,6 +323,13 @@ pub enum FankorErrorCode {
     )]
     IntermediateBufferIncorrectProgramId { actual: Pubkey, expected: Pubkey },
 
+    /// The list contains too many accounts to correctly serialize the instruction. Max: 256
+    #[msg(
+        "The list contains too many accounts ({}) to correctly serialize the instruction. Max: 256",
+        size
+    )]
+    TooManyAccounts { size: usize },
+
     // ------------------------------------------------------------------------
     // Zero Copy --------------------------------------------------------------
     // ------------------------------------------------------------------------

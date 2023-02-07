@@ -91,36 +91,6 @@ impl<'info> CpiInstruction<'info> for AccountInfo<'info> {
     }
 }
 
-impl<'info, T: CpiInstruction<'info>> CpiInstruction<'info> for Option<T> {
-    fn serialize_into_instruction_parts<W: Write>(
-        &self,
-        writer: &mut W,
-        metas: &mut Vec<AccountMeta>,
-        infos: &mut Vec<AccountInfo<'info>>,
-    ) -> FankorResult<()> {
-        if let Some(v) = self {
-            v.serialize_into_instruction_parts(writer, metas, infos)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl<'info, T: CpiInstruction<'info>> CpiInstruction<'info> for Vec<T> {
-    fn serialize_into_instruction_parts<W: Write>(
-        &self,
-        writer: &mut W,
-        metas: &mut Vec<AccountMeta>,
-        infos: &mut Vec<AccountInfo<'info>>,
-    ) -> FankorResult<()> {
-        for v in self {
-            v.serialize_into_instruction_parts(writer, metas, infos)?;
-        }
-
-        Ok(())
-    }
-}
-
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
@@ -144,34 +114,6 @@ impl LpiInstruction for Pubkey {
             is_writable: false,
             is_signer: false,
         });
-        Ok(())
-    }
-}
-
-impl<T: LpiInstruction> LpiInstruction for Option<T> {
-    fn serialize_into_instruction_parts<W: Write>(
-        &self,
-        writer: &mut W,
-        metas: &mut Vec<AccountMeta>,
-    ) -> FankorResult<()> {
-        if let Some(v) = self {
-            v.serialize_into_instruction_parts(writer, metas)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl<T: LpiInstruction> LpiInstruction for Vec<T> {
-    fn serialize_into_instruction_parts<W: Write>(
-        &self,
-        writer: &mut W,
-        metas: &mut Vec<AccountMeta>,
-    ) -> FankorResult<()> {
-        for v in self {
-            v.serialize_into_instruction_parts(writer, metas)?;
-        }
-
         Ok(())
     }
 }

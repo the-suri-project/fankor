@@ -1,8 +1,12 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
-use crate::traits::{AccountInfoVerification, Instruction, PdaChecker};
+use crate::traits::{
+    AccountInfoVerification, CpiInstruction, Instruction, LpiInstruction, PdaChecker,
+};
 use solana_program::account_info::AccountInfo;
+use solana_program::instruction::AccountMeta;
 use std::any::type_name;
+use std::io::Write;
 
 impl<'info, T: Instruction<'info>> Instruction<'info> for Option<T> {
     type CPI = Option<T::CPI>;
@@ -29,7 +33,8 @@ impl<'info, T: Instruction<'info>> Instruction<'info> for Option<T> {
         }
 
         let result = match buf[0] {
-            0 => {
+            0 => None,
+            1 => {
                 let mut new_buf = &buf[1..];
                 let mut new_accounts = *accounts;
                 let result = Some(T::try_from(context, &mut new_buf, &mut new_accounts)?);
@@ -39,7 +44,6 @@ impl<'info, T: Instruction<'info>> Instruction<'info> for Option<T> {
 
                 result
             }
-            1 => None,
             _ => {
                 return Err(FankorErrorCode::InstructionDidNotDeserialize {
                     account: type_name::<Self>().to_string(),
@@ -58,5 +62,40 @@ impl<'info, T: PdaChecker<'info>> PdaChecker<'info> for Option<T> {
             Some(v) => v.pda_info(),
             None => None,
         }
+    }
+}
+
+impl<'info, T: CpiInstruction<'info>> CpiInstruction<'info> for Option<T> {
+    fn serialize_into_instruction_parts<W: Write>(
+        &self,
+        writer: &mut W,
+        metas: &mut Vec<AccountMeta>,
+        infos: &mut Vec<AccountInfo<'info>>,
+    ) -> FankorResult<()> {
+        if let Some(v) = self {
+            writer.write_all(&[1])?;
+            v.serialize_into_instruction_parts(writer, metas, infos)?;
+        } else {
+            writer.write_all(&[0])?;
+        }
+
+        Ok(())
+    }
+}
+
+impl<T: LpiInstruction> LpiInstruction for Option<T> {
+    fn serialize_into_instruction_parts<W: Write>(
+        &self,
+        writer: &mut W,
+        metas: &mut Vec<AccountMeta>,
+    ) -> FankorResult<()> {
+        if let Some(v) = self {
+            writer.write_all(&[1])?;
+            v.serialize_into_instruction_parts(writer, metas)?;
+        } else {
+            writer.write_all(&[0])?;
+        }
+
+        Ok(())
     }
 }

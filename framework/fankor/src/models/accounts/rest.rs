@@ -1,9 +1,12 @@
 use crate::errors::FankorResult;
 use crate::models::FankorContext;
-use crate::traits::{AccountInfoVerification, Instruction};
+use crate::traits::{AccountInfoVerification, CpiInstruction, Instruction, LpiInstruction};
 use solana_program::account_info::AccountInfo;
+use solana_program::instruction::AccountMeta;
+use solana_program::pubkey::Pubkey;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
+use std::io::Write;
 
 /// A wrapper around a `Vec<AccountInfo>` that keeps the rest infos.
 pub struct Rest<'info> {
@@ -46,8 +49,8 @@ impl<'info> Rest<'info> {
 }
 
 impl<'info> Instruction<'info> for Rest<'info> {
-    type CPI = Vec<AccountInfo<'info>>;
-    type LPI = Vec<solana_program::pubkey::Pubkey>;
+    type CPI = CpiRest<'info>;
+    type LPI = LpiRest;
 
     fn verify_account_infos<'a>(
         &self,
@@ -78,5 +81,62 @@ impl<'info> Debug for Rest<'info> {
         f.debug_struct("Rest")
             .field("len", &self.accounts.len())
             .finish()
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+pub struct CpiRest<'info>(pub Vec<AccountInfo<'info>>);
+
+impl<'info> CpiRest<'info> {
+    // CONSTRUCTORS -----------------------------------------------------------
+
+    pub fn new(accounts: Vec<AccountInfo<'info>>) -> Self {
+        CpiRest(accounts)
+    }
+}
+
+impl<'info> CpiInstruction<'info> for CpiRest<'info> {
+    fn serialize_into_instruction_parts<W: Write>(
+        &self,
+        writer: &mut W,
+        metas: &mut Vec<AccountMeta>,
+        infos: &mut Vec<AccountInfo<'info>>,
+    ) -> FankorResult<()> {
+        for v in &self.0 {
+            v.serialize_into_instruction_parts(writer, metas, infos)?;
+        }
+
+        Ok(())
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+pub struct LpiRest(Vec<Pubkey>);
+
+impl LpiRest {
+    // CONSTRUCTORS -----------------------------------------------------------
+
+    pub fn new(accounts: Vec<Pubkey>) -> Self {
+        LpiRest(accounts)
+    }
+}
+
+impl LpiInstruction for LpiRest {
+    fn serialize_into_instruction_parts<W: Write>(
+        &self,
+        writer: &mut W,
+        metas: &mut Vec<AccountMeta>,
+    ) -> FankorResult<()> {
+        for v in &self.0 {
+            v.serialize_into_instruction_parts(writer, metas)?;
+        }
+
+        Ok(())
     }
 }

@@ -248,7 +248,8 @@ impl<T: TsInstructionGen> TsInstructionGen for Vec<T> {
         writable: bool,
     ) -> Cow<'static, str> {
         Cow::Owned(format!(
-            "{}.forEach(v => {{ {} }});",
+            "writer.buffer.writeUInt8({}.length, writer.length); {}.forEach(v => {{ {} }});",
+            value,
             value,
             T::get_external_account_metas(Cow::Borrowed("v"), signer, writable)
         ))

@@ -1,7 +1,9 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
-use crate::traits::{AccountInfoVerification, Instruction};
+use crate::traits::{AccountInfoVerification, CpiInstruction, Instruction, LpiInstruction};
 use solana_program::account_info::AccountInfo;
+use solana_program::instruction::AccountMeta;
+use std::io::Write;
 
 impl<'info, T: Instruction<'info>> Instruction<'info> for Vec<T> {
     type CPI = Vec<T::CPI>;
@@ -41,5 +43,48 @@ impl<'info, T: Instruction<'info>> Instruction<'info> for Vec<T> {
         *buf = new_buf;
 
         Ok(result)
+    }
+}
+
+impl<'info, T: CpiInstruction<'info>> CpiInstruction<'info> for Vec<T> {
+    fn serialize_into_instruction_parts<W: Write>(
+        &self,
+        writer: &mut W,
+        metas: &mut Vec<AccountMeta>,
+        infos: &mut Vec<AccountInfo<'info>>,
+    ) -> FankorResult<()> {
+        let length = self.len();
+        if length > u8::MAX as usize {
+            return Err(FankorErrorCode::TooManyAccounts { size: length }.into());
+        }
+
+        writer.write_all(&[length as u8])?;
+
+        for v in self {
+            v.serialize_into_instruction_parts(writer, metas, infos)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl<T: LpiInstruction> LpiInstruction for Vec<T> {
+    fn serialize_into_instruction_parts<W: Write>(
+        &self,
+        writer: &mut W,
+        metas: &mut Vec<AccountMeta>,
+    ) -> FankorResult<()> {
+        let length = self.len();
+        if length > u8::MAX as usize {
+            return Err(FankorErrorCode::TooManyAccounts { size: length }.into());
+        }
+
+        writer.write_all(&[length as u8])?;
+
+        for v in self {
+            v.serialize_into_instruction_parts(writer, metas)?;
+        }
+
+        Ok(())
     }
 }
