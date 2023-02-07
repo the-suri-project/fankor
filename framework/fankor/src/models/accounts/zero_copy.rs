@@ -1,7 +1,9 @@
 use crate::errors::{Error, FankorErrorCode, FankorResult};
 use crate::models::{Account, FankorContext, FankorContextExitAction, Program, System, Zc};
 use crate::prelude::CopyType;
-use crate::traits::{AccountInfoVerification, AccountType, Instruction, PdaChecker};
+use crate::traits::{
+    AccountInfoVerification, AccountType, Instruction, PdaChecker, SingleInstructionAccount,
+};
 use crate::utils::bpf_writer::BpfWriter;
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
@@ -452,6 +454,11 @@ impl<'info, T: AccountType + CopyType<'info>> Instruction<'info> for ZcAccount<'
         *accounts = &accounts[1..];
         Ok(result)
     }
+}
+
+impl<'info, T: AccountType + CopyType<'info>> SingleInstructionAccount<'info>
+    for ZcAccount<'info, T>
+{
 }
 
 impl<'info, T: AccountType + CopyType<'info>> PdaChecker<'info> for ZcAccount<'info, T> {

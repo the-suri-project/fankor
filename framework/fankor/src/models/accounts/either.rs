@@ -1,25 +1,15 @@
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{Account, FankorContext, UninitializedAccount, ZcAccount};
+use crate::models::FankorContext;
 use crate::prelude::PdaChecker;
-use crate::traits::{AccountInfoVerification, CpiInstruction, Instruction};
+use crate::traits::{
+    AccountInfoVerification, CpiInstruction, Instruction, SingleInstructionAccount,
+};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
 use std::any::type_name;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::io::Write;
-
-/// Alias for the common case of having either an actual account or its uninitialized counterpart.
-pub type MaybeUninitializedAccount<'info, T> =
-    Either<Account<'info, T>, UninitializedAccount<'info>>;
-
-/// Alias for the common case of having either a zero-copy account or its uninitialized counterpart.
-pub type MaybeUninitializedZcAccount<'info, T> =
-    Either<ZcAccount<'info, T>, UninitializedAccount<'info>>;
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
 
 /// Tries to deserialize `L` first and then `R` if `L` fails.
 ///
@@ -145,6 +135,11 @@ impl<'info, L: Instruction<'info>, R: Instruction<'info>> Instruction<'info> for
 
         Ok(result)
     }
+}
+
+impl<'info, L: SingleInstructionAccount<'info>, R: SingleInstructionAccount<'info>>
+    SingleInstructionAccount<'info> for Either<L, R>
+{
 }
 
 impl<'info, L: PdaChecker<'info>, R: PdaChecker<'info>> PdaChecker<'info> for Either<L, R> {

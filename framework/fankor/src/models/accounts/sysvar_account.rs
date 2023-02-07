@@ -1,6 +1,6 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
-use crate::traits::{AccountInfoVerification, Instruction, PdaChecker};
+use crate::traits::{AccountInfoVerification, Instruction, PdaChecker, SingleInstructionAccount};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::pubkey::Pubkey;
@@ -116,6 +116,8 @@ impl<'info, T: SysvarId> Instruction<'info> for SysvarAccount<'info, T> {
         Ok(result)
     }
 }
+
+impl<'info, T: SysvarId> SingleInstructionAccount<'info> for SysvarAccount<'info, T> {}
 
 impl<'info, T: SysvarId> PdaChecker<'info> for SysvarAccount<'info, T> {
     fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {

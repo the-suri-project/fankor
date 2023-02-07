@@ -40,7 +40,7 @@ pub struct StructAccounts<'info> {
 
     pub uninitialized: UninitializedAccount<'info>,
 
-    pub maybe_uninitialized: MaybeUninitializedAccount<'info, StructAccountData>,
+    pub maybe_uninitialized: MaybeUninitialized<'info, Account<'info, StructAccountData>>,
 
     pub other_struct: Box<StructAccountsWithoutAssociatedType<'info>>,
 
@@ -95,7 +95,7 @@ pub struct StructAccountsWithoutAssociatedType<'info> {
     pub either:
         Either<Account<'info, StructAccountData>, ZcAccount<'info, ZeroCopyStructAccountData>>,
 
-    pub maybe_uninitialized: MaybeUninitializedZcAccount<'info, ZeroCopyStructAccountData>,
+    pub maybe_uninitialized: MaybeUninitialized<'info, ZcAccount<'info, ZeroCopyStructAccountData>>,
 
     pub instructions_sysvar: SysvarAccount<'info, Instructions>,
 }

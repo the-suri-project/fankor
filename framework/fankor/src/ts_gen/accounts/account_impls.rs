@@ -1,6 +1,6 @@
 use crate::models::{
-    Account, Argument, CopyType, Either, Program, Rest, SysvarAccount, UncheckedAccount,
-    UninitializedAccount, ZcAccount,
+    Account, Argument, CopyType, Either, MaybeUninitialized, Program, Rest, SysvarAccount,
+    UncheckedAccount, UninitializedAccount, ZcAccount,
 };
 use crate::prelude::ProgramType;
 use crate::traits::AccountType;
@@ -94,6 +94,23 @@ impl<L: TsInstructionGen, R: TsInstructionGen> TsInstructionGen for Either<L, R>
     }
 }
 
+impl<'info, T> TsInstructionGen for MaybeUninitialized<'info, T> {
+    fn value_type() -> Cow<'static, str> {
+        Cow::Borrowed("solana.PublicKey")
+    }
+
+    fn get_account_metas(
+        value: Cow<'static, str>,
+        _signer: bool,
+        _writable: bool,
+    ) -> Cow<'static, str> {
+        Cow::Owned(format!(
+            "accountMetas.push({{ pubkey: {}, isSigner: false, isWritable: false }});",
+            value
+        ))
+    }
+}
+
 impl<T: TsInstructionGen> TsInstructionGen for Option<T> {
     fn value_type() -> Cow<'static, str> {
         Cow::Owned(format!("{} | null", T::value_type()))
@@ -140,13 +157,13 @@ impl<'info, T: ProgramType> TsInstructionGen for Program<'info, T> {
         if address == &Pubkey::default() {
             Cow::Owned(format!(
                 "if ({}) {{ accountMetas.push({{ pubkey: {}, isSigner: false, isWritable: false }}); }}\
-             else {{ accountMetas.push({{ pubkey: solana.PublicKey.default, isSigner: false, isWritable: false }}); }}",
+                else {{ accountMetas.push({{ pubkey: solana.PublicKey.default, isSigner: false, isWritable: false }}); }}",
                 value, value
             ))
         } else {
             Cow::Owned(format!(
                 "if ({}) {{ accountMetas.push({{ pubkey: {}, isSigner: false, isWritable: false }}); }}\
-             else {{ accountMetas.push({{ pubkey: new solana.PublicKey('{}'), isSigner: false, isWritable: false }}); }}",
+                else {{ accountMetas.push({{ pubkey: new solana.PublicKey('{}'), isSigner: false, isWritable: false }}); }}",
                 value, value, address
             ))
         }

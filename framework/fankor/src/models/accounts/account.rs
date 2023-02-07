@@ -1,7 +1,7 @@
 use crate::errors::{Error, FankorErrorCode, FankorResult};
 use crate::models::{FankorContext, FankorContextExitAction, Program, System};
 use crate::prelude::AccountInfoVerification;
-use crate::traits::{AccountSize, AccountType, Instruction, PdaChecker};
+use crate::traits::{AccountSize, AccountType, Instruction, PdaChecker, SingleInstructionAccount};
 use crate::utils::bpf_writer::BpfWriter;
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
@@ -547,6 +547,8 @@ impl<'info, T: AccountType> Instruction<'info> for Account<'info, T> {
         Ok(result)
     }
 }
+
+impl<'info, T: AccountType> SingleInstructionAccount<'info> for Account<'info, T> {}
 
 impl<'info, T: AccountType> PdaChecker<'info> for Account<'info, T> {
     fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {

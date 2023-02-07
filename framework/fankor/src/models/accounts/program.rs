@@ -1,6 +1,8 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
-use crate::traits::{AccountInfoVerification, Instruction, PdaChecker, ProgramType};
+use crate::traits::{
+    AccountInfoVerification, Instruction, PdaChecker, ProgramType, SingleInstructionAccount,
+};
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::pubkey::Pubkey;
@@ -119,6 +121,8 @@ impl<'info, T: ProgramType> Instruction<'info> for Program<'info, T> {
         Ok(result)
     }
 }
+
+impl<'info, T: ProgramType> SingleInstructionAccount<'info> for Program<'info, T> {}
 
 impl<'info, T: ProgramType> PdaChecker<'info> for Program<'info, T> {
     fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {

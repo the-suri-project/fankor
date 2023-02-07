@@ -1,6 +1,6 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{FankorContext, Program, System};
-use crate::traits::{AccountInfoVerification, Instruction, PdaChecker};
+use crate::traits::{AccountInfoVerification, Instruction, PdaChecker, SingleInstructionAccount};
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use crate::utils::rent::make_rent_exempt;
@@ -206,6 +206,8 @@ impl<'info> Instruction<'info> for UncheckedAccount<'info> {
         Ok(UncheckedAccount::new(context, info))
     }
 }
+
+impl<'info> SingleInstructionAccount<'info> for UncheckedAccount<'info> {}
 
 impl<'info> PdaChecker<'info> for UncheckedAccount<'info> {
     fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {
