@@ -1,11 +1,10 @@
 use crate::fnk_syn::FnkMetaArgumentList;
 use crate::Result;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::TokenStream;
 use quote::ToTokens;
 use syn::Attribute;
 
 pub struct InstructionArguments {
-    pub instructions_type_name: Option<Ident>,
     pub initial_validation: Option<Validation>,
     pub final_validation: Option<Validation>,
     pub attributes: Vec<Attribute>,
@@ -24,7 +23,6 @@ impl InstructionArguments {
         args.error_on_duplicated()?;
 
         let result = InstructionArguments {
-            instructions_type_name: args.pop_ident("program", true)?,
             initial_validation: {
                 match args.pop_element("initial_validation", true)? {
                     Some(v) => match v.value {

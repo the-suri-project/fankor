@@ -180,7 +180,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
             }
 
             if data.is_empty() {
-                return Err(::fankor::errors::FankorErrorCode::InstructionDiscriminantMissing.into());
+                return Err(::fankor::errors::FankorErrorCode::MissingInstructionDiscriminant.into());
             }
 
             // Process data.

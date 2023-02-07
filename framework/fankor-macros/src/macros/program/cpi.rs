@@ -1,13 +1,14 @@
 use crate::macros::program::programs::Program;
 use crate::Result;
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{format_ident, quote};
 
 pub fn build_cpi(program: &Program) -> Result<TokenStream> {
     let methods = program.methods.iter().map(|v| {
         let program_name = &program.name;
         let method_name = &v.snake_name;
         let type_name = &v.name;
+        let discriminant_name= format_ident!("{}Discriminant", program_name);
 
         let (result, result_param) = if let Some(result_type) = &v.return_type {
             (quote! {
@@ -21,7 +22,7 @@ pub fn build_cpi(program: &Program) -> Result<TokenStream> {
 
         quote! {
             pub fn #method_name<'info>(_program: &::fankor::models::Program<super::#program_name>, accounts: <#type_name<'info> as ::fankor::traits::Instruction<'info>>::CPI, signer_seeds: &[&[&[u8]]]) -> ::fankor::errors::FankorResult<#result_param> {
-                let mut data = Cursor::new(vec![]);
+                let mut data = Cursor::new(vec![#discriminant_name::#type_name.code()]);
                 let mut metas = Vec::new();
                 let mut infos = Vec::new();
                 ::fankor::traits::CpiInstruction::serialize_into_instruction_parts(&accounts, &mut data, &mut metas, &mut infos)?;

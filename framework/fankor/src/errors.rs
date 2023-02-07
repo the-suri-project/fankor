@@ -34,7 +34,7 @@ pub enum FankorErrorCode {
 
     /// The instruction discriminant is missing
     #[msg("The instruction discriminant is missing")]
-    InstructionDiscriminantMissing,
+    MissingInstructionDiscriminant,
 
     /// The instruction discriminant did not match any valid
     #[msg("The instruction discriminant did not match any valid")]

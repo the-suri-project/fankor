@@ -1,11 +1,10 @@
 use crate::accounts::*;
 use crate::arguments::*;
 use crate::errors::Errors;
-use crate::program::TestProgramDiscriminant;
 use fankor::prelude::*;
 use std::cmp::Ordering;
 
-#[instruction(program = TestProgram, initial_validation, final_validation)]
+#[instruction(initial_validation, final_validation)]
 #[allow(dead_code)]
 pub struct StructAccounts<'info> {
     pub args: Argument<InstructionArgs>,
@@ -77,7 +76,7 @@ impl<'info> StructAccounts<'info> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-#[instruction(program = TestProgram, initial_validation, final_validation)]
+#[instruction(initial_validation, final_validation)]
 #[allow(dead_code)]
 pub struct StructAccountsWithoutAssociatedType<'info> {
     pub args: Argument<InstructionArgs>,
@@ -127,7 +126,7 @@ impl<'info> StructAccountsWithoutAssociatedType<'info> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-#[instruction(program = TestProgram)]
+#[instruction]
 pub enum EnumAccounts<'info> {
     Struct1(StructAccounts<'info>),
 
@@ -149,7 +148,7 @@ impl<'info> EnumAccounts<'info> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-#[instruction(program = TestProgram)]
+#[instruction]
 pub enum EnumAccountsWithoutArgs<'info> {
     Struct1(StructAccountsWithoutAssociatedType<'info>),
 

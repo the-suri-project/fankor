@@ -54,7 +54,7 @@ export class FankorErrorCode {
 
 export type FankorErrorCodeTypes =
     | FankorErrorCode_DeclaredProgramIdMismatch
-    | FankorErrorCode_InstructionDiscriminantMissing
+    | FankorErrorCode_MissingInstructionDiscriminant
     | FankorErrorCode_InstructionDiscriminantNotFound
     | FankorErrorCode_UnusedAccounts
     | FankorErrorCode_MissingProgram
@@ -111,8 +111,8 @@ export interface FankorErrorCode_DeclaredProgramIdMismatch {
     value: null;
 }
 
-export interface FankorErrorCode_InstructionDiscriminantMissing {
-    type: 'InstructionDiscriminantMissing';
+export interface FankorErrorCode_MissingInstructionDiscriminant {
+    type: 'MissingInstructionDiscriminant';
     value: null;
 }
 
@@ -381,7 +381,7 @@ export interface FankorErrorCode_ZeroCopyPossibleDeadlock {
 export class FankorErrorCodeSchema implements FnkBorshSchema<FankorErrorCode> {
     innerSchema = TEnum([
         [1000, 'DeclaredProgramIdMismatch', Unit],
-        [1001, 'InstructionDiscriminantMissing', Unit],
+        [1001, 'MissingInstructionDiscriminant', Unit],
         [1002, 'InstructionDiscriminantNotFound', Unit],
         [1003, 'UnusedAccounts', Unit],
         [

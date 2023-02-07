@@ -229,14 +229,6 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
     });
 
     // Result
-    let instructions_type_discriminant =
-        if let Some(instructions_type_name) = &arguments.instructions_type_name {
-            let discriminant_name = format_ident!("{}Discriminant", instructions_type_name);
-            quote! { #discriminant_name::#name.code().serialize(writer)?; }
-        } else {
-            quote! {}
-        };
-
     let result = quote! {
         #[derive(EnumDiscriminants)]
         #[non_exhaustive]
@@ -324,7 +316,6 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
             ) -> FankorResult<()> {
                 use ::fankor::prelude::borsh::BorshSerialize;
 
-                #instructions_type_discriminant
                 self.discriminant().code().serialize(writer)?;
 
                 match self {
@@ -359,7 +350,6 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
             ) -> ::fankor::errors::FankorResult<()> {
                 use ::fankor::prelude::borsh::BorshSerialize;
 
-                #instructions_type_discriminant
                 self.discriminant().code().serialize(writer)?;
 
                 match self {
