@@ -101,12 +101,12 @@ impl<'info, T> TsInstructionGen for MaybeUninitialized<'info, T> {
 
     fn get_account_metas(
         value: Cow<'static, str>,
-        _signer: bool,
-        _writable: bool,
+        signer: bool,
+        writable: bool,
     ) -> Cow<'static, str> {
         Cow::Owned(format!(
-            "accountMetas.push({{ pubkey: {}, isSigner: false, isWritable: false }});",
-            value
+            "accountMetas.push({{ pubkey: {}, isSigner: {}, isWritable: {} }});",
+            value, signer, writable
         ))
     }
 }
