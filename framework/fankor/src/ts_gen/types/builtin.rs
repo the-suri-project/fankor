@@ -315,7 +315,11 @@ impl TsTypeGen for Keypair {
 
 impl TsTypeGen for Pubkey {
     fn value(&self) -> Cow<'static, str> {
-        Cow::Owned(format!("new solana.PublicKey(\"{}\")", self))
+        if self == &Pubkey::default() {
+            Cow::Borrowed("solana.PublicKey.default")
+        } else {
+            Cow::Owned(format!("new solana.PublicKey(\"{}\")", self))
+        }
     }
 
     fn value_type() -> Cow<'static, str> {

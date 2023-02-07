@@ -1,4 +1,5 @@
 pub use account::*;
+pub use argument::*;
 pub use boxed::*;
 pub use default_account::*;
 pub use either::*;
@@ -10,9 +11,9 @@ pub use unchecked_account::*;
 pub use uninitialized::*;
 pub use vector::*;
 pub use zero_copy::*;
-pub use argument::*;
 
 mod account;
+mod argument;
 mod boxed;
 mod default_account;
 mod either;
@@ -24,4 +25,3 @@ mod unchecked_account;
 mod uninitialized;
 mod vector;
 mod zero_copy;
-mod argument;

@@ -6,6 +6,7 @@ use crate::prelude::ProgramType;
 use crate::traits::AccountType;
 use crate::ts_gen::accounts::TsInstructionGen;
 use crate::ts_gen::types::{TsTypeGen, TsTypesCache};
+use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::SysvarId;
 use std::borrow::Cow;
 
@@ -174,11 +175,21 @@ impl<'info, T: ProgramType> TsInstructionGen for Program<'info, T> {
         _signer: bool,
         _writable: bool,
     ) -> Cow<'static, str> {
-        Cow::Owned(format!(
-            "if ({}) {{ accountMetas.push({{ pubkey: {}, isSigner: false, isWritable: false }}); }}\
+        let address = T::address();
+
+        if address == &Pubkey::default() {
+            Cow::Owned(format!(
+                "if ({}) {{ accountMetas.push({{ pubkey: {}, isSigner: false, isWritable: false }}); }}\
+             else {{ accountMetas.push({{ pubkey: solana.PublicKey.default, isSigner: false, isWritable: false }}); }}",
+                value, value
+            ))
+        } else {
+            Cow::Owned(format!(
+                "if ({}) {{ accountMetas.push({{ pubkey: {}, isSigner: false, isWritable: false }}); }}\
              else {{ accountMetas.push({{ pubkey: new solana.PublicKey('{}'), isSigner: false, isWritable: false }}); }}",
-            value, value, T::address()
-        ))
+                value, value, address
+            ))
+        }
     }
 }
 
