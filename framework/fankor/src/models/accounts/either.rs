@@ -195,8 +195,14 @@ impl<'info, L: CpiInstruction<'info>, R: CpiInstruction<'info>> CpiInstruction<'
         infos: &mut Vec<AccountInfo<'info>>,
     ) -> FankorResult<()> {
         match self {
-            CpiEither::Left(v) => v.serialize_into_instruction_parts(writer, metas, infos),
-            CpiEither::Right(v) => v.serialize_into_instruction_parts(writer, metas, infos),
+            Self::Left(v) => {
+                writer.write_all(&[0])?;
+                v.serialize_into_instruction_parts(writer, metas, infos)
+            }
+            Self::Right(v) => {
+                writer.write_all(&[1])?;
+                v.serialize_into_instruction_parts(writer, metas, infos)
+            }
         }
     }
 }
@@ -219,8 +225,14 @@ impl<L: crate::traits::LpiInstruction, R: crate::traits::LpiInstruction>
         metas: &mut Vec<AccountMeta>,
     ) -> FankorResult<()> {
         match self {
-            LpiEither::Left(v) => v.serialize_into_instruction_parts(writer, metas),
-            LpiEither::Right(v) => v.serialize_into_instruction_parts(writer, metas),
+            Self::Left(v) => {
+                writer.write_all(&[0])?;
+                v.serialize_into_instruction_parts(writer, metas)
+            }
+            Self::Right(v) => {
+                writer.write_all(&[1])?;
+                v.serialize_into_instruction_parts(writer, metas)
+            }
         }
     }
 }
