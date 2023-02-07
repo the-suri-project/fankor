@@ -132,8 +132,8 @@ impl DataContext {
         let accounts_type = T::value_type();
         let method = format!(
             "export function {}(accounts: {}) {{
-                const data = Buffer.from([{}.{}]);
-                const writer = new fnk.FnkBorshWriter(data);
+                const writer = new fnk.FnkBorshWriter();
+                writer.writeByte({}.{});
                 const accountMetas: solana.AccountMeta[] = [];
 
                 getMetasOf{}(accounts, accountMetas, writer);
