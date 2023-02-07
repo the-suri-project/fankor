@@ -1,7 +1,6 @@
 pub use account::*;
 pub use argument::*;
 pub use boxed::*;
-pub use default_account::*;
 pub use either::*;
 pub use option::*;
 pub use program::*;
@@ -15,7 +14,6 @@ pub use zero_copy::*;
 mod account;
 mod argument;
 mod boxed;
-mod default_account;
 mod either;
 mod option;
 mod program;

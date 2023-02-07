@@ -4,7 +4,7 @@ import { FnkBorshError } from '../errors';
 import { FnkBorshSchema } from '../borsh';
 import { InferFnkBorshSchemaInner } from './maps';
 
-export type RustOption<T> = { type: 'some'; value: T } | { type: 'none' };
+export type RustOption<T> = { type: 'Some'; value: T } | { type: 'None' };
 
 export function Option<S extends FnkBorshSchema<any>>(schema: S) {
     return new OptionSchema(schema);
@@ -27,7 +27,7 @@ export class OptionSchema<S extends FnkBorshSchema<any>>
         writer: FnkBorshWriter,
         value: RustOption<InferFnkBorshSchemaInner<S>>
     ) {
-        if (value.type === 'none') {
+        if (value.type === 'None') {
             writer.writeByte(0);
         } else {
             writer.writeByte(1);
@@ -41,10 +41,10 @@ export class OptionSchema<S extends FnkBorshSchema<any>>
         const discriminant = reader.readByte();
 
         if (discriminant === 0) {
-            return { type: 'none' };
+            return { type: 'None' };
         } else if (discriminant === 1) {
             return {
-                type: 'some',
+                type: 'Some',
                 value: this.schema.deserialize(reader),
             };
         } else {

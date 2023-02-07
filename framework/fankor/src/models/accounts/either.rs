@@ -1,5 +1,5 @@
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{Account, DefaultAccount, FankorContext, UninitializedAccount, ZcAccount};
+use crate::models::{Account, FankorContext, UninitializedAccount, ZcAccount};
 use crate::prelude::PdaChecker;
 use crate::traits::{AccountInfoVerification, CpiInstruction, Instruction};
 use solana_program::account_info::AccountInfo;
@@ -16,9 +16,6 @@ pub type MaybeUninitializedAccount<'info, T> =
 /// Alias for the common case of having either a zero-copy account or its uninitialized counterpart.
 pub type MaybeUninitializedZcAccount<'info, T> =
     Either<ZcAccount<'info, T>, UninitializedAccount<'info>>;
-
-/// Alias for the common case of having either an actual account or the default account.
-pub type MaybeDefaultAccount<'info, T> = Either<T, DefaultAccount<'info>>;
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------

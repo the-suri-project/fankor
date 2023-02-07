@@ -1,6 +1,6 @@
 use crate::models::{
-    Account, Argument, CopyType, DefaultAccount, Either, Program, Rest, SysvarAccount,
-    UncheckedAccount, UninitializedAccount, ZcAccount,
+    Account, Argument, CopyType, Either, Program, Rest, SysvarAccount, UncheckedAccount,
+    UninitializedAccount, ZcAccount,
 };
 use crate::prelude::ProgramType;
 use crate::traits::AccountType;
@@ -56,24 +56,6 @@ impl<T: TsInstructionGen> TsInstructionGen for Box<T> {
     }
 }
 
-impl<'info> TsInstructionGen for DefaultAccount<'info> {
-    fn value_type() -> Cow<'static, str> {
-        Cow::Borrowed("solana.PublicKey | undefined")
-    }
-
-    fn get_account_metas(
-        value: Cow<'static, str>,
-        _signer: bool,
-        _writable: bool,
-    ) -> Cow<'static, str> {
-        Cow::Owned(format!(
-            "if ({}) {{ accountMetas.push({{ pubkey: {}, isSigner: false, isWritable: false }}); }}\
-             else {{ accountMetas.push({{ pubkey: solana.PublicKey.default, isSigner: false, isWritable: false }}); }}",
-            value, value
-        ))
-    }
-}
-
 impl<L: TsInstructionGen, R: TsInstructionGen> TsInstructionGen for Either<L, R> {
     fn value_type() -> Cow<'static, str> {
         Cow::Owned(format!(
@@ -99,12 +81,12 @@ impl<L: TsInstructionGen, R: TsInstructionGen> TsInstructionGen for Either<L, R>
     ) -> Cow<'static, str> {
         Cow::Owned(format!(
             "if ({}.type === 'Left') {{
-                    writer.writeByte(0);
-                    {}
-                }} else {{
-                    writer.writeByte(1);
-                    {}
-                }}",
+                writer.writeByte(0);
+                {}
+            }} else {{
+                writer.writeByte(1);
+                {}
+            }}",
             value,
             L::get_external_account_metas(Cow::Owned(format!("{}.value", value)), signer, writable),
             R::get_external_account_metas(Cow::Owned(format!("{}.value", value)), signer, writable),

@@ -376,9 +376,9 @@ impl TsTypeGen for char {
 impl<T: TsTypeGen> TsTypeGen for Option<T> {
     fn value(&self) -> Cow<'static, str> {
         if let Some(v) = self {
-            Cow::Owned(format!("{{ type: 'some'; value: {} }}", v.value()))
+            Cow::Owned(format!("{{ type: 'Some'; value: {} }}", v.value()))
         } else {
-            Cow::Borrowed("{ type: 'none' }")
+            Cow::Borrowed("{ type: 'None' }")
         }
     }
 

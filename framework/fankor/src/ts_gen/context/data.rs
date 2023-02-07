@@ -1,5 +1,6 @@
 use crate::ts_gen::accounts::TsInstructionGen;
 use crate::ts_gen::types::{TsTypeGen, TsTypesCache};
+use convert_case::{Case, Converter};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 
@@ -123,7 +124,10 @@ impl DataContext {
         discriminant_name: &'static str,
         variant_name: &'static str,
     ) -> Result<(), String> {
-        let name = Cow::Owned(format!("create{}Instruction", variant_name));
+        let case_converter = Converter::new()
+            .from_case(Case::Pascal)
+            .to_case(Case::Camel);
+        let name = Cow::Owned(case_converter.convert(variant_name));
 
         if self.program_methods.contains_key(&name) {
             return Err(format!("Duplicated program method: '{}'", name));
@@ -131,7 +135,7 @@ impl DataContext {
 
         let accounts_type = T::value_type();
         let method = format!(
-            "export function {}(accounts: {}) {{
+            "{}(accounts: {}) {{
                 const writer = new fnk.FnkBorshWriter();
                 writer.writeByte({}.{});
                 const accountMetas: solana.AccountMeta[] = [];
@@ -192,9 +196,12 @@ impl DataContext {
         }
 
         // Build program methods.
+        buffer.push_str("export const instructions = {");
         for (_name, method) in self.program_methods.iter() {
             buffer.push_str(method);
+            buffer.push_str(",");
         }
+        buffer.push_str("};");
 
         buffer
     }
