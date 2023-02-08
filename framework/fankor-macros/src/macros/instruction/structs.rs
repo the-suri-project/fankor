@@ -51,7 +51,8 @@ pub fn process_struct(
         let name = &v.name;
         let name_str = name.to_string();
 
-        let data = v.data.iter().map(|v| {
+        // We need to reverse the data because it was processed in reverse order.
+        let data = v.data.iter().rev().map(|v| {
             let name = &v.name;
             let value = &v.value;
 
