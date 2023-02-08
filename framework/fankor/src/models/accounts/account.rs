@@ -1,5 +1,5 @@
 use crate::errors::{Error, FankorErrorCode, FankorResult};
-use crate::models::{FankorContext, FankorContextExitAction, Program, System};
+use crate::models::{CopyType, FankorContext, FankorContextExitAction, Program, System, ZcAccount};
 use crate::prelude::AccountInfoVerification;
 use crate::traits::{AccountSize, AccountType, Instruction, PdaChecker, SingleInstructionAccount};
 use crate::utils::bpf_writer::BpfWriter;
@@ -428,6 +428,22 @@ impl<'info, T: AccountType> Account<'info, T> {
         );
 
         Ok(())
+    }
+}
+
+impl<'info, T: AccountType + CopyType<'info>> Account<'info, T> {
+    // METHODS ----------------------------------------------------------------
+
+    /// Serializes the value and creates a new zc account.
+    pub fn into_zc_account(mut self) -> FankorResult<ZcAccount<'info, T>> {
+        self.save()?;
+
+        let new_account = ZcAccount::new_unchecked(self.context, self.info);
+
+        // Prevent old account to execute the drop actions.
+        self.dropped = true;
+
+        Ok(new_account)
     }
 }
 
