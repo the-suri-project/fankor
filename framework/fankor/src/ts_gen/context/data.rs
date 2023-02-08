@@ -199,7 +199,7 @@ impl DataContext {
         buffer.push_str("export const instructions = {");
         for (_name, method) in self.program_methods.iter() {
             buffer.push_str(method);
-            buffer.push_str(",");
+            buffer.push(',');
         }
         buffer.push_str("};");
 

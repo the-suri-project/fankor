@@ -2,9 +2,10 @@ pub use fnk::*;
 
 mod fnk;
 
-use crate::errors::FankorResult;
+use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{CopyType, Zc, ZeroCopyType};
-use borsh::BorshDeserialize;
+use crate::utils::bpf_writer::BpfWriter;
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use std::marker::PhantomData;
 use std::mem::size_of;
@@ -27,11 +28,10 @@ impl<'info, T: CopyType<'info>> ZeroCopyType<'info> for ZcVec<'info, T> {
         ))
     }
 
-    fn read_byte_size_from_bytes(mut bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+        let mut bytes2 = bytes;
+        let len = u32::deserialize(&mut bytes2)?;
         let mut size = size_of::<u32>();
-
-        let bytes2 = &mut bytes;
-        let len = u32::deserialize(bytes2)?;
 
         for _ in 0..len {
             size += T::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
@@ -120,6 +120,49 @@ impl<'info, T: CopyType<'info>> ZcVec<'info, T> {
             _data: PhantomData,
         }
     }
+
+    /// Writes the length of the vector.
+    pub fn write_len_unchecked(&self, new_length: u32) -> FankorResult<()> {
+        let mut bytes = (*self.info.data).borrow_mut();
+        let bytes = &mut bytes[self.offset..];
+        let mut writer = BpfWriter::new(bytes);
+        u32::serialize(&new_length, &mut writer)?;
+
+        Ok(())
+    }
+}
+
+impl<'info, T: CopyType<'info> + BorshSerialize> ZcVec<'info, T> {
+    // METHODS ----------------------------------------------------------------
+
+    /// Appends a list of elements to the end of the vector.
+    pub fn append(&self, value: &[T]) -> FankorResult<()> {
+        // Get current size.
+        let mut size = {
+            let bytes = (*self.info.data).borrow();
+            let bytes = &bytes[self.offset..];
+            Self::read_byte_size_from_bytes(bytes)?
+        };
+
+        // Update length.
+        let length = self.len()?;
+        let new_length = length
+            .checked_add(value.len())
+            .ok_or(FankorErrorCode::ZeroCopyLengthFieldOverflow)?;
+        let new_length =
+            u32::try_from(new_length).map_err(|_| FankorErrorCode::ZeroCopyLengthFieldOverflow)?;
+        self.write_len_unchecked(new_length)?;
+
+        // Append values.
+        for v in value {
+            let zc = Zc::new_unchecked(self.info, self.offset + size);
+            let v_size = v.byte_size_from_instance();
+            zc.try_write_value_with_sizes_unchecked(v, 0, v_size)?;
+            size += v_size;
+        }
+
+        Ok(())
+    }
 }
 
 impl<'info, T: CopyType<'info>> IntoIterator for ZcVec<'info, T> {
@@ -175,3 +218,115 @@ impl<'info, T: CopyType<'info>> Iterator for Iter<'info, T> {
 }
 
 impl<'info, T: CopyType<'info>> ExactSizeIterator for Iter<'info, T> {}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use solana_program::pubkey::Pubkey;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    #[test]
+    fn test_read_byte_length() {
+        let vector = vec![2, 0, 0, 0, 1, 0, 2, 0, 99];
+        let size = ZcVec::<u16>::read_byte_size_from_bytes(&vector).unwrap();
+
+        assert_eq!(size, size_of::<u32>() + 2 * size_of::<u16>());
+    }
+
+    #[test]
+    fn test_len_and_iter() {
+        let mut lamports = 0;
+        let mut vector = vec![5, 0, 0, 0, 3, 3, 3, 3, 3];
+        let info = AccountInfo {
+            key: &Pubkey::default(),
+            is_signer: false,
+            is_writable: false,
+            lamports: Rc::new(RefCell::new(&mut lamports)),
+            data: Rc::new(RefCell::new(&mut vector)),
+            owner: &Pubkey::default(),
+            executable: false,
+            rent_epoch: 0,
+        };
+
+        let (zc, _) = ZcVec::<u8>::new(&info, 0).unwrap();
+
+        assert_eq!(zc.len().unwrap(), 5);
+
+        let mut count = 0;
+        for zc_el in zc {
+            count += 1;
+
+            let value = zc_el.try_get_value().unwrap();
+            assert_eq!(value, 3);
+        }
+
+        assert_eq!(count, 5);
+    }
+
+    #[test]
+    fn test_write_len() {
+        let mut lamports = 0;
+        let mut vector = vec![3, 0, 0, 0, 3, 3, 3, 3, 3];
+        let info = AccountInfo {
+            key: &Pubkey::default(),
+            is_signer: false,
+            is_writable: false,
+            lamports: Rc::new(RefCell::new(&mut lamports)),
+            data: Rc::new(RefCell::new(&mut vector)),
+            owner: &Pubkey::default(),
+            executable: false,
+            rent_epoch: 0,
+        };
+
+        let (zc, _) = ZcVec::<u8>::new(&info, 0).unwrap();
+        zc.write_len_unchecked(5).unwrap();
+
+        assert_eq!(zc.len().unwrap(), 5);
+
+        let mut count = 0;
+        for zc_el in zc {
+            count += 1;
+
+            let value = zc_el.try_get_value().unwrap();
+            assert_eq!(value, 3);
+        }
+
+        assert_eq!(count, 5);
+    }
+
+    #[test]
+    fn test_append() {
+        let mut lamports = 0;
+        let mut vector = vec![3, 0, 0, 0, 3, 3, 3, 0, 0];
+        let info = AccountInfo {
+            key: &Pubkey::default(),
+            is_signer: false,
+            is_writable: false,
+            lamports: Rc::new(RefCell::new(&mut lamports)),
+            data: Rc::new(RefCell::new(&mut vector)),
+            owner: &Pubkey::default(),
+            executable: false,
+            rent_epoch: 0,
+        };
+
+        let (zc, _) = ZcVec::<u8>::new(&info, 0).unwrap();
+        zc.append(&[3, 3]).unwrap();
+
+        assert_eq!(zc.len().unwrap(), 5);
+
+        let mut count = 0;
+        for zc_el in zc {
+            count += 1;
+
+            let value = zc_el.try_get_value().unwrap();
+            assert_eq!(value, 3);
+        }
+
+        assert_eq!(count, 5);
+    }
+}

@@ -1,4 +1,5 @@
 pub use fnk::*;
+use std::mem::size_of;
 
 mod fnk;
 
@@ -19,12 +20,8 @@ impl<'info> ZeroCopyType<'info> for ZcString<'info> {
     }
 
     fn read_byte_size_from_bytes(mut bytes: &[u8]) -> FankorResult<usize> {
-        let bytes = &mut bytes;
-        let initial_len = bytes.len();
-        let length = u32::deserialize(bytes)?;
-        let length_field_size = initial_len - bytes.len();
-
-        Ok(length as usize + length_field_size)
+        let length = u32::deserialize(&mut bytes)?;
+        Ok(length as usize + size_of::<u32>())
     }
 }
 
@@ -112,5 +109,22 @@ impl<'info> ZcString<'info> {
         let text = unsafe { std::str::from_utf8_unchecked(&bytes[..size]) };
 
         Ok(f(text))
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_read_byte_length() {
+        let vector = vec![5, 0, 0, 0, 1, 2, 3, 4, 5, 99, 99, 99];
+        let size = ZcString::read_byte_size_from_bytes(&vector).unwrap();
+
+        assert_eq!(size, size_of::<u32>() + 5 * size_of::<u8>());
     }
 }

@@ -103,7 +103,7 @@ impl<'info> UninitializedAccount<'info> {
             &[],
         )?;
 
-        Ok(Account::new_without_checks(
+        Ok(Account::new_unchecked(
             self.context,
             self.info,
             T::default(),
@@ -134,7 +134,7 @@ impl<'info> UninitializedAccount<'info> {
             &[seeds],
         )?;
 
-        Ok(Account::new_without_checks(
+        Ok(Account::new_unchecked(
             self.context,
             self.info,
             T::default(),
@@ -188,7 +188,7 @@ impl<'info> UninitializedAccount<'info> {
             &[],
         )?;
 
-        Ok(Account::new_without_checks(self.context, self.info, value))
+        Ok(Account::new_unchecked(self.context, self.info, value))
     }
 
     /// Initializes the account transferring the necessary lamports to cover the rent
@@ -216,7 +216,7 @@ impl<'info> UninitializedAccount<'info> {
             &[seeds],
         )?;
 
-        Ok(Account::new_without_checks(self.context, self.info, value))
+        Ok(Account::new_unchecked(self.context, self.info, value))
     }
 }
 

@@ -120,3 +120,21 @@ impl<'info> ZcFnkString<'info> {
         Ok(f(text))
     }
 }
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::mem::size_of;
+
+    #[test]
+    fn test_read_byte_length() {
+        let vector = vec![5, 1, 2, 3, 4, 5, 99, 99, 99];
+        let size = ZcFnkString::read_byte_size_from_bytes(&vector).unwrap();
+
+        assert_eq!(size, 1 + 5 * size_of::<u8>());
+    }
+}

@@ -75,7 +75,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
         })
     }
 
-    pub(crate) fn new_without_checks(
+    pub fn new_unchecked(
         context: &'info FankorContext<'info>,
         info: &'info AccountInfo<'info>,
     ) -> ZcAccount<'info, T> {
@@ -279,7 +279,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
             .into());
         }
 
-        let new_account = Account::new_without_checks(self.context, self.info, new_value);
+        let new_account = Account::new_unchecked(self.context, self.info, new_value);
 
         // Serialize the new value.
         let mut data_bytes = Vec::with_capacity(new_account.info().data_len());
@@ -303,7 +303,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
     /// Deserializes the zero-copy value and creates a new account.
     pub fn into_account(mut self) -> FankorResult<Account<'info, T>> {
         let data = self.data().try_get_value()?;
-        let new_account = Account::new_without_checks(self.context, self.info, data);
+        let new_account = Account::new_unchecked(self.context, self.info, data);
 
         // Prevent old account to execute the drop actions.
         self.dropped = true;
@@ -449,7 +449,7 @@ impl<'info, T: AccountType + CopyType<'info>> Instruction<'info> for ZcAccount<'
             }
         }
 
-        let result = ZcAccount::new_without_checks(context, info);
+        let result = ZcAccount::new_unchecked(context, info);
 
         *accounts = &accounts[1..];
         Ok(result)

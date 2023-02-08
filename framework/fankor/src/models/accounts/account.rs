@@ -59,7 +59,7 @@ impl<'info, T: AccountType> Account<'info, T> {
         })
     }
 
-    pub(crate) fn new_without_checks(
+    pub fn new_unchecked(
         context: &'info FankorContext<'info>,
         info: &'info AccountInfo<'info>,
         data: T,
@@ -322,7 +322,7 @@ impl<'info, T: AccountType> Account<'info, T> {
             .into());
         }
 
-        let new_account = Account::new_without_checks(self.context, self.info, new_value);
+        let new_account = Account::new_unchecked(self.context, self.info, new_value);
 
         // Serialize the new value.
         let mut data_bytes = Vec::with_capacity(new_account.info().data_len());
@@ -541,7 +541,7 @@ impl<'info, T: AccountType> Instruction<'info> for Account<'info, T> {
         }
 
         let mut data: &[u8] = &info.try_borrow_data()?;
-        let result = Account::new_without_checks(context, info, T::try_deserialize(&mut data)?);
+        let result = Account::new_unchecked(context, info, T::try_deserialize(&mut data)?);
 
         *accounts = &accounts[1..];
         Ok(result)
