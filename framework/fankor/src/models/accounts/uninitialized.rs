@@ -168,8 +168,8 @@ impl<'info> UninitializedAccount<'info> {
     /// for the required space to contain `value` using `payer` as the funding account.
     pub fn init_with_value<T: AccountType + AccountSize>(
         self,
-        payer: &AccountInfo<'info>,
         value: T,
+        payer: &AccountInfo<'info>,
         system_program: &Program<System>,
     ) -> FankorResult<Account<'info, T>> {
         let rent = Rent::get()?;

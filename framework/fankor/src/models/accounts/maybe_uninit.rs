@@ -1,4 +1,4 @@
-use crate::errors::{FankorErrorCode, FankorResult};
+use crate::errors::FankorResult;
 use crate::models::{FankorContext, UninitializedAccount};
 use crate::prelude::PdaChecker;
 use crate::traits::{AccountInfoVerification, Instruction, SingleInstructionAccount};
