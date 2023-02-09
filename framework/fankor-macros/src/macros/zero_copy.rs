@@ -72,6 +72,10 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 if !zc_from_previous_methods_lasts.is_empty() {
                     zc_from_previous_methods.push(quote! {
                         pub fn #from_previous_method_name(&self, previous: #name_fields, mut offset: usize) -> FankorResult<Zc<'info, #field_ty>> {
+                            if previous == #name_fields::#pascal_field_name {
+                                return Ok(Zc::new_unchecked(self.info, offset))
+                            }
+
                             let bytes = self.info.try_borrow_data().map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock { type_name: std::any::type_name::<Self>() })?;
                             let mut processed = false;
 
