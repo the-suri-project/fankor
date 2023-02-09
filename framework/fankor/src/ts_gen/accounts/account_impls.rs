@@ -1,6 +1,6 @@
 use crate::models::{
-    Account, Argument, CopyType, Either, MaybeUninitialized, Program, Rest, SysvarAccount,
-    UncheckedAccount, UninitializedAccount, ZcAccount,
+    Account, Argument, CopyType, Either, MaybeUninitialized, Program, Rest, SingleEither,
+    SysvarAccount, UncheckedAccount, UninitializedAccount, ZcAccount,
 };
 use crate::prelude::ProgramType;
 use crate::traits::AccountType;
@@ -182,6 +182,23 @@ impl<'info> TsInstructionGen for Rest<'info> {
     ) -> Cow<'static, str> {
         Cow::Owned(format!(
             "{}.forEach(v => {{ accountMetas.push({{ pubkey: v, isSigner: {}, isWritable: {} }}); }});",
+            value, signer, writable
+        ))
+    }
+}
+
+impl<'info, L, R> TsInstructionGen for SingleEither<L, R> {
+    fn value_type() -> Cow<'static, str> {
+        Cow::Borrowed("solana.PublicKey")
+    }
+
+    fn get_account_metas(
+        value: Cow<'static, str>,
+        signer: bool,
+        writable: bool,
+    ) -> Cow<'static, str> {
+        Cow::Owned(format!(
+            "accountMetas.push({{ pubkey: {}, isSigner: {}, isWritable: {} }});",
             value, signer, writable
         ))
     }

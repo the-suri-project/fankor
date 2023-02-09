@@ -100,6 +100,11 @@ impl<'info, T: Instruction<'info>> Instruction<'info> for MaybeUninitialized<'in
     }
 }
 
+impl<'info, T: SingleInstructionAccount<'info>> SingleInstructionAccount<'info>
+    for MaybeUninitialized<'info, T>
+{
+}
+
 impl<'info, T: PdaChecker<'info>> PdaChecker<'info> for MaybeUninitialized<'info, T> {
     fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {
         match self {

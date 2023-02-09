@@ -11,14 +11,7 @@ use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::io::Write;
 
-/// Tries to deserialize `L` first and then `R` if `L` fails.
-///
-/// This is useful to have a fallback for some type, for example, it can be used for maybe
-/// uninitialized accounts: `Either<Account<'info, T>, UninitializedAccount<'info, T>>`.
-/// For this case you can use the `MaybeUninitializedAccount` type alias.
-///
-/// Note that `L` and `R` must be disjoint types, otherwise the deserialization will
-/// always return `L`.
+/// Deserialize `L` or `R` depending on a flag.
 pub enum Either<L, R> {
     Left(L),
     Right(R),

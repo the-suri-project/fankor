@@ -31,6 +31,11 @@ pub struct StructAccounts<'info> {
 
     pub zero_copy_account: ZcAccount<'info, ZeroCopyStructAccountData>,
 
+    pub single_either: SingleEither<
+        Account<'info, StructAccountData>,
+        ZcAccount<'info, ZeroCopyStructAccountData>,
+    >,
+
     #[account(address = &crate::ID)]
     pub program: Program<'info, System>,
 
