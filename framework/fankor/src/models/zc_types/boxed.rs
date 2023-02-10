@@ -15,7 +15,7 @@ impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for Box<T> {
 }
 
 impl<'info, T: CopyType<'info>> CopyType<'info> for Box<T> {
-    type ZeroCopyType = Option<T::ZeroCopyType>;
+    type ZeroCopyType = T::ZeroCopyType;
 
     fn byte_size_from_instance(&self) -> usize {
         let aux: &T = self;
