@@ -302,7 +302,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
 
     /// Deserializes the zero-copy value and creates a new account.
     pub fn into_account(mut self) -> FankorResult<Account<'info, T>> {
-        let data = self.data().try_get_value()?;
+        let data = self.data().try_value()?;
         let new_account = Account::new_unchecked(self.context, self.info, data);
 
         // Prevent old account to execute the drop actions.

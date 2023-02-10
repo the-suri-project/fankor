@@ -183,7 +183,7 @@ impl<'info, T: CopyType<'info> + BorshDeserialize> Zc<'info, T> {
     /// # Safety
     ///
     /// This method can fail if `bytes` cannot be deserialized into the type.
-    pub fn try_get_value(&self) -> FankorResult<T> {
+    pub fn try_value(&self) -> FankorResult<T> {
         let bytes =
             self.info
                 .data
@@ -200,7 +200,7 @@ impl<'info, T: CopyType<'info> + BorshDeserialize> Zc<'info, T> {
     /// # Safety
     ///
     /// This method can fail if `bytes` cannot be deserialized into the type.
-    pub fn get_zero_copy_value(&self) -> FankorResult<T::ZeroCopyType> {
+    pub fn zc_value(&self) -> FankorResult<T::ZeroCopyType> {
         T::ZeroCopyType::new(self.info, self.offset).map(|(v, _)| v)
     }
 }

@@ -261,7 +261,7 @@ mod test {
         for zc_el in zc {
             count += 1;
 
-            let value = zc_el.try_get_value().unwrap();
+            let value = zc_el.try_value().unwrap();
             assert_eq!(value, 3);
         }
 
@@ -292,7 +292,7 @@ mod test {
         for zc_el in zc {
             count += 1;
 
-            let value = zc_el.try_get_value().unwrap();
+            let value = zc_el.try_value().unwrap();
             assert_eq!(value, 3);
         }
 
@@ -323,7 +323,7 @@ mod test {
         for zc_el in zc {
             count += 1;
 
-            let value = zc_el.try_get_value().unwrap();
+            let value = zc_el.try_value().unwrap();
             assert_eq!(value, 3);
         }
 
