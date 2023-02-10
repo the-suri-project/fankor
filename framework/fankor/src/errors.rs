@@ -360,6 +360,10 @@ pub enum FankorErrorCode {
     /// The provided field is not preceding the current one.
     #[msg("The provided field is not preceding the current one")]
     ZeroCopyIncorrectPrecedingField,
+
+    /// Cannot move the specified bytes.
+    #[msg("Cannot move the specified bytes")]
+    ZeroCopyInvalidMove,
 }
 
 // ----------------------------------------------------------------------------
