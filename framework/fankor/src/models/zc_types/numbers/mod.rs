@@ -3,7 +3,7 @@ pub use fnk::*;
 mod fnk;
 
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{CopyType, ZeroCopyType};
+use crate::traits::{CopyType, ZeroCopyType};
 use solana_program::account_info::AccountInfo;
 use std::mem::size_of;
 
@@ -34,7 +34,7 @@ macro_rules! impl_type {
                 Ok((value, Some(size)))
             }
 
-            fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+            fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
                 let size = size_of::<$ty>();
 
                 if bytes.len() < size {
@@ -51,7 +51,7 @@ macro_rules! impl_type {
         impl<'info> CopyType<'info> for $ty {
             type ZeroCopyType = $ty;
 
-            fn byte_size_from_instance(&self) -> usize {
+            fn min_byte_size() -> usize {
                 size_of::<$ty>()
             }
         }

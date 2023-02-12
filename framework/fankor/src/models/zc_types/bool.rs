@@ -1,6 +1,7 @@
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{CopyType, ZeroCopyType};
+use crate::traits::{CopyType, ZeroCopyType};
 use solana_program::account_info::AccountInfo;
+use std::mem::size_of;
 
 impl<'info> ZeroCopyType<'info> for bool {
     fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
@@ -16,7 +17,7 @@ impl<'info> ZeroCopyType<'info> for bool {
         Ok((bytes[0] != 0, Some(1)))
     }
 
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
         if bytes.is_empty() {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: "bool" }.into());
         }
@@ -28,7 +29,7 @@ impl<'info> ZeroCopyType<'info> for bool {
 impl<'info> CopyType<'info> for bool {
     type ZeroCopyType = bool;
 
-    fn byte_size_from_instance(&self) -> usize {
-        1
+    fn min_byte_size() -> usize {
+        size_of::<bool>()
     }
 }

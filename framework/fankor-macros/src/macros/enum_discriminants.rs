@@ -156,7 +156,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 #[cfg(feature = "ts-gen")]
                 #[automatically_derived]
                 #[allow(non_snake_case)]
-                pub mod #test_name {
+                mod #test_name {
                     use super::*;
 
                     #[test]

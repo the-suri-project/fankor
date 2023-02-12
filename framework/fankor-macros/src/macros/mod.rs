@@ -1,6 +1,4 @@
 pub mod account;
-pub mod account_offset;
-pub mod account_size;
 pub mod accounts;
 pub mod base;
 pub mod const_pubkey;
@@ -8,6 +6,7 @@ pub mod constant;
 pub mod deserialize;
 pub mod enum_discriminants;
 pub mod error;
+pub mod field_offset;
 pub mod instruction;
 pub mod program;
 pub mod serialize;

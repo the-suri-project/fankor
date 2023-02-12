@@ -1,7 +1,7 @@
 use crate::prelude::{
     FnkArray, FnkBVec, FnkInt, FnkMap, FnkRange, FnkSet, FnkString, FnkUInt, FnkURange, FnkVec,
 };
-use crate::ts_gen::types::{TsTypeGen, TsTypesCache};
+use crate::traits::{TsTypeGen, TsTypesCache};
 use std::any::{Any, TypeId};
 use std::borrow::Cow;
 

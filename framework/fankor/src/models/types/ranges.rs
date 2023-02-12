@@ -1,6 +1,5 @@
 use crate::models::types::unsigned::FnkUInt;
 use crate::prelude::FnkInt;
-use crate::traits::AccountSize;
 use borsh::{BorshDeserialize, BorshSerialize};
 use std::io::Write;
 use std::ops::RangeInclusive;
@@ -107,18 +106,6 @@ impl BorshDeserialize for FnkURange {
     }
 }
 
-impl AccountSize for FnkURange {
-    fn min_account_size() -> usize {
-        FnkUInt::min_account_size() + FnkInt::min_account_size()
-    }
-
-    fn actual_account_size(&self) -> usize {
-        let (point, length) = self.point_and_length();
-
-        point.actual_account_size() + length.actual_account_size()
-    }
-}
-
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
@@ -182,15 +169,6 @@ impl BorshDeserialize for FnkRange {
     }
 }
 
-impl AccountSize for FnkRange {
-    fn min_account_size() -> usize {
-        FnkInt::min_account_size() * 2
-    }
-
-    fn actual_account_size(&self) -> usize {
-        self.from.actual_account_size() + self.to.actual_account_size()
-    }
-}
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------

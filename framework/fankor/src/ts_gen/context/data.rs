@@ -1,5 +1,4 @@
-use crate::ts_gen::accounts::TsInstructionGen;
-use crate::ts_gen::types::{TsTypeGen, TsTypesCache};
+use crate::traits::{TsInstructionGen, TsTypeGen, TsTypesCache};
 use convert_case::{Case, Converter};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};

@@ -1,4 +1,3 @@
-use crate::prelude::AccountSize;
 use borsh::{BorshDeserialize, BorshSerialize};
 use std::cmp::Ordering;
 use std::fmt::Debug;
@@ -750,16 +749,6 @@ impl<K: BorshDeserialize, V: BorshDeserialize> BorshDeserialize for FnkBVec<K, V
             nodes,
             root_position,
         })
-    }
-}
-
-impl<K: Copy, V: Copy> AccountSize for FnkBVec<K, V> {
-    fn min_account_size() -> usize {
-        size_of::<u16>() * 2
-    }
-
-    fn actual_account_size(&self) -> usize {
-        size_of::<u16>() * 2 + self.nodes.len() * Node::<K, V>::byte_size()
     }
 }
 

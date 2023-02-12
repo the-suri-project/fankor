@@ -1,7 +1,8 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::zc_types::vec::Iter;
-use crate::models::{CopyType, Zc, ZeroCopyType};
+use crate::models::Zc;
 use crate::prelude::{FnkUInt, FnkVec};
+use crate::traits::{CopyType, ZeroCopyType};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use std::marker::PhantomData;
@@ -24,13 +25,13 @@ impl<'info, T: CopyType<'info>> ZeroCopyType<'info> for ZcFnkVec<'info, T> {
         ))
     }
 
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
         let mut bytes2 = bytes;
         let len = FnkUInt::deserialize(&mut bytes2)?;
         let mut size = bytes.len() - bytes2.len();
 
         for _ in 0..len.0 {
-            size += T::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+            size += T::ZeroCopyType::read_byte_size(&bytes[size..])?;
         }
 
         Ok(size)
@@ -40,17 +41,21 @@ impl<'info, T: CopyType<'info>> ZeroCopyType<'info> for ZcFnkVec<'info, T> {
 impl<'info, T: CopyType<'info>> CopyType<'info> for FnkVec<T> {
     type ZeroCopyType = ZcFnkVec<'info, T>;
 
-    fn byte_size_from_instance(&self) -> usize {
+    fn byte_size(&self) -> usize {
         let mut size = 0;
 
         let len = FnkUInt::from(self.len() as u64);
-        size += len.byte_size_from_instance();
+        size += len.byte_size();
 
         for i in &self.0 {
-            size += i.byte_size_from_instance();
+            size += i.byte_size();
         }
 
         size
+    }
+
+    fn min_byte_size() -> usize {
+        FnkUInt::min_byte_size()
     }
 }
 
@@ -96,7 +101,7 @@ impl<'info, T: CopyType<'info>> ZcFnkVec<'info, T> {
                 }));
             }
 
-            let size = T::ZeroCopyType::read_byte_size_from_bytes(bytes)?;
+            let size = T::ZeroCopyType::read_byte_size(bytes)?;
             bytes = &bytes[size..];
         }
 
@@ -137,7 +142,7 @@ impl<'info, T: CopyType<'info> + BorshSerialize> ZcFnkVec<'info, T> {
         let mut size = {
             let bytes = (*self.info.data).borrow();
             let bytes = &bytes[self.offset..];
-            Self::read_byte_size_from_bytes(bytes)?
+            Self::read_byte_size(bytes)?
         };
 
         // Update length.
@@ -150,7 +155,7 @@ impl<'info, T: CopyType<'info> + BorshSerialize> ZcFnkVec<'info, T> {
         // Append values.
         for v in value {
             let zc = Zc::new_unchecked(self.info, self.offset + size);
-            let v_size = v.byte_size_from_instance();
+            let v_size = v.byte_size();
             zc.try_write_value_with_sizes_unchecked(v, 0, v_size)?;
             size += v_size;
         }
@@ -183,7 +188,7 @@ mod test {
     #[test]
     fn test_read_byte_length() {
         let vector = vec![2, 1, 0, 2, 0, 99];
-        let size = ZcFnkVec::<u16>::read_byte_size_from_bytes(&vector).unwrap();
+        let size = ZcFnkVec::<u16>::read_byte_size(&vector).unwrap();
 
         assert_eq!(size, 1 + 2 * size_of::<u16>());
     }

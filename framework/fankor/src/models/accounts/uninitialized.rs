@@ -3,7 +3,7 @@ use crate::cpi::system_program::CpiCreateAccount;
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{Account, FankorContext, Program, System};
 use crate::traits::{
-    AccountInfoVerification, AccountSize, AccountType, Instruction, PdaChecker,
+    AccountInfoVerification, AccountType, CopyType, Instruction, PdaChecker,
     SingleInstructionAccount,
 };
 use solana_program::account_info::AccountInfo;
@@ -144,36 +144,36 @@ impl<'info> UninitializedAccount<'info> {
     /// Initializes the account transferring the necessary lamports to cover the rent
     /// for the minimum space to contain the smallest value of `T`
     /// using `payer` as the funding account.
-    pub fn init_with_min_space<T: Default + AccountType + AccountSize>(
+    pub fn init_with_min_space<T: Default + AccountType + CopyType<'info>>(
         self,
         payer: &AccountInfo<'info>,
         system_program: &Program<System>,
     ) -> FankorResult<Account<'info, T>> {
-        self.init(T::min_account_size(), payer, system_program)
+        self.init(T::min_byte_size(), payer, system_program)
     }
 
     /// Initializes the PDA account transferring the necessary lamports to cover the rent
     /// for the minimum space to contain the smallest value of `T`
     /// using `payer` as the funding account.
-    pub fn init_pda_with_min_space<T: Default + AccountType + AccountSize>(
+    pub fn init_pda_with_min_space<T: Default + AccountType + CopyType<'info>>(
         self,
         seeds: &[&[u8]],
         payer: &AccountInfo<'info>,
         system_program: &Program<System>,
     ) -> FankorResult<Account<'info, T>> {
-        self.init_pda(T::min_account_size(), seeds, payer, system_program)
+        self.init_pda(T::min_byte_size(), seeds, payer, system_program)
     }
 
     /// Initializes the account transferring the necessary lamports to cover the rent
     /// for the required space to contain `value` using `payer` as the funding account.
-    pub fn init_with_value<T: AccountType + AccountSize>(
+    pub fn init_with_value<T: AccountType + CopyType<'info>>(
         self,
         value: T,
         payer: &AccountInfo<'info>,
         system_program: &Program<System>,
     ) -> FankorResult<Account<'info, T>> {
         let rent = Rent::get()?;
-        let space = value.actual_account_size() + 1 /* account discriminant */;
+        let space = value.byte_size() + 1 /* account discriminant */;
         let lamports = rent.minimum_balance(space);
 
         cpi::system_program::create_account(
@@ -193,7 +193,7 @@ impl<'info> UninitializedAccount<'info> {
 
     /// Initializes the account transferring the necessary lamports to cover the rent
     /// for the required space to contain `value` using `payer` as the funding account.
-    pub fn init_pda_with_value<T: AccountType + AccountSize>(
+    pub fn init_pda_with_value<T: AccountType + CopyType<'info>>(
         self,
         value: T,
         seeds: &[&[u8]],
@@ -201,7 +201,7 @@ impl<'info> UninitializedAccount<'info> {
         system_program: &Program<System>,
     ) -> FankorResult<Account<'info, T>> {
         let rent = Rent::get()?;
-        let space = value.actual_account_size() + 1 /* account discriminant */;
+        let space = value.byte_size() + 1 /* account discriminant */;
         let lamports = rent.minimum_balance(space);
 
         cpi::system_program::create_account(

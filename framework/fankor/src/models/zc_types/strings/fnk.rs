@@ -1,7 +1,6 @@
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{CopyType, ZeroCopyType};
 use crate::prelude::{FnkString, FnkUInt};
-use crate::traits::AccountSize;
+use crate::traits::{CopyType, ZeroCopyType};
 use borsh::BorshDeserialize;
 use solana_program::account_info::AccountInfo;
 
@@ -15,7 +14,7 @@ impl<'info> ZeroCopyType<'info> for ZcFnkString<'info> {
         Ok((ZcFnkString { info, offset }, None))
     }
 
-    fn read_byte_size_from_bytes(mut bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size(mut bytes: &[u8]) -> FankorResult<usize> {
         let bytes = &mut bytes;
         let initial_len = bytes.len();
         let length = FnkUInt::deserialize(bytes)?;
@@ -31,8 +30,13 @@ impl<'info> ZeroCopyType<'info> for ZcFnkString<'info> {
 impl<'info, 'a> CopyType<'info> for FnkString<'a> {
     type ZeroCopyType = ZcFnkString<'info>;
 
-    fn byte_size_from_instance(&self) -> usize {
-        self.actual_account_size()
+    fn byte_size(&self) -> usize {
+        let length = FnkUInt::from(self.0.len() as u64);
+        length.byte_size() + self.0.len()
+    }
+
+    fn min_byte_size() -> usize {
+        FnkUInt::min_byte_size()
     }
 }
 
@@ -133,7 +137,7 @@ mod test {
     #[test]
     fn test_read_byte_length() {
         let vector = vec![5, 1, 2, 3, 4, 5, 99, 99, 99];
-        let size = ZcFnkString::read_byte_size_from_bytes(&vector).unwrap();
+        let size = ZcFnkString::read_byte_size(&vector).unwrap();
 
         assert_eq!(size, 1 + 5 * size_of::<u8>());
     }

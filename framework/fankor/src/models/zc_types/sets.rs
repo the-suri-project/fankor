@@ -1,7 +1,8 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::zc_types::vec::Iter;
-use crate::models::{CopyType, Zc, ZeroCopyType};
+use crate::models::Zc;
 use crate::prelude::{FnkSet, FnkUInt};
+use crate::traits::{CopyType, ZeroCopyType};
 use borsh::BorshDeserialize;
 use solana_program::account_info::AccountInfo;
 use std::marker::PhantomData;
@@ -24,13 +25,13 @@ impl<'info, T: CopyType<'info>> ZeroCopyType<'info> for ZcFnkSet<'info, T> {
         ))
     }
 
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
         let mut bytes2 = bytes;
         let len = FnkUInt::deserialize(&mut bytes2)?;
         let mut size = bytes.len() - bytes2.len();
 
         for _ in 0..len.0 {
-            size += T::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+            size += T::ZeroCopyType::read_byte_size(&bytes[size..])?;
         }
 
         Ok(size)
@@ -40,17 +41,19 @@ impl<'info, T: CopyType<'info>> ZeroCopyType<'info> for ZcFnkSet<'info, T> {
 impl<'info, T: CopyType<'info> + Ord> CopyType<'info> for FnkSet<T> {
     type ZeroCopyType = ZcFnkSet<'info, T>;
 
-    fn byte_size_from_instance(&self) -> usize {
-        let mut size = 0;
+    fn byte_size(&self) -> usize {
+        let length = FnkUInt::from(self.0.len() as u64);
+        let mut size = length.byte_size();
 
-        let len = FnkUInt::from(self.len() as u64);
-        size += len.byte_size_from_instance();
-
-        for i in &self.0 {
-            size += i.byte_size_from_instance();
+        for v in &self.0 {
+            size += v.byte_size();
         }
 
         size
+    }
+
+    fn min_byte_size() -> usize {
+        FnkUInt::min_byte_size()
     }
 }
 

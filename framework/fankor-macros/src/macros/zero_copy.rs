@@ -9,27 +9,36 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
     let result = match &input {
         Item::Struct(item) => {
             let name = &item.ident;
+            let visibility = &item.vis;
 
             let (_, ty_generics, where_clause) = item.generics.split_for_impl();
 
-            let byte_size_from_instance_method = item.fields.iter().map(|field| {
+            let byte_size_method = item.fields.iter().map(|field| {
                 let field_name = &field.ident;
 
                 quote! {
-                    size += self.#field_name.byte_size_from_instance();
+                    size += self.#field_name.byte_size();
                 }
             });
 
-            let read_byte_size_from_bytes_method = item.fields.iter().map(|field| {
+            let min_byte_size_method = item.fields.iter().map(|field| {
+                let field_type = &field.ty;
+
+                quote! {
+                    size += <#field_type>::min_byte_size();
+                }
+            });
+
+            let read_byte_size_method = item.fields.iter().map(|field| {
                 let field_ty = &field.ty;
 
                 quote! {
-                    size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+                    size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size(&bytes[size..])?;
                 }
             });
 
             let zc_name = format_ident!("Zc{}", name);
-            let name_fields = format_ident!("{}ZcFields", name);
+            let fields_name = format_ident!("{}Fields", name);
             let mut aux_zc_generics = item.generics.clone();
             aux_zc_generics
                 .params
@@ -55,7 +64,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 zc_field_names.push(pascal_field_name.clone());
 
                 let res = quote! {
-                    pub fn #field_name(&self) -> FankorResult<Zc<'info, #field_ty>> {
+                    #visibility fn #field_name(&self) -> FankorResult<Zc<'info, #field_ty>> {
                         let bytes = self.info.try_borrow_data()
                             .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
                                 type_name: std::any::type_name::<Self>(),
@@ -71,8 +80,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                 if !zc_from_previous_methods_lasts.is_empty() {
                     zc_from_previous_methods.push(quote! {
-                        pub fn #from_previous_method_name(&self, previous: #name_fields, mut offset: usize) -> FankorResult<Zc<'info, #field_ty>> {
-                            if previous == #name_fields::#pascal_field_name {
+                        #visibility fn #from_previous_method_name(&self, previous: #fields_name, mut offset: usize) -> FankorResult<Zc<'info, #field_ty>> {
+                            if previous == #fields_name::#pascal_field_name {
                                 return Ok(Zc::new_unchecked(self.info, offset))
                             }
 
@@ -91,12 +100,12 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 }
 
                 zc_field_methods_aux.push(quote! {
-                    size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+                    size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size(&bytes[size..])?;
                 });
 
                 zc_from_previous_methods_lasts.push(quote! {
-                    if processed || previous == #name_fields::#pascal_field_name {
-                        offset += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[offset..])?;
+                    if processed || previous == #fields_name::#pascal_field_name {
+                        offset += <#field_ty as CopyType>::ZeroCopyType::read_byte_size(&bytes[offset..])?;
                         processed = true;
                     }
                 });
@@ -109,9 +118,15 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 impl #zc_impl_generics CopyType<'info> for #name #ty_generics #where_clause {
                     type ZeroCopyType = #zc_name #zc_ty_generics;
 
-                    fn byte_size_from_instance(&self) -> usize {
+                    fn byte_size(&self) -> usize {
                         let mut size = 0;
-                        #(#byte_size_from_instance_method)*
+                        #(#byte_size_method)*
+                        size
+                    }
+
+                    fn min_byte_size() -> usize {
+                        let mut size = 0;
+                        #(#min_byte_size_method)*
                         size
                     }
                 }
@@ -119,10 +134,10 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 #[allow(dead_code)]
                 #[automatically_derived]
                 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-                pub enum #name_fields { #(#zc_field_names),* }
+                #visibility enum #fields_name { #(#zc_field_names),* }
 
                 // TODO process generics to add phantom data if needed
-                pub struct #zc_name #zc_ty_generics #zc_where_clause {
+                #visibility struct #zc_name #zc_ty_generics #zc_where_clause {
                     info: &'info AccountInfo<'info>,
                     offset: usize,
                 }
@@ -139,9 +154,9 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         ))
                     }
 
-                    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+                    fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
                         let mut size = 0;
-                        #(#read_byte_size_from_bytes_method)*
+                        #(#read_byte_size_method)*
                         Ok(size)
                     }
                 }
@@ -155,7 +170,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
         }
         Item::Enum(item) => {
             let name = &item.ident;
-
+            let visibility = &item.vis;
             let (_, ty_generics, where_clause) = item.generics.split_for_impl();
 
             let mut aux_zc_generics = item.generics.clone();
@@ -166,13 +181,14 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let (zc_impl_generics, zc_ty_generics, zc_where_clause) =
                 aux_zc_generics.split_for_impl();
 
-            let byte_size_from_instance_method = item.variants.iter().map(|variant| {
+            let mut min_byte_size_method = Vec::with_capacity(item.variants.len());
+            let byte_size_method = item.variants.iter().map(|variant| {
                 let variant_name = &variant.ident;
 
                 match &variant.fields {
-                    Fields::Named(fields) => {
-                        let mut field_names = Vec::with_capacity(fields.named.len());
-                        let fields = fields
+                    Fields::Named(named_fields) => {
+                        let mut field_names = Vec::with_capacity(named_fields.named.len());
+                        let fields = named_fields
                             .named
                             .iter()
                             .map(|field| {
@@ -183,10 +199,29 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                 });
 
                                 quote! {
-                                    size += #field_name.byte_size_from_instance();
+                                    size += #field_name.byte_size();
                                 }
                             })
                             .collect::<Vec<_>>();
+                        let min_fields = named_fields
+                            .named
+                            .iter()
+                            .map(|field| {
+                                let field_type = &field.ty;
+
+                                quote! {
+                                    variant_size += <#field_type as ::fankor::traits::CopyType>::min_byte_size();
+                                }
+                            })
+                            .collect::<Vec<_>>();
+
+                        min_byte_size_method.push(quote! {
+                            {
+                                let mut variant_size = 1;
+                                #(#min_fields)*
+                                size = size.min(variant_size);
+                            }
+                        });
 
                         quote! {
                             #name::#variant_name { #(#field_names),* } => {
@@ -194,9 +229,9 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             }
                         }
                     }
-                    Fields::Unnamed(fields) => {
-                        let mut field_names = Vec::with_capacity(fields.unnamed.len());
-                        let fields = fields
+                    Fields::Unnamed(unnamed_fields) => {
+                        let mut field_names = Vec::with_capacity(unnamed_fields.unnamed.len());
+                        let fields = unnamed_fields
                             .unnamed
                             .iter()
                             .enumerate()
@@ -208,10 +243,29 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                 });
 
                                 quote! {
-                                    size += #field_name.byte_size_from_instance();
+                                    size += #field_name.byte_size();
                                 }
                             })
                             .collect::<Vec<_>>();
+                        let min_fields = unnamed_fields
+                            .unnamed
+                            .iter()
+                            .map(|field| {
+                                let field_type = &field.ty;
+
+                                quote! {
+                                    size += <#field_type as ::fankor::traits::CopyType>::min_byte_size();
+                                }
+                            })
+                            .collect::<Vec<_>>();
+
+                        min_byte_size_method.push(quote! {
+                            {
+                                let mut variant_size = 1;
+                                #(#min_fields)*
+                                size = size.min(variant_size);
+                            }
+                        });
 
                         quote! {
                             #name::#variant_name(#(#field_names),*) => {
@@ -225,7 +279,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         }
                     }
                 }
-            });
+            }).collect::<Vec<_>>();
 
             let zc_name = format_ident!("Zc{}", name);
             let zc_name_variants = item.variants.iter().map(|variant| {
@@ -288,7 +342,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                                     quote! {
                                         let #field_name = Zc::new_unchecked(info, __offset + size);
-                                        size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+                                        size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size(&bytes[size..])?;
                                     }
                                 });
 
@@ -312,7 +366,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                                     quote! {
                                         let #field_name = Zc::new_unchecked(info, __offset + size);
-                                        size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+                                        size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size(&bytes[size..])?;
                                     }
                                 });
 
@@ -332,7 +386,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         }
                     });
 
-            let read_byte_size_from_bytes_method =
+            let read_byte_size_method =
                 item.variants
                     .iter()
                     .enumerate()
@@ -345,7 +399,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                     let field_ty = &field.ty;
 
                                     quote! {
-                                        size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+                                        size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size(&bytes[size..])?;
                                     }
                                 });
 
@@ -360,7 +414,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                     let field_ty = &field.ty;
 
                                     quote! {
-                                        size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+                                        size += <#field_ty as CopyType>::ZeroCopyType::read_byte_size(&bytes[size..])?;
                                     }
                                 });
 
@@ -404,7 +458,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     impl #zc_impl_generics CopyType<'info> for #name #ty_generics #where_clause {
                         type ZeroCopyType = #name #ty_generics;
 
-                        fn byte_size_from_instance(&self) -> usize {
+                        fn min_byte_size() -> usize {
                             1
                         }
                     }
@@ -432,7 +486,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             Ok((result, Some(size)))
                         }
 
-                        fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+                        fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
                             if bytes.is_empty() {
                                 return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
                             }
@@ -441,7 +495,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             let flag = bytes[0];
 
                             match flag {
-                                #(#read_byte_size_from_bytes_method,)*
+                                #(#read_byte_size_method,)*
                                 _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminant { type_name: std::any::type_name::<Self>() }.into()),
                             }
 
@@ -455,18 +509,26 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     impl #zc_impl_generics CopyType<'info> for #name #ty_generics #where_clause {
                         type ZeroCopyType = #zc_name #zc_ty_generics;
 
-                        fn byte_size_from_instance(&self) -> usize {
+                        fn byte_size(&self) -> usize {
                             let mut size = 1;
 
                             match self {
-                                #(#byte_size_from_instance_method),*
+                                #(#byte_size_method),*
                             }
+
+                            size
+                        }
+
+                        fn min_byte_size() -> usize {
+                            let mut size = 1;
+
+                            #(#min_byte_size_method)*
 
                             size
                         }
                     }
 
-                    pub enum #zc_name #zc_ty_generics #zc_where_clause {
+                    #visibility enum #zc_name #zc_ty_generics #zc_where_clause {
                         #(#zc_name_variants),*
                     }
 
@@ -494,7 +556,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             Ok((result, Some(size)))
                         }
 
-                        fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+                        fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
                             if bytes.is_empty() {
                                 return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
                             }
@@ -503,7 +565,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             let flag = bytes[0];
 
                             match flag {
-                                #(#read_byte_size_from_bytes_method,)*
+                                #(#read_byte_size_method,)*
                                 _ => return Err(FankorErrorCode::ZeroCopyInvalidEnumDiscriminant { type_name: std::any::type_name::<Self>() }.into()),
                             }
 

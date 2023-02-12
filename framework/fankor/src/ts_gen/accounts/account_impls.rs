@@ -1,11 +1,9 @@
 use crate::models::{
-    Account, Argument, CopyType, Either, MaybeUninitialized, Program, Rest, SingleEither,
-    SysvarAccount, UncheckedAccount, UninitializedAccount, ZcAccount,
+    Account, Argument, Either, MaybeUninitialized, Program, Rest, SingleEither, SysvarAccount,
+    UncheckedAccount, UninitializedAccount, ZcAccount,
 };
 use crate::prelude::ProgramType;
-use crate::traits::AccountType;
-use crate::ts_gen::accounts::TsInstructionGen;
-use crate::ts_gen::types::{TsTypeGen, TsTypesCache};
+use crate::traits::{AccountType, CopyType, TsInstructionGen, TsTypeGen, TsTypesCache};
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::SysvarId;
 use std::borrow::Cow;
@@ -187,7 +185,7 @@ impl<'info> TsInstructionGen for Rest<'info> {
     }
 }
 
-impl<'info, L, R> TsInstructionGen for SingleEither<L, R> {
+impl<L, R> TsInstructionGen for SingleEither<L, R> {
     fn value_type() -> Cow<'static, str> {
         Cow::Borrowed("solana.PublicKey")
     }

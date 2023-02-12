@@ -238,10 +238,10 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
         #[cfg(feature = "ts-gen")]
         #[automatically_derived]
         #[allow(non_snake_case)]
-        pub mod #test_name {
+        mod #test_name {
             use super::*;
-            use ::fankor::prelude::ts_gen::accounts::TsInstructionGen;
-            use ::fankor::prelude::ts_gen::types::TsTypesCache;
+            use ::fankor::prelude::TsInstructionGen;
+            use ::fankor::prelude::TsTypesCache;
             use std::borrow::Cow;
 
             #[test]

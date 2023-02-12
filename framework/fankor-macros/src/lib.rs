@@ -87,6 +87,7 @@ pub fn zero_copy(input: TokenStream) -> TokenStream {
 /// - `Accounts`
 /// - `BorshSerialize`
 /// - `BorshDeserialize`
+/// - `EnumDiscriminants`
 /// - `TsGen`
 #[proc_macro_attribute]
 pub fn accounts(args: TokenStream, input: TokenStream) -> TokenStream {
@@ -105,8 +106,11 @@ pub fn accounts(args: TokenStream, input: TokenStream) -> TokenStream {
 
 /// This macro marks defines a new account implementing the traits:
 /// - `Account`
-/// - `BorshSerialize`
-/// - `BorshDeserialize`
+/// - `EnumDiscriminants` if the type is an enum.
+/// - `StructFields` if the type is an struct.
+/// - `FankorSerialize`
+/// - `FankorDeserialize`
+/// - `FankorZeroCopy`
 /// - `TsGen`
 #[proc_macro_attribute]
 pub fn account(args: TokenStream, input: TokenStream) -> TokenStream {
@@ -123,25 +127,9 @@ pub fn account(args: TokenStream, input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-/// Generates the size methods for structs and enums in order to get their minimum
-/// size and the actual size.
-#[proc_macro_derive(AccountSize)]
-pub fn account_size(input: TokenStream) -> TokenStream {
-    let input = parse_macro_input!(input as Item);
-
-    match macros::account_size::processor(input) {
-        Ok(v) => v,
-        Err(e) => e.to_compile_error().into(),
-    }
-}
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-
 /// Generates field offsets for structs and enums.
 /// The offsets are based in the fixed (minimum) size of the accounts, so having:
-/// ```ignore
+/// ```none
 /// struct Foo {
 ///     a: Vec<u8>,
 ///     b: u16,
@@ -154,12 +142,12 @@ pub fn account_size(input: TokenStream) -> TokenStream {
 /// For those cases use `actual_offset` providing an object to get the correct offset
 /// of a field inside that object.
 ///
-/// > Requires that the struct or enum has the `AccountSize` trait implemented.
-#[proc_macro_derive(AccountOffsets)]
-pub fn account_offsets(input: TokenStream) -> TokenStream {
+/// > Requires that the struct or enum has the `FankorZeroCopy` trait implemented.
+#[proc_macro_derive(FieldOffsets)]
+pub fn field_offsets(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 
-    match macros::account_offset::processor(input) {
+    match macros::field_offset::processor(input) {
         Ok(v) => v,
         Err(e) => e.to_compile_error().into(),
     }
@@ -222,7 +210,7 @@ pub fn error_code(args: TokenStream, input: TokenStream) -> TokenStream {
 /// A program consist of a set of instructions expressed as methods following one
 /// of these signatures:
 ///
-/// ```ignore
+/// ```none
 /// # Instruction without arguments
 /// fn my_instruction(context: FankorContext, account: ACCOUNT) -> Result<RESULT>;
 ///
@@ -253,8 +241,9 @@ pub fn program(args: TokenStream, input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-/// This macro executes following macros over the given type:
+/// This macro executes the following macros over the given type:
 /// - `EnumDiscriminants` if the type is an enum.
+/// - `StructFields` if the type is an struct.
 /// - `FankorSerialize`
 /// - `FankorDeserialize`
 /// - `FankorZeroCopy`

@@ -32,7 +32,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
         #[cfg(feature = "ts-gen")]
         #[automatically_derived]
         #[allow(non_snake_case)]
-        pub mod #constant_test_name {
+        mod #constant_test_name {
             use super::*;
 
             #[test]

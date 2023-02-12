@@ -1,5 +1,5 @@
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{CopyType, ZeroCopyType};
+use crate::traits::{CopyType, ZeroCopyType};
 use solana_program::account_info::AccountInfo;
 use std::any::type_name;
 
@@ -11,7 +11,7 @@ impl<'info> ZeroCopyType<'info> for () {
         Ok(((), Some(0)))
     }
 
-    fn read_byte_size_from_bytes(_bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size(_bytes: &[u8]) -> FankorResult<usize> {
         Ok(0)
     }
 }
@@ -19,7 +19,7 @@ impl<'info> ZeroCopyType<'info> for () {
 impl<'info> CopyType<'info> for () {
     type ZeroCopyType = ();
 
-    fn byte_size_from_instance(&self) -> usize {
+    fn min_byte_size() -> usize {
         0
     }
 }
@@ -50,17 +50,17 @@ macro_rules! impl_tuple {
                                     type_name: type_name::<Self>(),
                                 })?;
                         let bytes = &bytes[offset..];
-                        offset += $types::read_byte_size_from_bytes(bytes)?
+                        offset += $types::read_byte_size(bytes)?
                     }
                 )*
 
                 Ok((($($types),*), Some(offset - original_offset)))
             }
 
-            fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+            fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
                 let mut size = 0;
 
-                $(size += $types::read_byte_size_from_bytes(&bytes[size..])?;)*
+                $(size += $types::read_byte_size(&bytes[size..])?;)*
 
                 Ok(size)
             }
@@ -70,12 +70,20 @@ macro_rules! impl_tuple {
         impl<'info, $($types: CopyType<'info>),*> CopyType<'info> for ($($types),*) {
             type ZeroCopyType = ($($types::ZeroCopyType),*);
 
-            fn byte_size_from_instance(&self) -> usize {
+            fn byte_size(&self) -> usize {
                 let mut size = 0;
 
                 let ($($types),*) = self;
 
-                $(size += $types.byte_size_from_instance();)*
+                $(size += $types.byte_size();)*
+
+                size
+            }
+
+            fn min_byte_size() -> usize {
+                let mut size = 0;
+
+                $(size += <$types>::min_byte_size();)*
 
                 size
             }

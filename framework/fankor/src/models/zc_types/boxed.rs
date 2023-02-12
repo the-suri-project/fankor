@@ -1,5 +1,5 @@
 use crate::errors::FankorResult;
-use crate::models::{CopyType, ZeroCopyType};
+use crate::traits::{CopyType, ZeroCopyType};
 use solana_program::account_info::AccountInfo;
 
 impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for Box<T> {
@@ -9,16 +9,21 @@ impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for Box<T> {
     }
 
     #[inline(always)]
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
-        T::read_byte_size_from_bytes(bytes)
+    fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
+        T::read_byte_size(bytes)
     }
 }
 
 impl<'info, T: CopyType<'info>> CopyType<'info> for Box<T> {
     type ZeroCopyType = T::ZeroCopyType;
 
-    fn byte_size_from_instance(&self) -> usize {
+    fn byte_size(&self) -> usize {
         let aux: &T = self;
-        aux.byte_size_from_instance()
+        aux.byte_size()
+    }
+
+    fn min_byte_size() -> usize {
+        // Prevents infinite recursion.
+        0
     }
 }

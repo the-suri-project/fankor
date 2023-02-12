@@ -1,4 +1,3 @@
-use crate::traits::AccountSize;
 use borsh::{BorshDeserialize, BorshSerialize};
 use std::fmt::Debug;
 use std::io::Write;
@@ -131,22 +130,6 @@ impl<T: BorshDeserialize, const N: usize> BorshDeserialize for FnkArray<T, N> {
 
         // SAFETY: The elements up to `i` have been initialized in `fill_buffer`.
         Ok(FnkArray(unsafe { result.transmute_to_array() }))
-    }
-}
-
-impl<T: AccountSize, const N: usize> AccountSize for FnkArray<T, N> {
-    fn min_account_size() -> usize {
-        T::min_account_size() * N
-    }
-
-    fn actual_account_size(&self) -> usize {
-        let mut size = 0;
-
-        for v in &self.0 {
-            size += v.actual_account_size();
-        }
-
-        size
     }
 }
 

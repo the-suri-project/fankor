@@ -1,11 +1,9 @@
 use crate::prelude::{FnkRange, FnkURange};
+use crate::traits::{CopyType, ZeroCopyType};
 use crate::{
     errors::FankorErrorCode,
     errors::FankorResult,
-    models::CopyType,
-    models::ZeroCopyType,
     prelude::{FnkInt, FnkUInt},
-    traits::AccountSize,
 };
 use borsh::BorshDeserialize;
 use solana_program::account_info::AccountInfo;
@@ -24,9 +22,9 @@ impl<'info> ZeroCopyType<'info> for FnkURange {
         Ok((value, Some(initial_size - bytes.len())))
     }
 
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
-        let mut size = FnkUInt::read_byte_size_from_bytes(bytes)?;
-        size += FnkUInt::read_byte_size_from_bytes(&bytes[size..])?;
+    fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
+        let mut size = FnkUInt::read_byte_size(bytes)?;
+        size += FnkUInt::read_byte_size(&bytes[size..])?;
 
         Ok(size)
     }
@@ -35,8 +33,14 @@ impl<'info> ZeroCopyType<'info> for FnkURange {
 impl<'info> CopyType<'info> for FnkURange {
     type ZeroCopyType = FnkURange;
 
-    fn byte_size_from_instance(&self) -> usize {
-        self.actual_account_size()
+    fn byte_size(&self) -> usize {
+        let (point, length) = self.point_and_length();
+
+        point.byte_size() + length.byte_size()
+    }
+
+    fn min_byte_size() -> usize {
+        FnkUInt::min_byte_size() + FnkInt::min_byte_size()
     }
 }
 
@@ -58,9 +62,9 @@ impl<'info> ZeroCopyType<'info> for FnkRange {
         Ok((value, Some(initial_size - bytes.len())))
     }
 
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
-        let mut size = FnkInt::read_byte_size_from_bytes(bytes)?;
-        size += FnkInt::read_byte_size_from_bytes(&bytes[size..])?;
+    fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
+        let mut size = FnkInt::read_byte_size(bytes)?;
+        size += FnkInt::read_byte_size(&bytes[size..])?;
 
         Ok(size)
     }
@@ -69,7 +73,11 @@ impl<'info> ZeroCopyType<'info> for FnkRange {
 impl<'info> CopyType<'info> for FnkRange {
     type ZeroCopyType = FnkRange;
 
-    fn byte_size_from_instance(&self) -> usize {
-        self.actual_account_size()
+    fn byte_size(&self) -> usize {
+        self.from().byte_size() + self.to().byte_size()
+    }
+
+    fn min_byte_size() -> usize {
+        FnkInt::min_byte_size() * 2
     }
 }

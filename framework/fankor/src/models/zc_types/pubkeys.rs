@@ -1,6 +1,5 @@
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{CopyType, ZeroCopyType};
-use crate::traits::AccountSize;
+use crate::traits::{CopyType, ZeroCopyType};
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 use std::mem::size_of;
@@ -26,7 +25,7 @@ impl<'info> ZeroCopyType<'info> for Pubkey {
         Ok((Pubkey::from(bytes), Some(size)))
     }
 
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
         let size = size_of::<Pubkey>();
 
         if bytes.len() < size {
@@ -43,7 +42,7 @@ impl<'info> ZeroCopyType<'info> for Pubkey {
 impl<'info> CopyType<'info> for Pubkey {
     type ZeroCopyType = Pubkey;
 
-    fn byte_size_from_instance(&self) -> usize {
-        self.actual_account_size()
+    fn min_byte_size() -> usize {
+        size_of::<[u8; 32]>()
     }
 }

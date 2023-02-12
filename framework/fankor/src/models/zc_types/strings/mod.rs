@@ -4,8 +4,7 @@ use std::mem::size_of;
 mod fnk;
 
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{CopyType, ZeroCopyType};
-use crate::traits::AccountSize;
+use crate::traits::{CopyType, ZeroCopyType};
 use borsh::BorshDeserialize;
 use solana_program::account_info::AccountInfo;
 
@@ -19,7 +18,7 @@ impl<'info> ZeroCopyType<'info> for ZcString<'info> {
         Ok((ZcString { info, offset }, None))
     }
 
-    fn read_byte_size_from_bytes(mut bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size(mut bytes: &[u8]) -> FankorResult<usize> {
         let length = u32::deserialize(&mut bytes)?;
         Ok(length as usize + size_of::<u32>())
     }
@@ -28,8 +27,13 @@ impl<'info> ZeroCopyType<'info> for ZcString<'info> {
 impl<'info> CopyType<'info> for String {
     type ZeroCopyType = ZcString<'info>;
 
-    fn byte_size_from_instance(&self) -> usize {
-        self.actual_account_size()
+    fn byte_size(&self) -> usize {
+        size_of::<u32>() // Length
+            + self.as_bytes().len()
+    }
+
+    fn min_byte_size() -> usize {
+        size_of::<u32>() // Length
     }
 }
 
@@ -123,7 +127,7 @@ mod test {
     #[test]
     fn test_read_byte_length() {
         let vector = vec![5, 0, 0, 0, 1, 2, 3, 4, 5, 99, 99, 99];
-        let size = ZcString::read_byte_size_from_bytes(&vector).unwrap();
+        let size = ZcString::read_byte_size(&vector).unwrap();
 
         assert_eq!(size, size_of::<u32>() + 5 * size_of::<u8>());
     }

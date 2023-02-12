@@ -13,34 +13,11 @@ pub mod tuples;
 pub mod vec;
 
 use crate::errors::{FankorErrorCode, FankorResult};
+use crate::traits::{CopyType, ZeroCopyType};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use std::cmp::Ordering;
-use std::io::{Cursor, Read, Write};
-
-pub trait ZeroCopyType<'info>: Sized {
-    // CONSTRUCTORS -----------------------------------------------------------
-
-    fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)>;
-
-    // STATIC METHODS ---------------------------------------------------------
-
-    /// Returns the size of the type in bytes.
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize>;
-}
-
-pub trait CopyType<'info>: Sized {
-    type ZeroCopyType: ZeroCopyType<'info>;
-
-    // METHODS ----------------------------------------------------------------
-
-    /// Returns the size of the type in bytes from an instance.
-    fn byte_size_from_instance(&self) -> usize;
-}
-
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
-// ----------------------------------------------------------------------------
+use std::io::{Cursor, Write};
 
 /// A wrapper around a `T` that implements `ZeroCopyType`.
 pub struct Zc<'info, T: CopyType<'info>> {
@@ -85,7 +62,7 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
                     type_name: std::any::type_name::<Self>(),
                 })?;
         let bytes = &bytes[self.offset..];
-        T::ZeroCopyType::read_byte_size_from_bytes(bytes)
+        T::ZeroCopyType::read_byte_size(bytes)
     }
 
     /// Reverses `length` bytes from the current offset expading the buffer and moving
@@ -133,7 +110,7 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
         })?;
 
         let bytes = &mut original_bytes[self.offset..];
-        let value_size = T::ZeroCopyType::read_byte_size_from_bytes(bytes)?;
+        let value_size = T::ZeroCopyType::read_byte_size(bytes)?;
 
         drop(original_bytes);
 
@@ -353,8 +330,8 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
                     type_name: std::any::type_name::<Self>(),
                 })?;
         let bytes = &original_bytes[self.offset..];
-        let previous_size = T::ZeroCopyType::read_byte_size_from_bytes(bytes)?;
-        let new_size = value.byte_size_from_instance();
+        let previous_size = T::ZeroCopyType::read_byte_size(bytes)?;
+        let new_size = value.byte_size();
 
         drop(original_bytes);
 

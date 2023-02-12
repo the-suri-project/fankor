@@ -1,5 +1,5 @@
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{CopyType, ZeroCopyType};
+use crate::traits::{CopyType, ZeroCopyType};
 use solana_program::account_info::AccountInfo;
 use solana_program::program_option::COption;
 use std::any::type_name;
@@ -35,7 +35,7 @@ impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for Option<T> {
         Ok(result)
     }
 
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
         if bytes.is_empty() {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: type_name::<Self>(),
@@ -47,7 +47,7 @@ impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for Option<T> {
         let flag = bytes[0];
 
         if flag != 0 {
-            size += T::read_byte_size_from_bytes(&bytes[1..])?;
+            size += T::read_byte_size(&bytes[1..])?;
         }
 
         Ok(size)
@@ -57,11 +57,16 @@ impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for Option<T> {
 impl<'info, T: CopyType<'info>> CopyType<'info> for Option<T> {
     type ZeroCopyType = Option<T::ZeroCopyType>;
 
-    fn byte_size_from_instance(&self) -> usize {
-        match self {
-            None => 1,
-            Some(v) => 1 + v.byte_size_from_instance(),
+    fn byte_size(&self) -> usize {
+        size_of::<u8>() // Discriminant
+            + match self {
+            Some(v) => v.byte_size(),
+            None => 0
         }
+    }
+
+    fn min_byte_size() -> usize {
+        size_of::<u8>() // Discriminant
     }
 }
 
@@ -101,7 +106,7 @@ impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for COption<T> {
         Ok(result)
     }
 
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
         let mut size = size_of::<u32>();
 
         if bytes.len() < size {
@@ -114,7 +119,7 @@ impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for COption<T> {
         let flag = u32::from_le_bytes(bytes[..size].try_into().unwrap());
 
         if flag != 0 {
-            size += T::read_byte_size_from_bytes(&bytes[size..])?;
+            size += T::read_byte_size(&bytes[size..])?;
         }
 
         Ok(size)
@@ -124,10 +129,14 @@ impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for COption<T> {
 impl<'info, T: CopyType<'info>> CopyType<'info> for COption<T> {
     type ZeroCopyType = Option<T::ZeroCopyType>;
 
-    fn byte_size_from_instance(&self) -> usize {
+    fn byte_size(&self) -> usize {
         match self {
             COption::None => size_of::<u32>(),
-            COption::Some(v) => size_of::<u32>() + v.byte_size_from_instance(),
+            COption::Some(v) => size_of::<u32>() + v.byte_size(),
         }
+    }
+
+    fn min_byte_size() -> usize {
+        size_of::<u32>() // Discriminant
     }
 }

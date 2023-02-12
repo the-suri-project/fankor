@@ -1,5 +1,4 @@
 use crate::prelude::FnkUInt;
-use crate::traits::AccountSize;
 use borsh::{BorshDeserialize, BorshSerialize};
 use std::collections::BTreeMap;
 use std::io::{ErrorKind, Write};
@@ -101,24 +100,6 @@ impl<K: BorshDeserialize + Ord + core::hash::Hash, T: BorshDeserialize> BorshDes
         }
 
         Ok(FnkMap::new(map))
-    }
-}
-
-impl<K: AccountSize, T: AccountSize> AccountSize for FnkMap<K, T> {
-    fn min_account_size() -> usize {
-        FnkUInt::min_account_size()
-    }
-
-    fn actual_account_size(&self) -> usize {
-        let length = FnkUInt::from(self.0.len() as u64);
-        let mut size = length.actual_account_size();
-
-        for (k, v) in &self.0 {
-            size += k.actual_account_size();
-            size += v.actual_account_size();
-        }
-
-        size
     }
 }
 

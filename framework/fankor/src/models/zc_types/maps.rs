@@ -1,7 +1,8 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::zc_types::vec::Iter;
-use crate::models::{CopyType, Zc, ZeroCopyType};
+use crate::models::Zc;
 use crate::prelude::{FnkMap, FnkUInt};
+use crate::traits::{CopyType, ZeroCopyType};
 use borsh::BorshDeserialize;
 use solana_program::account_info::AccountInfo;
 use std::marker::PhantomData;
@@ -26,14 +27,14 @@ impl<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> ZeroCopyType<'info>
         ))
     }
 
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
         let mut bytes2 = bytes;
         let len = FnkUInt::deserialize(&mut bytes2)?;
         let mut size = bytes.len() - bytes2.len();
 
         for _ in 0..len.0 {
-            size += K::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
-            size += V::ZeroCopyType::read_byte_size_from_bytes(&bytes[size..])?;
+            size += K::ZeroCopyType::read_byte_size(&bytes[size..])?;
+            size += V::ZeroCopyType::read_byte_size(&bytes[size..])?;
         }
 
         Ok(size)
@@ -43,18 +44,20 @@ impl<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> ZeroCopyType<'info>
 impl<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> CopyType<'info> for FnkMap<K, V> {
     type ZeroCopyType = ZcFnkMap<'info, K, V>;
 
-    fn byte_size_from_instance(&self) -> usize {
-        let mut size = 0;
-
-        let len = FnkUInt::from(self.len() as u64);
-        size += len.byte_size_from_instance();
+    fn byte_size(&self) -> usize {
+        let length = FnkUInt::from(self.0.len() as u64);
+        let mut size = length.byte_size();
 
         for (k, v) in &self.0 {
-            size += k.byte_size_from_instance();
-            size += v.byte_size_from_instance();
+            size += k.byte_size();
+            size += v.byte_size();
         }
 
         size
+    }
+
+    fn min_byte_size() -> usize {
+        FnkUInt::min_byte_size()
     }
 }
 

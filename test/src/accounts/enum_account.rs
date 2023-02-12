@@ -1,7 +1,7 @@
 use fankor::prelude::*;
 
 #[fankor_base]
-#[derive(AccountSize, AccountOffsets)]
+#[derive(FieldOffsets)]
 pub enum EnumAccountData {
     A,
     B(u32),

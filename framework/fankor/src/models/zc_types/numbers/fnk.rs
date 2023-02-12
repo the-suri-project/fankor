@@ -1,7 +1,6 @@
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{CopyType, ZeroCopyType};
 use crate::prelude::{FnkInt, FnkUInt};
-use crate::traits::AccountSize;
+use crate::traits::{CopyType, ZeroCopyType};
 use borsh::BorshDeserialize;
 use solana_program::account_info::AccountInfo;
 
@@ -19,7 +18,7 @@ impl<'info> ZeroCopyType<'info> for FnkInt {
         Ok((value, Some(initial_size - bytes.len())))
     }
 
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
         if bytes.is_empty() {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: "FnkInt",
@@ -74,8 +73,36 @@ impl<'info> ZeroCopyType<'info> for FnkInt {
 impl<'info> CopyType<'info> for FnkInt {
     type ZeroCopyType = FnkInt;
 
-    fn byte_size_from_instance(&self) -> usize {
-        self.actual_account_size()
+    fn byte_size(&self) -> usize {
+        const FLAG_ENCODING_LIMIT: u64 = 1 << 13; // 2^13
+        let number = self.0.unsigned_abs();
+
+        if number < FLAG_ENCODING_LIMIT {
+            // Flag encoding.
+            if number >> 5 != 0 {
+                2
+            } else {
+                1
+            }
+        } else {
+            // Length encoding.
+            let mut byte_length = 9; // 8 bytes + 1 byte for length.
+            let bytes = number.to_le_bytes();
+
+            for i in (1..8).rev() {
+                if bytes[i] != 0 {
+                    break;
+                }
+
+                byte_length -= 1;
+            }
+
+            byte_length
+        }
+    }
+
+    fn min_byte_size() -> usize {
+        1
     }
 }
 
@@ -97,7 +124,7 @@ impl<'info> ZeroCopyType<'info> for FnkUInt {
         Ok((value, Some(initial_size - bytes.len())))
     }
 
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
         if bytes.is_empty() {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: "FnkUInt",
@@ -152,8 +179,34 @@ impl<'info> ZeroCopyType<'info> for FnkUInt {
 impl<'info> CopyType<'info> for FnkUInt {
     type ZeroCopyType = FnkUInt;
 
-    fn byte_size_from_instance(&self) -> usize {
-        self.actual_account_size()
+    fn byte_size(&self) -> usize {
+        const FLAG_ENCODING_LIMIT: u64 = 1 << 14; // 2^14
+        if self.0 < FLAG_ENCODING_LIMIT {
+            // Flag encoding.
+            if self.0 >> 6 != 0 {
+                2
+            } else {
+                1
+            }
+        } else {
+            // Length encoding.
+            let mut byte_length = 9; // 8 bytes + 1 byte for length.
+            let bytes = self.0.to_le_bytes();
+
+            for i in (1..8).rev() {
+                if bytes[i] != 0 {
+                    break;
+                }
+
+                byte_length -= 1;
+            }
+
+            byte_length
+        }
+    }
+
+    fn min_byte_size() -> usize {
+        1
     }
 }
 
@@ -168,7 +221,7 @@ mod test {
     use std::io::Cursor;
 
     #[test]
-    fn test_signed_read_byte_size_from_bytes() {
+    fn test_signed_read_byte_size() {
         for number in [
             0i64,
             1,
@@ -217,8 +270,8 @@ mod test {
                 .unwrap_or_else(|_| panic!("Failed to serialize for {}", number));
 
             assert_eq!(
-                FnkInt::read_byte_size_from_bytes(&buffer).expect("Cannot read byte size"),
-                fnk_number.actual_account_size(),
+                FnkInt::read_byte_size(&buffer).expect("Cannot read byte size"),
+                fnk_number.byte_size(),
                 "Incorrect result for {}",
                 number
             );
@@ -226,7 +279,7 @@ mod test {
     }
 
     #[test]
-    fn test_unsigned_read_byte_size_from_bytes() {
+    fn test_unsigned_read_byte_size() {
         for number in [
             0u64,
             1,
@@ -255,8 +308,8 @@ mod test {
                 .unwrap_or_else(|_| panic!("Failed to serialize for {}", number));
 
             assert_eq!(
-                FnkUInt::read_byte_size_from_bytes(&buffer).expect("Cannot read byte size"),
-                fnk_number.actual_account_size(),
+                FnkUInt::read_byte_size(&buffer).expect("Cannot read byte size"),
+                fnk_number.byte_size(),
                 "Incorrect result for {}",
                 number
             );

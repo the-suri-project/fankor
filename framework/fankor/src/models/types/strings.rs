@@ -1,5 +1,4 @@
 use crate::models::types::unsigned::FnkUInt;
-use crate::traits::AccountSize;
 use borsh::{BorshDeserialize, BorshSerialize};
 use std::borrow::Cow;
 use std::fmt::Display;
@@ -121,17 +120,6 @@ impl<'a> BorshDeserialize for FnkString<'a> {
 
         *buf = &buf[length..];
         Ok(result)
-    }
-}
-
-impl<'a> AccountSize for FnkString<'a> {
-    fn min_account_size() -> usize {
-        FnkUInt::min_account_size()
-    }
-
-    fn actual_account_size(&self) -> usize {
-        let length = FnkUInt::from(self.0.len() as u64);
-        length.actual_account_size() + self.0.len()
     }
 }
 

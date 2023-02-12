@@ -1,7 +1,7 @@
 use crate::errors::{Error, FankorErrorCode, FankorResult};
-use crate::models::{CopyType, FankorContext, FankorContextExitAction, Program, System, ZcAccount};
+use crate::models::{FankorContext, FankorContextExitAction, Program, System, ZcAccount};
 use crate::prelude::AccountInfoVerification;
-use crate::traits::{AccountSize, AccountType, Instruction, PdaChecker, SingleInstructionAccount};
+use crate::traits::{AccountType, CopyType, Instruction, PdaChecker, SingleInstructionAccount};
 use crate::utils::bpf_writer::BpfWriter;
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
@@ -432,6 +432,23 @@ impl<'info, T: AccountType> Account<'info, T> {
 }
 
 impl<'info, T: AccountType + CopyType<'info>> Account<'info, T> {
+    // GETTERS ----------------------------------------------------------------
+
+    /// Whether the account has enough lamports to be rent-exempt or not.
+    ///
+    /// This is the same as [`is_rent_exempt`] but gets the byte size from the value instead
+    /// of the written bytes in the account. Useful to check if the new value fits in the existing
+    /// space.
+    pub fn is_value_rent_exempt(&self) -> bool {
+        let info = self.info();
+        let lamports = info.lamports();
+        let data_len = self.data.byte_size() + 1 /* account discriminant */;
+
+        let rent = Rent::get().expect("Cannot access Rent Sysvar");
+
+        rent.is_exempt(lamports, data_len)
+    }
+
     // METHODS ----------------------------------------------------------------
 
     /// Serializes the value and creates a new zc account.
@@ -445,27 +462,6 @@ impl<'info, T: AccountType + CopyType<'info>> Account<'info, T> {
 
         Ok(new_account)
     }
-}
-
-impl<'info, T: AccountType + AccountSize> Account<'info, T> {
-    // GETTERS ----------------------------------------------------------------
-
-    /// Whether the account has enough lamports to be rent-exempt or not.
-    ///
-    /// This is the same as [`is_rent_exempt`] but gets the byte size from the value instead
-    /// of the written bytes in the account. Useful to check if the new value fits in the existing
-    /// space.
-    pub fn is_value_rent_exempt(&self) -> bool {
-        let info = self.info();
-        let lamports = info.lamports();
-        let data_len = self.data.actual_account_size() + 1 /* account discriminant */;
-
-        let rent = Rent::get().expect("Cannot access Rent Sysvar");
-
-        rent.is_exempt(lamports, data_len)
-    }
-
-    // METHODS ----------------------------------------------------------------
 
     /// Reallocates the account to the actual account `data` size plus the discriminant
     /// length. If a `payer` is provided, fankor will add funds to the account to make it
@@ -477,7 +473,7 @@ impl<'info, T: AccountType + AccountSize> Account<'info, T> {
         system_program: &Program<System>,
     ) -> FankorResult<()> {
         self.realloc_unchecked(
-            self.data.actual_account_size() + 1, /* account discriminant */
+            self.data.byte_size() + 1, /* account discriminant */
             zero_bytes,
             payer,
             system_program,
@@ -516,7 +512,7 @@ impl<'info, T: AccountType + AccountSize> Account<'info, T> {
             .into());
         }
 
-        let new_size = self.data.actual_account_size() + 1 /* account discriminant */;
+        let new_size = self.data.byte_size() + 1 /* account discriminant */;
         make_rent_exempt(new_size, payer, self.info, system_program)
     }
 }

@@ -1,6 +1,7 @@
 use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{Zc, ZeroCopyType};
+use crate::models::Zc;
 use crate::prelude::{CopyType, FnkBVec, Node, MAX_HEIGHT};
+use crate::traits::ZeroCopyType;
 use crate::utils::bpf_writer::BpfWriter;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
@@ -1076,7 +1077,7 @@ impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZeroCopyType<'info> for ZcFn
         ))
     }
 
-    fn read_byte_size_from_bytes(bytes: &[u8]) -> FankorResult<usize> {
+    fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
         let mut bytes2 = bytes;
         let size = u16::deserialize(&mut bytes2)?;
 
@@ -1091,9 +1092,13 @@ impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZeroCopyType<'info> for ZcFn
 impl<'info, K: CopyType<'info>, V: CopyType<'info>> CopyType<'info> for FnkBVec<K, V> {
     type ZeroCopyType = ZcFnkBVec<'info, K, V>;
 
-    fn byte_size_from_instance(&self) -> usize {
+    fn byte_size(&self) -> usize {
         // Size field + root position + nodes
         size_of::<u16>() + size_of::<u16>() + self.len() * Node::<K, V>::byte_size()
+    }
+
+    fn min_byte_size() -> usize {
+        size_of::<u16>() * 2
     }
 }
 

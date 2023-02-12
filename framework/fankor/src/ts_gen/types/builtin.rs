@@ -1,4 +1,4 @@
-use crate::ts_gen::types::{TsTypeGen, TsTypesCache};
+use crate::traits::{TsTypeGen, TsTypesCache};
 use solana_program::pubkey::Pubkey;
 use solana_sdk::signature::Keypair;
 use std::any::{Any, TypeId};

@@ -1,4 +1,3 @@
-use crate::traits::AccountSize;
 use borsh::{BorshDeserialize, BorshSerialize};
 use std::fmt::Display;
 use std::io::{ErrorKind, Write};
@@ -267,37 +266,6 @@ impl BorshDeserialize for FnkUInt {
     }
 }
 
-impl AccountSize for FnkUInt {
-    fn min_account_size() -> usize {
-        1
-    }
-
-    fn actual_account_size(&self) -> usize {
-        if self.0 < FLAG_ENCODING_LIMIT {
-            // Flag encoding.
-            if self.0 >> 6 != 0 {
-                2
-            } else {
-                1
-            }
-        } else {
-            // Length encoding.
-            let mut byte_length = 9; // 8 bytes + 1 byte for length.
-            let bytes = self.0.to_le_bytes();
-
-            for i in (1..8).rev() {
-                if bytes[i] != 0 {
-                    break;
-                }
-
-                byte_length -= 1;
-            }
-
-            byte_length
-        }
-    }
-}
-
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
@@ -305,6 +273,7 @@ impl AccountSize for FnkUInt {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::traits::CopyType;
     use std::io::Cursor;
 
     #[test]
@@ -354,7 +323,7 @@ mod test {
                 .unwrap_or_else(|_| panic!("Failed to serialize for {}", number));
 
             assert_eq!(buffer, vec![number]);
-            assert_eq!(fnk_number.actual_account_size(), 1);
+            assert_eq!(fnk_number.byte_size(), 1);
         }
     }
 
@@ -374,7 +343,7 @@ mod test {
             assert_eq!(buffer.len(), 2);
             assert_eq!(buffer[0], first_byte);
             assert_eq!(buffer[1], second_byte);
-            assert_eq!(fnk_number.actual_account_size(), 2);
+            assert_eq!(fnk_number.byte_size(), 2);
         }
     }
 
@@ -394,7 +363,7 @@ mod test {
             assert_eq!(buffer.len(), num_bytes + 1);
             assert_eq!(buffer[0], length);
             assert_eq!(&buffer[1..], &number.to_le_bytes()[..num_bytes]);
-            assert_eq!(fnk_number.actual_account_size(), num_bytes + 1);
+            assert_eq!(fnk_number.byte_size(), num_bytes + 1);
         }
 
         // Rest
@@ -414,7 +383,7 @@ mod test {
                 assert_eq!(buffer.len(), num_bytes + 1);
                 assert_eq!(buffer[0], length);
                 assert_eq!(&buffer[1..], &number.to_le_bytes()[..num_bytes]);
-                assert_eq!(fnk_number.actual_account_size(), num_bytes + 1);
+                assert_eq!(fnk_number.byte_size(), num_bytes + 1);
             }
         }
     }
