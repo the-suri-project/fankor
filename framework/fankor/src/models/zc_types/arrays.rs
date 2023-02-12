@@ -5,6 +5,7 @@ use crate::prelude::FnkArray;
 use crate::traits::{CopyType, ZeroCopyType};
 use solana_program::account_info::AccountInfo;
 use std::marker::PhantomData;
+use std::mem::size_of;
 
 pub struct ZcFnkArray<'info, T: CopyType<'info>, const N: usize> {
     info: &'info AccountInfo<'info>,
@@ -27,8 +28,14 @@ impl<'info, T: CopyType<'info>, const N: usize> ZeroCopyType<'info> for ZcFnkArr
     fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
         let mut size = 0;
 
-        for _ in 0..N {
-            size += T::ZeroCopyType::read_byte_size(&bytes[size..])?;
+        match size_of::<T>() {
+            0 => {}
+            1 => size += N,
+            _ => {
+                for _ in 0..N {
+                    size += T::ZeroCopyType::read_byte_size(&bytes[size..])?;
+                }
+            }
         }
 
         Ok(size)

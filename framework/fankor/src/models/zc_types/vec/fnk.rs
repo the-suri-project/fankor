@@ -6,6 +6,7 @@ use crate::traits::{CopyType, ZeroCopyType};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use std::marker::PhantomData;
+use std::mem::size_of;
 
 pub struct ZcFnkVec<'info, T: CopyType<'info>> {
     info: &'info AccountInfo<'info>,
@@ -30,8 +31,18 @@ impl<'info, T: CopyType<'info>> ZeroCopyType<'info> for ZcFnkVec<'info, T> {
         let len = FnkUInt::deserialize(&mut bytes2)?;
         let mut size = bytes.len() - bytes2.len();
 
-        for _ in 0..len.0 {
-            size += T::ZeroCopyType::read_byte_size(&bytes[size..])?;
+        match size_of::<T>() {
+            0 => {}
+            1 => {
+                size += len
+                    .get_usize()
+                    .ok_or(FankorErrorCode::ZeroCopyLengthFieldOverflow)?
+            }
+            _ => {
+                for _ in 0..len.0 {
+                    size += T::ZeroCopyType::read_byte_size(&bytes[size..])?;
+                }
+            }
         }
 
         Ok(size)

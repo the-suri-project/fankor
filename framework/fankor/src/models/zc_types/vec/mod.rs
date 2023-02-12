@@ -34,8 +34,14 @@ impl<'info, T: CopyType<'info>> ZeroCopyType<'info> for ZcVec<'info, T> {
         let len = u32::deserialize(&mut bytes2)?;
         let mut size = size_of::<u32>();
 
-        for _ in 0..len {
-            size += T::ZeroCopyType::read_byte_size(&bytes[size..])?;
+        match size_of::<T>() {
+            0 => {}
+            1 => size += len as usize,
+            _ => {
+                for _ in 0..len {
+                    size += T::ZeroCopyType::read_byte_size(&bytes[size..])?;
+                }
+            }
         }
 
         Ok(size)
