@@ -109,6 +109,35 @@ impl<'info, T: CopyType<'info>> ZcVec<'info, T> {
         Ok(None)
     }
 
+    /// Retains only the elements specified by the predicate.
+    ///
+    /// # Safety
+    ///
+    /// DO NOT WRITE TO THE ACCOUNT WHILE INSIDE THE PREDICATE.
+    pub fn retain<F>(&self, mut f: F) -> FankorResult<()>
+    where
+        F: FnMut(&Zc<T>) -> FankorResult<bool>,
+    {
+        let mut offset = self.offset + size_of::<u32>();
+        let mut length = self.len()?;
+
+        #[allow(clippy::mut_range_bound)]
+        for _ in 0..length {
+            let zc = Zc::<T>::new_unchecked(self.info, offset);
+
+            if !f(&zc)? {
+                zc.remove_unchecked()?;
+                length -= 1;
+            } else {
+                offset += zc.byte_size()?;
+            }
+        }
+
+        self.write_len_unchecked(length as u32)?;
+
+        Ok(())
+    }
+
     pub fn iter(&self) -> Iter<'info, T> {
         let bytes = (*self.info.data).borrow();
         let mut bytes = &bytes[self.offset..];

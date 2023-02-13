@@ -1,7 +1,7 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::zc_types::vec::Iter;
 use crate::models::Zc;
-use crate::prelude::{FnkUInt, FnkVec};
+use crate::prelude::{FnkMap, FnkSet, FnkUInt, FnkVec};
 use crate::traits::{CopyType, ZeroCopyType};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
@@ -70,6 +70,45 @@ impl<'info, T: CopyType<'info>> CopyType<'info> for FnkVec<T> {
     }
 }
 
+impl<'info, T: CopyType<'info> + Ord> CopyType<'info> for FnkSet<T> {
+    type ZeroCopyType = ZcFnkVec<'info, T>;
+
+    fn byte_size(&self) -> usize {
+        let length = FnkUInt::from(self.0.len() as u64);
+        let mut size = length.byte_size();
+
+        for v in &self.0 {
+            size += v.byte_size();
+        }
+
+        size
+    }
+
+    fn min_byte_size() -> usize {
+        FnkUInt::min_byte_size()
+    }
+}
+
+impl<'info, K: CopyType<'info> + Ord, V: CopyType<'info>> CopyType<'info> for FnkMap<K, V> {
+    type ZeroCopyType = ZcFnkVec<'info, (K, V)>;
+
+    fn byte_size(&self) -> usize {
+        let length = FnkUInt::from(self.0.len() as u64);
+        let mut size = length.byte_size();
+
+        for (k, v) in &self.0 {
+            size += k.byte_size();
+            size += v.byte_size();
+        }
+
+        size
+    }
+
+    fn min_byte_size() -> usize {
+        FnkUInt::min_byte_size()
+    }
+}
+
 impl<'info, T: CopyType<'info>> ZcFnkVec<'info, T> {
     // GETTERS ----------------------------------------------------------------
 
@@ -117,6 +156,44 @@ impl<'info, T: CopyType<'info>> ZcFnkVec<'info, T> {
         }
 
         Ok(None)
+    }
+
+    /// Retains only the elements specified by the predicate.
+    ///
+    /// # Safety
+    ///
+    /// DO NOT WRITE TO THE ACCOUNT WHILE INSIDE THE PREDICATE.
+    pub fn retain<F>(&self, mut f: F) -> FankorResult<()>
+    where
+        F: FnMut(&Zc<T>) -> FankorResult<bool>,
+    {
+        let mut offset = self.offset;
+        let mut length = {
+            let original_bytes = (*self.info.data).borrow();
+            let mut bytes = &original_bytes[self.offset..];
+            let len = FnkUInt::deserialize(&mut bytes)?;
+
+            offset += original_bytes.len() - bytes.len();
+
+            len.get_usize()
+                .ok_or(FankorErrorCode::ZeroCopyLengthFieldOverflow)?
+        };
+
+        #[allow(clippy::mut_range_bound)]
+        for _ in 0..length {
+            let zc = Zc::<T>::new_unchecked(self.info, offset);
+
+            if !f(&zc)? {
+                zc.remove_unchecked()?;
+                length -= 1;
+            } else {
+                offset += zc.byte_size()?;
+            }
+        }
+
+        self.write_len_unchecked(FnkUInt::from(length as u64))?;
+
+        Ok(())
     }
 
     pub fn iter(&self) -> Iter<'info, T> {
