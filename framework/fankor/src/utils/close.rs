@@ -34,6 +34,8 @@ pub(crate) fn close_account<'info>(
 
     // Close the account.
     info.assign(&system_program::ID);
+
+    #[cfg(any(feature = "test", test))]
     info.realloc(0, false)?;
 
     context.remove_exit_action(info);

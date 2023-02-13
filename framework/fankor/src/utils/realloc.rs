@@ -13,6 +13,7 @@ pub(crate) fn realloc_account_to_size<'info>(
     info: &AccountInfo<'info>,
     payer: Option<&AccountInfo<'info>>,
 ) -> FankorResult<()> {
+    #[cfg(any(feature = "test", test))]
     info.realloc(size, zero_bytes)?;
 
     if let Some(payer) = payer {

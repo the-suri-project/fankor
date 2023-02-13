@@ -79,6 +79,8 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
 
         // Reallocate the buffer
         let original_len = self.info.data_len();
+
+        #[cfg(any(feature = "test", test))]
         self.info.realloc(original_len + length, false)?;
 
         // Shift bytes
@@ -144,6 +146,7 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
         let original_length = original_bytes.len();
         drop(original_bytes);
 
+        #[cfg(any(feature = "test", test))]
         self.info.realloc(original_length - length, false)?;
 
         Ok(())
@@ -198,6 +201,7 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
                 // Reallocate the buffer
                 drop(original_bytes);
 
+                #[cfg(any(feature = "test", test))]
                 self.info.realloc(original_len - diff, false)?;
             }
             Ordering::Equal => {
@@ -214,6 +218,8 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
             Ordering::Greater => {
                 // Reallocate the buffer
                 let diff = new_size - previous_size;
+
+                #[cfg(any(feature = "test", test))]
                 self.info.realloc(original_len + diff, false)?;
 
                 // Shift bytes
@@ -404,6 +410,7 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
                 // Reallocate the buffer
                 drop(original_bytes);
 
+                #[cfg(any(feature = "test", test))]
                 self.info.realloc(original_len - diff, false)?;
             }
             Ordering::Equal => {
@@ -420,6 +427,8 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
             Ordering::Greater => {
                 // Reallocate the buffer
                 let diff = new_size - previous_size;
+
+                #[cfg(any(feature = "test", test))]
                 self.info.realloc(original_len + diff, false)?;
 
                 // Shift bytes
