@@ -283,6 +283,46 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
 
         Ok(())
     }
+
+    /// Appends the bytes of this element to a vector.
+    /// This method is used to map the bytes of one element to another.
+    ///
+    /// # Safety
+    /// This method can fail if the element does not fit in `buffer`.
+    pub fn append_to_vec(&self, buffer: &mut Vec<u8>) -> FankorResult<()> {
+        let size = {
+            let original_bytes = self.info.data.try_borrow().map_err(|_| {
+                FankorErrorCode::ZeroCopyPossibleDeadlock {
+                    type_name: std::any::type_name::<Self>(),
+                }
+            })?;
+            let original_bytes_slice = &original_bytes[self.offset..];
+            T::ZeroCopyType::read_byte_size(original_bytes_slice)?
+        };
+
+        self.append_to_vec_with_size(buffer, size)
+    }
+
+    /// Appends the bytes of this element to a vector.
+    /// This method is used to map the bytes of one element to another.
+    ///
+    /// # Safety
+    /// This method can fail if the element does not fit in `buffer`.
+    pub fn append_to_vec_with_size(&self, buffer: &mut Vec<u8>, size: usize) -> FankorResult<()> {
+        let original_bytes =
+            self.info
+                .data
+                .try_borrow()
+                .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
+                    type_name: std::any::type_name::<Self>(),
+                })?;
+        let mut bytes = &original_bytes[self.offset..];
+        bytes = &bytes[..size];
+
+        buffer.extend_from_slice(bytes);
+
+        Ok(())
+    }
 }
 
 impl<'info, T: CopyType<'info> + BorshDeserialize> Zc<'info, T> {
