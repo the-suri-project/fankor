@@ -4,10 +4,10 @@ use crate::prelude::CopyType;
 use crate::traits::{
     AccountInfoVerification, AccountType, Instruction, PdaChecker, SingleInstructionAccount,
 };
-use crate::utils::bpf_writer::BpfWriter;
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use crate::utils::rent::make_rent_exempt;
+use crate::utils::writers::ArrayWriter;
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::pubkey::Pubkey;
@@ -291,7 +291,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
         // Save data.
         let mut data = self.info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
-        let mut writer = BpfWriter::new(dst);
+        let mut writer = ArrayWriter::new(dst);
         writer.write_all(&data_bytes)?;
 
         // Prevent old account to execute the drop actions.

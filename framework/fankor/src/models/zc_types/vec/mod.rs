@@ -5,7 +5,7 @@ mod fnk;
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::Zc;
 use crate::traits::{CopyType, ZeroCopyType};
-use crate::utils::bpf_writer::BpfWriter;
+use crate::utils::writers::ArrayWriter;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use std::marker::PhantomData;
@@ -157,7 +157,7 @@ impl<'info, T: CopyType<'info>> ZcVec<'info, T> {
     pub fn write_len_unchecked(&self, new_length: u32) -> FankorResult<()> {
         let mut bytes = (*self.info.data).borrow_mut();
         let bytes = &mut bytes[self.offset..];
-        let mut writer = BpfWriter::new(bytes);
+        let mut writer = ArrayWriter::new(bytes);
         u32::serialize(&new_length, &mut writer)?;
 
         Ok(())

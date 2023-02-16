@@ -2,7 +2,7 @@ use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::Zc;
 use crate::prelude::{CopyType, FnkBVec, Node, MAX_HEIGHT};
 use crate::traits::ZeroCopyType;
-use crate::utils::bpf_writer::BpfWriter;
+use crate::utils::writers::ArrayWriter;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use std::cmp::Ordering;
@@ -69,7 +69,7 @@ impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZcFnkBVec<'info, K, V> {
         })?;
 
         let bytes = &mut bytes[self.offset..];
-        let mut writer = BpfWriter::new(bytes);
+        let mut writer = ArrayWriter::new(bytes);
         u16::serialize(&len, &mut writer)?;
 
         Ok(())
@@ -84,7 +84,7 @@ impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZcFnkBVec<'info, K, V> {
         })?;
 
         let bytes = &mut bytes[self.offset + size_of::<u16>()..];
-        let mut writer = BpfWriter::new(bytes);
+        let mut writer = ArrayWriter::new(bytes);
         u16::serialize(&root_position, &mut writer)?;
 
         Ok(())
@@ -336,7 +336,7 @@ impl<
         })?;
 
         let bytes = &mut bytes[offset..];
-        let mut writer = BpfWriter::new(bytes);
+        let mut writer = ArrayWriter::new(bytes);
         node.key.serialize(&mut writer)?;
         node.value.serialize(&mut writer)?;
         node.left_child_at.serialize(&mut writer)?;
@@ -386,7 +386,7 @@ impl<
         })?;
 
         let bytes = &mut bytes[offset..];
-        let mut writer = BpfWriter::new(bytes);
+        let mut writer = ArrayWriter::new(bytes);
         value.serialize(&mut writer)?;
 
         Ok(())
@@ -408,7 +408,7 @@ impl<
         })?;
 
         let bytes = &mut bytes[offset..];
-        let mut writer = BpfWriter::new(bytes);
+        let mut writer = ArrayWriter::new(bytes);
         left_child_at.serialize(&mut writer)?;
 
         Ok(())
@@ -430,7 +430,7 @@ impl<
         })?;
 
         let bytes = &mut bytes[offset..];
-        let mut writer = BpfWriter::new(bytes);
+        let mut writer = ArrayWriter::new(bytes);
         right_child_at.serialize(&mut writer)?;
 
         Ok(())
@@ -452,7 +452,7 @@ impl<
         })?;
 
         let bytes = &mut bytes[offset..];
-        let mut writer = BpfWriter::new(bytes);
+        let mut writer = ArrayWriter::new(bytes);
         height.serialize(&mut writer)?;
 
         Ok(())

@@ -2,10 +2,10 @@ use crate::errors::{Error, FankorErrorCode, FankorResult};
 use crate::models::{FankorContext, FankorContextExitAction, Program, System, ZcAccount};
 use crate::prelude::AccountInfoVerification;
 use crate::traits::{AccountType, CopyType, Instruction, PdaChecker, SingleInstructionAccount};
-use crate::utils::bpf_writer::BpfWriter;
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use crate::utils::rent::make_rent_exempt;
+use crate::utils::writers::ArrayWriter;
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::pubkey::Pubkey;
@@ -194,7 +194,7 @@ impl<'info, T: AccountType> Account<'info, T> {
 
         let mut data = self.info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
-        let mut writer = BpfWriter::new(dst);
+        let mut writer = ArrayWriter::new(dst);
         self.data.try_serialize(&mut writer)?;
 
         Ok(())
@@ -334,7 +334,7 @@ impl<'info, T: AccountType> Account<'info, T> {
         // Save data.
         let mut data = self.info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
-        let mut writer = BpfWriter::new(dst);
+        let mut writer = ArrayWriter::new(dst);
         writer.write_all(&data_bytes)?;
 
         // Prevent old account to execute the drop actions.
@@ -641,7 +641,7 @@ fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
             // Write data.
             let mut data = account.info.try_borrow_mut_data()?;
             let dst: &mut [u8] = &mut data;
-            let mut writer = BpfWriter::new(dst);
+            let mut writer = ArrayWriter::new(dst);
             writer.write_all(&serialized)?;
 
             // Prevent executing this action twice.
