@@ -1,6 +1,4 @@
 use solana_program::program_memory::sol_memcpy;
-use std::cmp;
-use std::cmp::min;
 use std::io::{self, Write};
 
 #[derive(Debug)]

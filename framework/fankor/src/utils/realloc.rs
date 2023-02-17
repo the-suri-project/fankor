@@ -14,7 +14,15 @@ pub(crate) fn realloc_account_to_size<'info>(
     payer: Option<&AccountInfo<'info>>,
 ) -> FankorResult<()> {
     #[cfg(any(feature = "test", test))]
-    info.realloc(size, zero_bytes)?;
+    if info.rent_epoch != crate::tests::ACCOUNT_INFO_TEST_MAGIC_NUMBER
+    {
+        info.realloc(size, zero_bytes)?;
+    }
+
+    #[cfg(not(any(feature = "test", test)))]
+    {
+        info.realloc(size, zero_bytes)?;
+    }
 
     if let Some(payer) = payer {
         make_rent_exempt(size, payer, info, program)?;

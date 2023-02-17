@@ -297,6 +297,7 @@ impl<'info, T: CopyType<'info>> ExactSizeIterator for Iter<'info, T> {}
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::tests::create_account_info_for_tests;
     use solana_program::pubkey::Pubkey;
     use std::cell::RefCell;
     use std::rc::Rc;
@@ -313,17 +314,7 @@ mod test {
     fn test_len_and_iter() {
         let mut lamports = 0;
         let mut vector = vec![5, 0, 0, 0, 3, 3, 3, 3, 3];
-        let info = AccountInfo {
-            key: &Pubkey::default(),
-            is_signer: false,
-            is_writable: false,
-            lamports: Rc::new(RefCell::new(&mut lamports)),
-            data: Rc::new(RefCell::new(&mut vector)),
-            owner: &Pubkey::default(),
-            executable: false,
-            rent_epoch: 0,
-        };
-
+        let info = create_account_info_for_tests(&mut lamports, &mut vector);
         let (zc, _) = ZcVec::<u8>::new(&info, 0).unwrap();
 
         assert_eq!(zc.len().unwrap(), 5);
@@ -343,17 +334,7 @@ mod test {
     fn test_write_len() {
         let mut lamports = 0;
         let mut vector = vec![3, 0, 0, 0, 3, 3, 3, 3, 3];
-        let info = AccountInfo {
-            key: &Pubkey::default(),
-            is_signer: false,
-            is_writable: false,
-            lamports: Rc::new(RefCell::new(&mut lamports)),
-            data: Rc::new(RefCell::new(&mut vector)),
-            owner: &Pubkey::default(),
-            executable: false,
-            rent_epoch: 0,
-        };
-
+        let info = create_account_info_for_tests(&mut lamports, &mut vector);
         let (zc, _) = ZcVec::<u8>::new(&info, 0).unwrap();
         zc.write_len_unchecked(5).unwrap();
 
@@ -374,17 +355,7 @@ mod test {
     fn test_append() {
         let mut lamports = 0;
         let mut vector = vec![3, 0, 0, 0, 3, 3, 3, 0, 0];
-        let info = AccountInfo {
-            key: &Pubkey::default(),
-            is_signer: false,
-            is_writable: false,
-            lamports: Rc::new(RefCell::new(&mut lamports)),
-            data: Rc::new(RefCell::new(&mut vector)),
-            owner: &Pubkey::default(),
-            executable: false,
-            rent_epoch: 0,
-        };
-
+        let info = create_account_info_for_tests(&mut lamports, &mut vector);
         let (zc, _) = ZcVec::<u8>::new(&info, 0).unwrap();
         let new_offset = zc.append(&[3, 3]).unwrap();
 
@@ -406,17 +377,7 @@ mod test {
     fn test_append_zc() {
         let mut lamports = 0;
         let mut vector = vec![3, 0, 0, 0, 3, 3, 3, 0, 0];
-        let info = AccountInfo {
-            key: &Pubkey::default(),
-            is_signer: false,
-            is_writable: false,
-            lamports: Rc::new(RefCell::new(&mut lamports)),
-            data: Rc::new(RefCell::new(&mut vector)),
-            owner: &Pubkey::default(),
-            executable: false,
-            rent_epoch: 0,
-        };
-
+        let info = create_account_info_for_tests(&mut lamports, &mut vector);
         let mut lamports_el = 0;
         let mut vector_el = vec![3; 1];
         let info_el = AccountInfo {

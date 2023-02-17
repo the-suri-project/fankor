@@ -78,9 +78,19 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
         }
 
         // Reallocate the buffer
-        let original_len = self.info.data_len();
-
         #[cfg(any(feature = "test", test))]
+        if self.info.rent_epoch == crate::tests::ACCOUNT_INFO_TEST_MAGIC_NUMBER {
+            let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
+                FankorErrorCode::ZeroCopyPossibleDeadlock {
+                    type_name: std::any::type_name::<Self>(),
+                }
+            })?;
+            let bytes = &mut bytes[self.offset..];
+            bytes.rotate_right(length);
+            return Ok(());
+        }
+
+        let original_len = self.info.data_len();
         self.info.realloc(original_len + length, false)?;
 
         // Shift bytes
@@ -147,7 +157,14 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
         drop(original_bytes);
 
         #[cfg(any(feature = "test", test))]
-        self.info.realloc(original_length - length, false)?;
+        if self.info.rent_epoch == crate::tests::ACCOUNT_INFO_TEST_MAGIC_NUMBER {
+            self.info.realloc(original_length - length, false)?;
+        }
+
+        #[cfg(not(any(feature = "test", test)))]
+        {
+            self.info.realloc(original_length - length, false)?;
+        }
 
         Ok(())
     }
@@ -202,7 +219,14 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
                 drop(original_bytes);
 
                 #[cfg(any(feature = "test", test))]
-                self.info.realloc(original_len - diff, false)?;
+                if self.info.rent_epoch == crate::tests::ACCOUNT_INFO_TEST_MAGIC_NUMBER {
+                    self.info.realloc(original_len - diff, false)?;
+                }
+
+                #[cfg(not(any(feature = "test", test)))]
+                {
+                    self.info.realloc(original_len - diff, false)?;
+                }
             }
             Ordering::Equal => {
                 // Serialize
@@ -220,6 +244,23 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
                 let diff = new_size - previous_size;
 
                 #[cfg(any(feature = "test", test))]
+                if self.info.rent_epoch == crate::tests::ACCOUNT_INFO_TEST_MAGIC_NUMBER {
+                    // Shift bytes
+                    let mut original_bytes = self.info.data.try_borrow_mut().map_err(|_| {
+                        FankorErrorCode::ZeroCopyPossibleDeadlock {
+                            type_name: std::any::type_name::<Self>(),
+                        }
+                    })?;
+                    let original_bytes_slice = &mut original_bytes[self.offset..];
+                    original_bytes_slice.rotate_right(diff);
+
+                    // Serialize
+                    let mut cursor = Cursor::new(original_bytes_slice);
+                    cursor.write_all(bytes)?;
+
+                    return Ok(());
+                }
+
                 self.info.realloc(original_len + diff, false)?;
 
                 // Shift bytes
@@ -451,7 +492,14 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
                 drop(original_bytes);
 
                 #[cfg(any(feature = "test", test))]
-                self.info.realloc(original_len - diff, false)?;
+                if self.info.rent_epoch == crate::tests::ACCOUNT_INFO_TEST_MAGIC_NUMBER {
+                    self.info.realloc(original_len - diff, false)?;
+                }
+
+                #[cfg(not(any(feature = "test", test)))]
+                {
+                    self.info.realloc(original_len - diff, false)?;
+                }
             }
             Ordering::Equal => {
                 // Serialize
@@ -469,6 +517,23 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
                 let diff = new_size - previous_size;
 
                 #[cfg(any(feature = "test", test))]
+                if self.info.rent_epoch == crate::tests::ACCOUNT_INFO_TEST_MAGIC_NUMBER {
+                    // Shift bytes
+                    let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
+                        FankorErrorCode::ZeroCopyPossibleDeadlock {
+                            type_name: std::any::type_name::<Self>(),
+                        }
+                    })?;
+                    let bytes = &mut bytes[self.offset..];
+                    bytes.rotate_right(diff);
+
+                    // Serialize
+                    let mut cursor = Cursor::new(bytes);
+                    value.serialize(&mut cursor)?;
+
+                    return Ok(());
+                }
+
                 self.info.realloc(original_len + diff, false)?;
 
                 // Shift bytes
@@ -522,8 +587,7 @@ impl<'info, T: CopyType<'info>> Clone for Zc<'info, T> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use std::cell::RefCell;
-    use std::rc::Rc;
+    use crate::tests::create_account_info_for_tests;
 
     #[test]
     pub fn test_move_byte_slice() {
@@ -541,17 +605,7 @@ mod test {
         ] {
             let mut lamports = 0;
             let mut data = vec![0u8, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-            let info = AccountInfo {
-                key: &Default::default(),
-                is_signer: false,
-                is_writable: false,
-                lamports: Rc::new(RefCell::new(&mut lamports)),
-                data: Rc::new(RefCell::new(&mut data)),
-                owner: &Default::default(),
-                executable: false,
-                rent_epoch: 0,
-            };
-
+            let info = create_account_info_for_tests(&mut lamports, &mut data);
             let zc = Zc::<u8>::new_unchecked(&info, 0);
             assert!(
                 zc.move_byte_slice(from, to, size).is_ok(),
@@ -564,17 +618,7 @@ mod test {
         for (from, to, size) in [(3, 4, 3), (3, 5, 3), (0, 5, 9), (0, 6, 9), (0, 10, 14)] {
             let mut lamports = 0;
             let mut data = vec![0u8, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
-            let info = AccountInfo {
-                key: &Default::default(),
-                is_signer: false,
-                is_writable: false,
-                lamports: Rc::new(RefCell::new(&mut lamports)),
-                data: Rc::new(RefCell::new(&mut data)),
-                owner: &Default::default(),
-                executable: false,
-                rent_epoch: 0,
-            };
-
+            let info = create_account_info_for_tests(&mut lamports, &mut data);
             let zc = Zc::<u8>::new_unchecked(&info, 0);
             assert!(
                 zc.move_byte_slice(from, to, size).is_err(),

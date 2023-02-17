@@ -36,7 +36,15 @@ pub(crate) fn close_account<'info>(
     info.assign(&system_program::ID);
 
     #[cfg(any(feature = "test", test))]
-    info.realloc(0, false)?;
+    if info.rent_epoch != crate::tests::ACCOUNT_INFO_TEST_MAGIC_NUMBER
+    {
+        info.realloc(0, false)?;
+    }
+
+    #[cfg(not(any(feature = "test", test)))]
+    {
+        info.realloc(0, false)?;
+    }
 
     context.remove_exit_action(info);
 

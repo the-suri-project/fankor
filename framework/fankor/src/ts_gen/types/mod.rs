@@ -1,5 +1,5 @@
+pub use self::fankor::*;
 pub use builtin::*;
-pub use fankor::*;
 
 mod builtin;
 mod fankor;

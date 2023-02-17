@@ -1181,11 +1181,9 @@ impl<
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::tests::create_account_info_for_tests;
     use rand::Rng;
-    use solana_program::pubkey::Pubkey;
-    use std::cell::RefCell;
     use std::collections::HashSet;
-    use std::rc::Rc;
 
     /// This test can take some time to complete.
     #[test]
@@ -1194,17 +1192,7 @@ mod test {
 
         for _ in 0..100 {
             let mut vector = vec![0u8; 10_000];
-            let info = AccountInfo {
-                key: &Pubkey::default(),
-                is_signer: false,
-                is_writable: false,
-                lamports: Rc::new(RefCell::new(&mut lamports)),
-                data: Rc::new(RefCell::new(&mut vector)),
-                owner: &Pubkey::default(),
-                executable: false,
-                rent_epoch: 0,
-            };
-
+            let info = create_account_info_for_tests(&mut lamports, &mut vector);
             let mut rng = rand::thread_rng();
             let (map, _) = ZcFnkBVec::new(&info, 0).unwrap();
 
@@ -1238,17 +1226,7 @@ mod test {
 
         for _ in 0..10 {
             let mut vector = vec![0u8; combinations as usize * 45];
-            let info = AccountInfo {
-                key: &Pubkey::default(),
-                is_signer: false,
-                is_writable: false,
-                lamports: Rc::new(RefCell::new(&mut lamports)),
-                data: Rc::new(RefCell::new(&mut vector)),
-                owner: &Pubkey::default(),
-                executable: false,
-                rent_epoch: 0,
-            };
-
+            let info = create_account_info_for_tests(&mut lamports, &mut vector);
             let mut rng = rand::thread_rng();
             let (map, _) = ZcFnkBVec::new(&info, 0).unwrap();
 
