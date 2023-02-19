@@ -16,7 +16,7 @@ impl TsTypeGen for () {
     }
 
     fn schema_name() -> Cow<'static, str> {
-        Cow::Borrowed("fnk.UnitSchema")
+        Cow::Borrowed("fnk.Unit")
     }
 }
 
