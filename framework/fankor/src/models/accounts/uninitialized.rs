@@ -242,8 +242,10 @@ impl<'info> Instruction<'info> for UninitializedAccount<'info> {
         }
 
         let info = &accounts[0];
+        let result = UninitializedAccount::new(context, info)?;
+
         *accounts = &accounts[1..];
-        UninitializedAccount::new(context, info)
+        Ok(result)
     }
 }
 

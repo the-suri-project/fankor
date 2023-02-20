@@ -32,18 +32,12 @@ impl<'info, T: Instruction<'info>> Instruction<'info> for Option<T> {
             return Err(FankorErrorCode::NotEnoughDataToDeserializeInstruction.into());
         }
 
-        let result = match buf[0] {
+        let condition = buf[0];
+        *buf = &buf[1..];
+
+        let result = match condition {
             0 => None,
-            1 => {
-                let mut new_buf = &buf[1..];
-                let mut new_accounts = *accounts;
-                let result = Some(T::try_from(context, &mut new_buf, &mut new_accounts)?);
-
-                *accounts = new_accounts;
-                *buf = new_buf;
-
-                result
-            }
+            1 => Some(T::try_from(context, buf, accounts)?),
             _ => {
                 return Err(FankorErrorCode::InstructionDidNotDeserialize {
                     account: type_name::<Self>().to_string(),

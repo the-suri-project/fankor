@@ -89,8 +89,15 @@ impl<'info, T: Instruction<'info>> Instruction<'info> for MaybeUninitialized<'in
         buf: &mut &[u8],
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
-        let result = match <T as Instruction>::try_from(context, buf, accounts) {
-            Ok(v) => Self::Init(v),
+        let mut new_buf = *buf;
+        let mut new_accounts = *accounts;
+        let result = match <T as Instruction>::try_from(context, &mut new_buf, &mut new_accounts) {
+            Ok(v) => {
+                *buf = new_buf;
+                *accounts = new_accounts;
+
+                Self::Init(v)
+            }
             Err(_) => Self::Uninit(<UninitializedAccount as Instruction>::try_from(
                 context, buf, accounts,
             )?),

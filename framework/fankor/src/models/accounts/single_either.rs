@@ -95,8 +95,15 @@ impl<'info, L: Instruction<'info>, R: Instruction<'info>> Instruction<'info>
         buf: &mut &[u8],
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
-        let result = match <L as Instruction>::try_from(context, buf, accounts) {
-            Ok(v) => Self::Left(v),
+        let mut new_buf = *buf;
+        let mut new_accounts = *accounts;
+        let result = match <L as Instruction>::try_from(context, &mut new_buf, &mut new_accounts) {
+            Ok(v) => {
+                *buf = new_buf;
+                *accounts = new_accounts;
+
+                Self::Left(v)
+            }
             Err(_) => Self::Right(<R as Instruction>::try_from(context, buf, accounts)?),
         };
 

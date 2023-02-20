@@ -31,16 +31,13 @@ impl<'info, T: Instruction<'info>> Instruction<'info> for Vec<T> {
         }
 
         let size = buf[0] as usize;
+        *buf = &buf[1..];
+
         let mut result = Vec::with_capacity(size);
-        let mut new_buf = &buf[1..];
-        let mut new_accounts = *accounts;
 
         for _ in 0..size {
-            result.push(T::try_from(context, &mut new_buf, &mut new_accounts)?);
+            result.push(T::try_from(context, buf, accounts)?);
         }
-
-        *accounts = new_accounts;
-        *buf = new_buf;
 
         Ok(result)
     }
