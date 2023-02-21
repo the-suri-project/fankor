@@ -1,18 +1,22 @@
 use crate::errors::FankorResult;
 use crate::models::FankorContext;
-use crate::traits::{AccountInfoVerification, Instruction, PdaChecker, SingleInstructionAccount};
+use crate::traits::{
+    AccountInfoVerification, CpiInstruction, Instruction, LpiInstruction, PdaChecker,
+    SingleInstructionAccount,
+};
 use solana_program::account_info::AccountInfo;
+use solana_program::instruction::AccountMeta;
+use std::io::Write;
 
 impl<'info, T: Instruction<'info>> Instruction<'info> for Box<T> {
-    type CPI = AccountInfo<'info>;
-    type LPI = solana_program::pubkey::Pubkey;
+    type CPI = Box<T::CPI>;
+    type LPI = Box<T::LPI>;
 
     fn verify_account_infos<'a>(
         &self,
         config: &mut AccountInfoVerification<'a, 'info>,
     ) -> FankorResult<()> {
-        let value: &T = self;
-        T::verify_account_infos(value, config)
+        T::verify_account_infos(self, config)
     }
 
     #[inline(never)]
@@ -31,5 +35,34 @@ impl<'info, T: PdaChecker<'info>> PdaChecker<'info> for Box<T> {
     fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {
         let aux: &T = self;
         aux.pda_info()
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+impl<'info, T: CpiInstruction<'info>> CpiInstruction<'info> for Box<T> {
+    fn serialize_into_instruction_parts<W: Write>(
+        &self,
+        writer: &mut W,
+        metas: &mut Vec<AccountMeta>,
+        infos: &mut Vec<AccountInfo<'info>>,
+    ) -> FankorResult<()> {
+        T::serialize_into_instruction_parts(self, writer, metas, infos)
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+
+impl<T: LpiInstruction> LpiInstruction for Box<T> {
+    fn serialize_into_instruction_parts<W: Write>(
+        &self,
+        writer: &mut W,
+        metas: &mut Vec<AccountMeta>,
+    ) -> FankorResult<()> {
+        T::serialize_into_instruction_parts(self, writer, metas)
     }
 }
