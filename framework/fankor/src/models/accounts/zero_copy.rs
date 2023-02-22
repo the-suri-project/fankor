@@ -497,6 +497,7 @@ fn drop_aux<'info, T: AccountType + CopyType<'info>>(
 ) -> FankorResult<()> {
     match account.context.get_exit_action(account.info) {
         None => {}
+        Some(FankorContextExitAction::ProcessedByZeroCopy) => {}
         Some(FankorContextExitAction::Processed) => {
             return Err(FankorErrorCode::DuplicatedWritableAccounts {
                 address: *account.address(),
@@ -522,7 +523,7 @@ fn drop_aux<'info, T: AccountType + CopyType<'info>>(
             // Prevent executing this action twice.
             account
                 .context
-                .set_exit_action(account.info, FankorContextExitAction::Processed);
+                .set_exit_action(account.info, FankorContextExitAction::ProcessedByZeroCopy);
         }
         Some(FankorContextExitAction::Close {
             destination_account,
@@ -532,7 +533,7 @@ fn drop_aux<'info, T: AccountType + CopyType<'info>>(
             // Prevent executing this action twice.
             account
                 .context
-                .set_exit_action(account.info, FankorContextExitAction::Processed);
+                .set_exit_action(account.info, FankorContextExitAction::ProcessedByZeroCopy);
         }
     }
 

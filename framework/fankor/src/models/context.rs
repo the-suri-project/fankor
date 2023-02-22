@@ -34,9 +34,13 @@ struct FankorContextAccountData<'info> {
 /// The action to perform at the end of the instruction for a specific account.
 #[derive(Clone)]
 pub enum FankorContextExitAction<'info> {
-    /// Indicates the account has already process the exit action.
+    /// Indicates the account has already processed the exit action.
     /// It is used to detect duplicated actions.
     Processed,
+
+    /// Indicates the account has already processed the exit action by zero copy.
+    /// It is used to detect duplicated actions.
+    ProcessedByZeroCopy,
 
     /// Reallocates the account to contain all the data and optionally makes
     /// the account rent-exempt.

@@ -615,7 +615,8 @@ fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
                     .set_exit_action(account.info, FankorContextExitAction::Processed);
             }
         }
-        Some(FankorContextExitAction::Processed) => {
+        Some(FankorContextExitAction::Processed)
+        | Some(FankorContextExitAction::ProcessedByZeroCopy) => {
             return Err(FankorErrorCode::DuplicatedWritableAccounts {
                 address: *account.address(),
             }
