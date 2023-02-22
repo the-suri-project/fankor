@@ -4,7 +4,7 @@ pub mod macros;
 pub mod models;
 pub mod prelude;
 pub mod rpc_errors;
-#[cfg(feature = "test")]
+#[cfg(any(test, feature = "test"))]
 pub mod tests;
 pub mod traits;
 #[cfg(feature = "ts-gen")]

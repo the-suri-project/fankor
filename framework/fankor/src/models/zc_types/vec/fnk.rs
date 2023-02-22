@@ -234,12 +234,13 @@ impl<'info, T: CopyType<'info> + BorshSerialize> ZcFnkVec<'info, T> {
             Self::read_byte_size(bytes)?
         };
 
-        // Update length.
+        // Read length.
         let length = self.len()?;
+        let fnk_length = FnkUInt::from(self.len()?);
         let new_length = length
             .checked_add(values.len())
             .ok_or(FankorErrorCode::ZeroCopyLengthFieldOverflow)?;
-        self.write_len_unchecked(FnkUInt::from(new_length))?;
+        let fnk_new_length = FnkUInt::from(new_length);
 
         // Append values.
         for value in values {
@@ -249,7 +250,11 @@ impl<'info, T: CopyType<'info> + BorshSerialize> ZcFnkVec<'info, T> {
             size += value_size;
         }
 
-        Ok(size)
+        // Write length.
+        self.write_len_unchecked(fnk_new_length)?;
+
+        let diff = fnk_new_length.byte_size() - fnk_length.byte_size();
+        Ok(size + diff)
     }
 
     /// Appends a list of zero-copy elements to the end of the vector.
@@ -262,12 +267,13 @@ impl<'info, T: CopyType<'info> + BorshSerialize> ZcFnkVec<'info, T> {
             Self::read_byte_size(bytes)?
         };
 
-        // Update length.
+        // Read length.
         let length = self.len()?;
+        let fnk_length = FnkUInt::from(self.len()?);
         let new_length = length
             .checked_add(values.len())
             .ok_or(FankorErrorCode::ZeroCopyLengthFieldOverflow)?;
-        self.write_len_unchecked(FnkUInt::from(new_length))?;
+        let fnk_new_length = FnkUInt::from(new_length);
 
         // Append values.
         for value in values {
@@ -285,7 +291,10 @@ impl<'info, T: CopyType<'info> + BorshSerialize> ZcFnkVec<'info, T> {
             size += value_size;
         }
 
-        Ok(size)
+        // Write length.
+        self.write_len_unchecked(fnk_new_length)?;
+
+        Ok(size + fnk_new_length.byte_size() - fnk_length.byte_size())
     }
 }
 
@@ -363,17 +372,17 @@ mod test {
     #[test]
     fn test_append() {
         let mut lamports = 0;
-        let mut vector = vec![0; 100];
+        let mut vector = vec![0; 10_000];
         vector[0] = 2;
         vector[1] = 3;
         vector[2] = 3;
 
         let info = create_account_info_for_tests(&mut lamports, &mut vector);
         let (zc, _) = ZcFnkVec::<u8>::new(&info, 0).unwrap();
-        let new_offset = zc.append(&[3; 64]).unwrap();
+        let new_offset = zc.append(&[3; 500]).unwrap();
 
-        assert_eq!(zc.len().unwrap(), 66);
-        assert_eq!(new_offset, 67);
+        assert_eq!(zc.len().unwrap(), 502);
+        assert_eq!(new_offset, 504);
 
         let mut count = 0;
         for zc_el in zc {
@@ -383,7 +392,36 @@ mod test {
             assert_eq!(value, 3);
         }
 
-        assert_eq!(count, 66);
+        assert_eq!(count, 502);
+    }
+
+    #[test]
+    fn test_append2() {
+        let mut lamports = 0;
+        let mut vector = vec![0; 10_000];
+        vector[0] = 2;
+        vector[1] = 3;
+        vector[2] = 4;
+        vector[3] = 3;
+        vector[4] = 4;
+
+        let info = create_account_info_for_tests(&mut lamports, &mut vector);
+        let (zc, _) = ZcFnkVec::<(u8, u8)>::new(&info, 0).unwrap();
+        let data = vec![(3, 4); 500];
+        let new_offset = zc.append(&data).unwrap();
+
+        assert_eq!(zc.len().unwrap(), 502);
+        assert_eq!(new_offset, 1006);
+
+        let mut count = 0;
+        for zc_el in zc {
+            count += 1;
+
+            let value = zc_el.try_value().unwrap();
+            assert_eq!(value, (3, 4));
+        }
+
+        assert_eq!(count, 502);
     }
 
     #[test]
