@@ -170,10 +170,11 @@ impl<'info, T: CopyType<'info>> ZcFnkVec<'info, T> {
         let mut offset = self.offset;
         let mut length = {
             let original_bytes = (*self.info.data).borrow();
-            let mut bytes = &original_bytes[self.offset..];
-            let len = FnkUInt::deserialize(&mut bytes)?;
+            let bytes = &original_bytes[self.offset..];
+            let mut bytes2 = bytes;
+            let len = FnkUInt::deserialize(&mut bytes2)?;
 
-            offset += original_bytes.len() - bytes.len();
+            offset += bytes.len() - bytes2.len();
 
             len.get_usize()
                 .ok_or(FankorErrorCode::ZeroCopyLengthFieldOverflow)?
@@ -462,5 +463,40 @@ mod test {
         }
 
         assert_eq!(count, 4);
+    }
+
+    #[test]
+    fn test_retain() {
+        let mut lamports = 0;
+        let mut vector = vec![0; 100];
+        vector[0] = 8;
+        vector[1] = 3;
+        vector[2] = 1;
+        vector[3] = 1;
+        vector[4] = 3;
+        vector[5] = 1;
+        vector[6] = 3;
+        vector[7] = 1;
+        vector[8] = 1;
+
+        let info = create_account_info_for_tests(&mut lamports, &mut vector);
+        let (zc, _) = ZcFnkVec::<u8>::new(&info, 0).unwrap();
+        zc.retain(|zc_el| {
+            let value = zc_el.try_value()?;
+            Ok(value != 1)
+        })
+        .unwrap();
+
+        assert_eq!(zc.len().unwrap(), 3);
+
+        let mut count = 0;
+        for zc_el in zc {
+            count += 1;
+
+            let value = zc_el.try_value().unwrap();
+            assert_eq!(value, 3);
+        }
+
+        assert_eq!(count, 3);
     }
 }
