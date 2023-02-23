@@ -1,4 +1,5 @@
 use crate::errors::{FankorErrorCode, FankorResult};
+use crate::prelude::byte_seeds_to_slices;
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 use std::cell::RefCell;
@@ -27,8 +28,8 @@ struct FankorContextAccountData<'info> {
     // End action to perform at the end of the instruction.
     exit_action: Option<FankorContextExitAction<'info>>,
 
-    // The bump seed used for the derived the account.
-    bump_seed: Option<u8>,
+    // Seeds used to derived the account.
+    seeds: Option<Rc<Vec<u8>>>,
 }
 
 /// The action to perform at the end of the instruction for a specific account.
@@ -94,14 +95,14 @@ impl<'info> FankorContext<'info> {
         self.accounts.iter().find(|account| account.key == address)
     }
 
-    /// Gets the corresponding bump seed for an account if it was previously computed.
-    pub fn get_bump_seed_from_account(&self, account: &AccountInfo<'info>) -> Option<u8> {
+    /// Gets the corresponding seeds for an account if it was previously computed.
+    pub fn get_seeds_for_account(&self, account: &AccountInfo<'info>) -> Option<Rc<Vec<u8>>> {
         let index = self.get_index_for_account(account);
         self.inner
             .borrow()
             .account_data
             .get(&index)
-            .and_then(|v| v.bump_seed)
+            .and_then(|v| v.seeds.clone())
     }
 
     pub(crate) fn get_index_for_account(&self, account: &AccountInfo<'info>) -> u8 {
@@ -148,7 +149,7 @@ impl<'info> FankorContext<'info> {
                     index,
                     FankorContextAccountData {
                         exit_action: Some(exit_action),
-                        bump_seed: None,
+                        seeds: None,
                     },
                 );
             }
@@ -164,22 +165,26 @@ impl<'info> FankorContext<'info> {
         }
     }
 
-    /// Sets the bump seed associated with an account.
+    /// Sets the seeds associated with an account.
     ///
     /// # Safety
     /// This method is intended to be used only by the framework.
-    pub fn set_bump_seed_unchecked(&self, account: &AccountInfo<'info>, bump_seed: u8) {
+    pub fn set_seeds_for_account_unchecked(
+        &self,
+        account: &AccountInfo<'info>,
+        seeds: Rc<Vec<u8>>,
+    ) {
         let index = self.get_index_for_account(account);
         let mut inner = (*self.inner).borrow_mut();
 
         match inner.account_data.get_mut(&index) {
-            Some(v) => v.bump_seed = Some(bump_seed),
+            Some(v) => v.seeds = Some(seeds),
             None => {
                 inner.account_data.insert(
                     index,
                     FankorContextAccountData {
                         exit_action: None,
-                        bump_seed: Some(bump_seed),
+                        seeds: Some(seeds),
                     },
                 );
             }
@@ -194,78 +199,61 @@ impl<'info> FankorContext<'info> {
     pub fn check_canonical_pda(
         &self,
         account: &AccountInfo<'info>,
-        seeds: &[&[u8]],
+        seeds: Vec<u8>,
     ) -> FankorResult<()> {
         self.check_canonical_pda_with_program(account, seeds, self.program_id)
     }
 
     /// Checks whether the given account is a canonical PDA with the given seeds and program_id.
-    ///
-    /// Note: the first time this method is called, it will save the generated bump seed
-    /// in the context. If you call this method again with other seeds and/or program_id,
-    /// it will return an error because it won't compute the same bump seed.
     pub fn check_canonical_pda_with_program(
         &self,
         account: &AccountInfo<'info>,
-        seeds: &[&[u8]],
+        mut seeds: Vec<u8>,
         program_id: &Pubkey,
     ) -> FankorResult<()> {
         let index = self.get_index_for_account(account);
-        let saved_bump_seed = self
+        let saved_seeds = self
             .inner
             .borrow()
             .account_data
             .get(&index)
-            .and_then(|v| v.bump_seed);
+            .and_then(|v| v.seeds.clone());
 
-        match saved_bump_seed {
-            Some(expected_bump_seed) => {
-                let bump_seed = &[expected_bump_seed];
-                let mut new_seeds = Vec::with_capacity(seeds.len() + 1);
-                new_seeds.extend_from_slice(seeds);
-                new_seeds.push(bump_seed.as_ref());
-
-                let expected_address = Pubkey::create_program_address(&new_seeds, program_id)
-                    .map_err(|_| FankorErrorCode::CannotFindValidPdaWithProvidedSeeds {
-                        program_id: *program_id,
-                    })?;
-
-                if expected_address != *account.key {
-                    return Err(FankorErrorCode::InvalidPda {
-                        expected: expected_address,
-                        actual: *account.key,
-                    }
-                    .into());
-                }
+        if let Some(saved_seeds) = saved_seeds {
+            if *saved_seeds == seeds {
+                return Ok(());
             }
+        }
+
+        let compute_seeds = byte_seeds_to_slices(&seeds);
+
+        let (expected_address, bump_seed) =
+            Pubkey::find_program_address(&compute_seeds, program_id);
+
+        if expected_address != *account.key {
+            return Err(FankorErrorCode::InvalidPda {
+                expected: expected_address,
+                actual: *account.key,
+            }
+            .into());
+        }
+
+        // Add the seeds to the context.
+        seeds.push(bump_seed);
+
+        let mut inner = (*self.inner).borrow_mut();
+        match inner.account_data.get_mut(&index) {
+            Some(v) => v.seeds = Some(Rc::new(seeds)),
             None => {
-                let (expected_address, expected_bump_seed) =
-                    Pubkey::find_program_address(seeds, self.program_id);
-
-                if expected_address != *account.key {
-                    return Err(FankorErrorCode::InvalidPda {
-                        expected: expected_address,
-                        actual: *account.key,
-                    }
-                    .into());
-                }
-
-                // Add the bump seed to the context.
-                let mut inner = (*self.inner).borrow_mut();
-                match inner.account_data.get_mut(&index) {
-                    Some(v) => v.bump_seed = Some(expected_bump_seed),
-                    None => {
-                        inner.account_data.insert(
-                            index,
-                            FankorContextAccountData {
-                                exit_action: None,
-                                bump_seed: Some(expected_bump_seed),
-                            },
-                        );
-                    }
-                }
+                inner.account_data.insert(
+                    index,
+                    FankorContextAccountData {
+                        exit_action: None,
+                        seeds: Some(Rc::new(seeds)),
+                    },
+                );
             }
-        };
+        }
 
         Ok(())
     }

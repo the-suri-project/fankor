@@ -61,7 +61,7 @@ export type FankorErrorCodeTypes =
     | FankorErrorCode_CannotFindValidPdaWithProvidedSeeds
     | FankorErrorCode_InvalidPda
     | FankorErrorCode_MissingSeedsAccount
-    | FankorErrorCode_MissingPdaBumpSeed
+    | FankorErrorCode_MissingPdaSeeds
     | FankorErrorCode_DuplicatedWritableAccounts
     | FankorErrorCode_AccountDiscriminantNotFound
     | FankorErrorCode_AccountDiscriminantMismatch
@@ -146,8 +146,8 @@ export interface FankorErrorCode_MissingSeedsAccount {
     value: null;
 }
 
-export interface FankorErrorCode_MissingPdaBumpSeed {
-    type: 'MissingPdaBumpSeed';
+export interface FankorErrorCode_MissingPdaSeeds {
+    type: 'MissingPdaSeeds';
     value: { account: PublicKey };
 }
 
@@ -408,7 +408,7 @@ export class FankorErrorCodeSchema implements FnkBorshSchema<FankorErrorCode> {
         [1007, 'MissingSeedsAccount', Unit],
         [
             1008,
-            'MissingPdaBumpSeed',
+            'MissingPdaSeeds',
             TStruct([['account', TPublicKey]] as const),
         ],
         [

@@ -6,6 +6,7 @@ pub use crate::models::*;
 pub use crate::traits::*;
 #[cfg(feature = "ts-gen")]
 pub use crate::ts_gen;
+pub use crate::utils::seeds::byte_seeds_to_slices;
 pub use crate::utils::type_id_of;
 pub use crate::utils::writers::ArrayWriter;
 pub use crate::utils::writers::VecWriter;

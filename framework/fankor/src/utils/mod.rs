@@ -3,6 +3,7 @@ use std::any::TypeId;
 pub mod close;
 pub mod realloc;
 pub mod rent;
+pub mod seeds;
 pub mod writers;
 
 /// Gets the type identifier of a given value.

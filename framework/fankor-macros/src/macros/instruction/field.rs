@@ -25,6 +25,7 @@ pub struct Field {
     pub rent_exempt: Option<TokenStream>,
     pub signer: Option<TokenStream>,
     pub pda: Option<DataAndError>,
+    pub pda_bytes: Option<DataAndError>,
     pub pda_program_id: Option<TokenStream>,
     pub constraints: Vec<DataAndError>,
     pub data: Vec<Data>,
@@ -66,6 +67,7 @@ impl Field {
             rent_exempt: None,
             signer: None,
             pda: None,
+            pda_bytes: None,
             pda_program_id: None,
             constraints: Vec::new(),
             data: Vec::new(),
@@ -102,6 +104,7 @@ impl Field {
                     rent_exempt: None,
                     signer: None,
                     pda: None,
+                    pda_bytes: None,
                     pda_program_id: None,
                     constraints: Vec::new(),
                     data: Vec::new(),
@@ -318,14 +321,34 @@ impl Field {
                                 ));
                             }
 
-                            if self.pda.is_some() {
+                            if self.pda.is_some() || self.pda_bytes.is_some() {
                                 return Err(Error::new(
                                     name.span(),
-                                    "The pda argument can only be defined once",
+                                    "The pda/pda_bytes arguments can only be defined once",
                                 ));
                             }
 
                             self.pda = Some(DataAndError {
+                                data: quote! {#value},
+                                error: meta.error.map(|e| quote! {#e}),
+                            });
+                        }
+                        "pda_bytes" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The pda_bytes argument is not allowed in enums",
+                                ));
+                            }
+
+                            if self.pda.is_some() || self.pda_bytes.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The pda/pda_bytes arguments can only be defined once",
+                                ));
+                            }
+
+                            self.pda_bytes = Some(DataAndError {
                                 data: quote! {#value},
                                 error: meta.error.map(|e| quote! {#e}),
                             });

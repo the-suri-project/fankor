@@ -22,9 +22,10 @@ pub struct StructAccounts<'info> {
     #[account(rent_exempt = false)]
     #[account(signer = false)]
     #[account(pda = [crate::ID.as_ref(), &self.account2.data().value1.to_le_bytes(), &self.args.arg2.to_le_bytes()])]
-    #[account(pda_program_id = &crate::ID)]
+    #[account(pda_program_id = &Pubkey::default())]
     pub account2: Account<'info, StructAccountData>,
 
+    #[account(pda_bytes = vec![1, 2, 3])]
     pub account3: Option<Account<'info, StructAccountData>>,
 
     pub unchecked_account: UncheckedAccount<'info>,

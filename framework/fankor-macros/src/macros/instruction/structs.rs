@@ -194,24 +194,15 @@ pub fn process_struct(
             let seeds = &pda.data;
 
             pda_methods.push(quote! {
-                pub fn #pda_method_name(&self, context: &FankorContext<'info>) -> FankorResult<Vec<Vec<u8>>> {
+                pub fn #pda_method_name(&self, context: &FankorContext<'info>) -> FankorResult<std::rc::Rc<Vec<u8>>> {
                     let info = match self.#name.pda_info() {
                         Some(v) => v,
                         None => return Err(::fankor::errors::FankorErrorCode::MissingSeedsAccount.into()),
                     };
 
-                    let mut seeds = {
-                        #(#data)*
-                        let seeds = #seeds;
-
-                        seeds.into_iter().map(|v|v.to_vec()).collect::<Vec<_>>()
-                    };
-
-                    // Get bump.
-                    let bump = context.get_bump_seed_from_account(info).ok_or_else(|| ::fankor::errors::FankorErrorCode::MissingPdaBumpSeed {
+                    let seeds = context.get_seeds_for_account(info).ok_or_else(|| ::fankor::errors::FankorErrorCode::MissingPdaSeeds {
                         account: *info.key
                     })?;
-                    seeds.push(vec![bump]);
 
                     Ok(seeds)
                 }
@@ -230,10 +221,55 @@ pub fn process_struct(
             };
 
             account_info_conditions.push(quote! {{
-                let seeds = #seeds;
+                let seeds: &[&[u8]] = &#seeds;
                 let program_id = #program_id;
 
-                context.check_canonical_pda_with_program(info, &seeds, program_id)#error;
+                let seeds_length = seeds.iter().map(|v|v.len()).sum::<usize>();
+                let mut final_seeds = Vec::with_capacity(seeds_length + 1 /* bump */);
+                for seeds in seeds {
+                    final_seeds.extend_from_slice(*seeds);
+                }
+
+                context.check_canonical_pda_with_program(info, final_seeds, program_id)#error;
+            }});
+        }
+
+        if let Some(pda) = &v.pda_bytes {
+            let pda_method_name = format_ident!("{}_pda_seeds", name);
+            let seeds = &pda.data;
+
+            pda_methods.push(quote! {
+                pub fn #pda_method_name(&self, context: &FankorContext<'info>) -> FankorResult<std::rc::Rc<Vec<u8>>> {
+                    let info = match self.#name.pda_info() {
+                        Some(v) => v,
+                        None => return Err(::fankor::errors::FankorErrorCode::MissingSeedsAccount.into()),
+                    };
+
+                    let seeds = context.get_seeds_for_account(info).ok_or_else(|| ::fankor::errors::FankorErrorCode::MissingPdaSeeds {
+                        account: *info.key
+                    })?;
+
+                    Ok(seeds)
+                }
+            });
+
+            let program_id = v.pda_program_id.clone().unwrap_or_else(|| quote! { context.program_id() });
+            let error = match &pda.error {
+                Some(v) => {
+                    quote! {
+                        .map_err(|_| #v)?
+                    }
+                },
+                None => {
+                    quote! { ? }
+                }
+            };
+
+            account_info_conditions.push(quote! {{
+                let seeds: Vec<u8> = #seeds;
+                let program_id = #program_id;
+
+                context.check_canonical_pda_with_program(info, seeds, program_id)#error;
             }});
         }
 

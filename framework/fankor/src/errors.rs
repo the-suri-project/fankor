@@ -71,9 +71,9 @@ pub enum FankorErrorCode {
     #[msg("The account to calculate the seeds is missing")]
     MissingSeedsAccount,
 
-    /// The bump seed of the PDA is missing
-    #[msg("The bump seed of the PDA ({}) is missing", account)]
-    MissingPdaBumpSeed { account: Pubkey },
+    /// The seeds of the PDA are missing
+    #[msg("The seeds of the PDA ({}) are missing", account)]
+    MissingPdaSeeds { account: Pubkey },
 
     // ------------------------------------------------------------------------
     // Accounts ---------------------------------------------------------------
