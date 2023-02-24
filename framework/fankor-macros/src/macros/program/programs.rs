@@ -12,6 +12,7 @@ pub struct Program {
     pub snake_name: Ident,
     pub methods: Vec<ProgramMethod>,
     pub fallback_method_call: Option<TokenStream>,
+    pub testable: bool,
 
     /// List of attributes to apply to the enum.
     pub attrs: Vec<Attribute>,
@@ -35,6 +36,8 @@ impl Program {
             Some(v) => v.to_token_stream(),
             None => quote! { fallback(program_id, accounts, data) },
         });
+
+        let testable = args.pop_plain("testable", true)?;
 
         args.error_on_unknown()?;
 
@@ -63,6 +66,7 @@ impl Program {
             snake_name,
             methods: vec![],
             fallback_method_call,
+            testable,
             attrs: Vec::new(),
         };
 

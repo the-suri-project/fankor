@@ -1,7 +1,7 @@
 use crate::instruction::*;
 use fankor::prelude::*;
 
-#[program(fallback)]
+#[program(testable, fallback)]
 enum TestProgram {
     #[discriminant = 3]
     StructAccounts,

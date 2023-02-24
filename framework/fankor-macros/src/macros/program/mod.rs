@@ -80,6 +80,29 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
         }
     }).collect::<Vec<_>>();
 
+    let testable_dispatch_method = if program.testable {
+        quote! {
+            #[cfg(any(feature = "test"))]
+            0 => {
+                ::fankor::prelude::msg!("Testable Instruction");
+
+                let mut ix_data = ix_data;
+                let mut ix_accounts = accounts;
+                let accounts = <::fankor::prelude::TestableInstruction<'info> as fankor::traits::Instruction>::try_from(&context, &mut ix_data, &mut ix_accounts)?;
+
+                if ix_accounts.len() != 0 {
+                    return Err(::fankor::errors::FankorErrorCode::UnusedAccounts.into());
+                }
+
+                accounts.processor(context.clone())?;
+
+                Ok(())
+            }
+        }
+    } else {
+        quote! {}
+    };
+
     let dispatch_default = if let Some(fallback_method_call) = &program.fallback_method_call {
         quote! {
             _ => {
@@ -203,6 +226,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
             #(#discriminant_constants)*
 
             match sighash {
+                #testable_dispatch_method
                 #(#dispatch_methods,)*
                 #dispatch_default
             }
