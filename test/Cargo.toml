@@ -13,14 +13,14 @@ crate-type = ["cdylib", "lib"]
 [features]
 no-entrypoint = ["fankor/no-entrypoint"]
 library = ["no-entrypoint", "fankor/library"]
-test = ["fankor/test"]
+test-utils = ["fankor/test-utils"]
 ts-gen = ["fankor/ts-gen"]
 
 [dependencies]
 fankor = { path = "../framework/fankor", features = ["token-program", "metadata-program"] }
 
 [dev-dependencies]
-fankor = { path = "../framework/fankor", features = ["token-program", "metadata-program", "test"] }
+fankor = { path = "../framework/fankor", features = ["token-program", "metadata-program", "test-utils"] }
 solana-sdk = "1.15.0"
 solana-program-test = "1.15.0"
 tokio = { version = "1.14.1", features = ["macros"] }

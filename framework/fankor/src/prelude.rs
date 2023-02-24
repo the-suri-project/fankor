@@ -3,6 +3,8 @@ pub use crate::errors::*;
 pub use crate::macros::*;
 pub use crate::models::types::*;
 pub use crate::models::*;
+#[cfg(feature = "testable-program")]
+pub use crate::testable_program::*;
 pub use crate::traits::*;
 #[cfg(feature = "ts-gen")]
 pub use crate::ts_gen;
@@ -37,15 +39,15 @@ pub use spl_associated_token_account;
 pub use spl_token;
 pub use static_assertions::const_assert;
 
-#[cfg(feature = "test")]
+#[cfg(feature = "test-utils")]
 pub use crate::tests::*;
 #[cfg(feature = "ts-gen")]
 pub use lazy_static::lazy_static;
-#[cfg(feature = "test")]
+#[cfg(feature = "test-utils")]
 pub use solana_program_runtime;
-#[cfg(feature = "test")]
+#[cfg(feature = "test-utils")]
 pub use solana_program_test;
-#[cfg(feature = "test")]
+#[cfg(feature = "test-utils")]
 pub use solana_sdk;
 
 pub mod sysvar {

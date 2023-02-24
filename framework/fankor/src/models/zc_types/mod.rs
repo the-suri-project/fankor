@@ -78,7 +78,7 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
         }
 
         // Reallocate the buffer
-        #[cfg(any(feature = "test", test))]
+        #[cfg(any(feature = "test-utils", test))]
         if self.info.rent_epoch == crate::tests::ACCOUNT_INFO_TEST_MAGIC_NUMBER {
             let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
                 FankorErrorCode::ZeroCopyPossibleDeadlock {
@@ -156,12 +156,12 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
         let original_length = original_bytes.len();
         drop(original_bytes);
 
-        #[cfg(any(feature = "test", test))]
+        #[cfg(any(feature = "test-utils", test))]
         if self.info.rent_epoch == crate::tests::ACCOUNT_INFO_TEST_MAGIC_NUMBER {
             self.info.realloc(original_length - length, false)?;
         }
 
-        #[cfg(not(any(feature = "test", test)))]
+        #[cfg(not(any(feature = "test-utils", test)))]
         {
             self.info.realloc(original_length - length, false)?;
         }
@@ -218,12 +218,12 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
                 // Reallocate the buffer
                 drop(original_bytes);
 
-                #[cfg(any(feature = "test", test))]
+                #[cfg(any(feature = "test-utils", test))]
                 if self.info.rent_epoch == crate::tests::ACCOUNT_INFO_TEST_MAGIC_NUMBER {
                     self.info.realloc(original_len - diff, false)?;
                 }
 
-                #[cfg(not(any(feature = "test", test)))]
+                #[cfg(not(any(feature = "test-utils", test)))]
                 {
                     self.info.realloc(original_len - diff, false)?;
                 }
@@ -243,7 +243,7 @@ impl<'info, T: CopyType<'info>> Zc<'info, T> {
                 // Reallocate the buffer
                 let diff = new_size - previous_size;
 
-                #[cfg(any(feature = "test", test))]
+                #[cfg(any(feature = "test-utils", test))]
                 if self.info.rent_epoch == crate::tests::ACCOUNT_INFO_TEST_MAGIC_NUMBER {
                     // Shift bytes
                     let mut original_bytes = self.info.data.try_borrow_mut().map_err(|_| {
@@ -491,12 +491,12 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
                 // Reallocate the buffer
                 drop(original_bytes);
 
-                #[cfg(any(feature = "test", test))]
+                #[cfg(any(feature = "test-utils", test))]
                 if self.info.rent_epoch == crate::tests::ACCOUNT_INFO_TEST_MAGIC_NUMBER {
                     self.info.realloc(original_len - diff, false)?;
                 }
 
-                #[cfg(not(any(feature = "test", test)))]
+                #[cfg(not(any(feature = "test-utils", test)))]
                 {
                     self.info.realloc(original_len - diff, false)?;
                 }
@@ -516,7 +516,7 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
                 // Reallocate the buffer
                 let diff = new_size - previous_size;
 
-                #[cfg(any(feature = "test", test))]
+                #[cfg(any(feature = "test-utils", test))]
                 if self.info.rent_epoch == crate::tests::ACCOUNT_INFO_TEST_MAGIC_NUMBER {
                     // Shift bytes
                     let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {

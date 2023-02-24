@@ -10,7 +10,7 @@ mod program;
 
 mod constants;
 mod serialization;
-#[cfg(all(test, feature = "test"))]
+#[cfg(all(test, feature = "test-utils"))]
 mod tests;
 
 setup!("7JKciYMdWKBo1yPhjVe5eDDjoxYfB8YhkAL7DRpJj3xE");

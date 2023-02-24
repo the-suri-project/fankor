@@ -19,7 +19,7 @@ macro_rules! impl_account {
             }
         }
 
-        #[cfg(any(feature = "test", test))]
+        #[cfg(any(feature = "test-utils", test))]
         impl AccountSerialize for $name {
             fn try_serialize<W: Write>(&self, writer: &mut W) -> FankorResult<()> {
                 let mut buf = [0u8; <$ty>::LEN];
@@ -31,14 +31,14 @@ macro_rules! impl_account {
             }
         }
 
-        #[cfg(not(any(feature = "test", test)))]
+        #[cfg(not(any(feature = "test-utils", test)))]
         impl AccountSerialize for $name {
             fn try_serialize<W: Write>(&self, _writer: &mut W) -> FankorResult<()> {
                 unreachable!("Cannot write accounts that does not belong to the current program")
             }
         }
 
-        #[cfg(any(feature = "test", test))]
+        #[cfg(any(feature = "test-utils", test))]
         impl BorshSerialize for $name {
             fn serialize<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
                 let mut buf = [0u8; <$ty>::LEN];
@@ -51,7 +51,7 @@ macro_rules! impl_account {
             }
         }
 
-        #[cfg(not(any(feature = "test", test)))]
+        #[cfg(not(any(feature = "test-utils", test)))]
         impl BorshSerialize for $name {
             fn serialize<W: Write>(&self, _writer: &mut W) -> std::io::Result<()> {
                 unreachable!("Cannot write accounts that does not belong to the current program")
@@ -111,7 +111,7 @@ macro_rules! impl_account {
             }
         }
 
-        #[cfg(any(feature = "test", test))]
+        #[cfg(any(feature = "test-utils", test))]
         impl AccountSerialize for $name {
             fn try_serialize<W: Write>(&self, writer: &mut W) -> FankorResult<()> {
                 let mut buf = [0u8; <$ty>::LEN];
@@ -123,14 +123,14 @@ macro_rules! impl_account {
             }
         }
 
-        #[cfg(not(any(feature = "test", test)))]
+        #[cfg(not(any(feature = "test-utils", test)))]
         impl AccountSerialize for $name {
             fn try_serialize<W: Write>(&self, _writer: &mut W) -> FankorResult<()> {
                 unreachable!("Cannot write accounts that does not belong to the current program")
             }
         }
 
-        #[cfg(any(feature = "test", test))]
+        #[cfg(any(feature = "test-utils", test))]
         impl BorshSerialize for $name {
             fn serialize<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
                 let mut buf = [0u8; <$ty>::LEN];
@@ -143,7 +143,7 @@ macro_rules! impl_account {
             }
         }
 
-        #[cfg(not(any(feature = "test", test)))]
+        #[cfg(not(any(feature = "test-utils", test)))]
         impl BorshSerialize for $name {
             fn serialize<W: Write>(&self, _writer: &mut W) -> std::io::Result<()> {
                 unreachable!("Cannot write accounts that does not belong to the current program")
@@ -207,7 +207,7 @@ macro_rules! impl_account {
             }
         }
 
-        #[cfg(any(feature = "test", test))]
+        #[cfg(any(feature = "test-utils", test))]
         impl AccountSerialize for $name {
             fn try_serialize<W: Write>(&self, writer: &mut W) -> FankorResult<()> {
                 <$ty>::serialize(&self.0, writer).map_err(|e| crate::errors::Error::from(e))?;
@@ -216,14 +216,14 @@ macro_rules! impl_account {
             }
         }
 
-        #[cfg(not(any(feature = "test", test)))]
+        #[cfg(not(any(feature = "test-utils", test)))]
         impl AccountSerialize for $name {
             fn try_serialize<W: Write>(&self, _writer: &mut W) -> FankorResult<()> {
                 unreachable!("Cannot write accounts that does not belong to the current program")
             }
         }
 
-        #[cfg(any(feature = "test", test))]
+        #[cfg(any(feature = "test-utils", test))]
         impl BorshSerialize for $name {
             fn serialize<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
                 <$ty>::serialize(&self.0, writer)
@@ -233,7 +233,7 @@ macro_rules! impl_account {
             }
         }
 
-        #[cfg(not(any(feature = "test", test)))]
+        #[cfg(not(any(feature = "test-utils", test)))]
         impl BorshSerialize for $name {
             fn serialize<W: Write>(&self, _writer: &mut W) -> std::io::Result<()> {
                 unreachable!("Cannot write accounts that does not belong to the current program")

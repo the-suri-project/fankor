@@ -59,7 +59,7 @@ impl Default for UpgradeableLoaderAccount {
     }
 }
 
-#[cfg(any(feature = "test", test))]
+#[cfg(any(feature = "test-utils", test))]
 impl AccountSerialize for UpgradeableLoaderAccount {
     fn try_serialize<W: Write>(&self, writer: &mut W) -> FankorResult<()> {
         let buf =
@@ -70,14 +70,14 @@ impl AccountSerialize for UpgradeableLoaderAccount {
     }
 }
 
-#[cfg(not(any(feature = "test", test)))]
+#[cfg(not(any(feature = "test-utils", test)))]
 impl AccountSerialize for UpgradeableLoaderAccount {
     fn try_serialize<W: Write>(&self, _writer: &mut W) -> FankorResult<()> {
         unreachable!("Cannot write accounts that does not belong to the current program")
     }
 }
 
-#[cfg(any(feature = "test", test))]
+#[cfg(any(feature = "test-utils", test))]
 impl BorshSerialize for UpgradeableLoaderAccount {
     fn serialize<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
         let buf =
@@ -88,7 +88,7 @@ impl BorshSerialize for UpgradeableLoaderAccount {
     }
 }
 
-#[cfg(not(any(feature = "test", test)))]
+#[cfg(not(any(feature = "test-utils", test)))]
 impl BorshSerialize for UpgradeableLoaderAccount {
     fn serialize<W: Write>(&self, _writer: &mut W) -> std::io::Result<()> {
         unreachable!("Cannot write accounts that does not belong to the current program")

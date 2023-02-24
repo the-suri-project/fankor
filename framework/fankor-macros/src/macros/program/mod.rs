@@ -82,7 +82,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
 
     let testable_dispatch_method = if program.testable {
         quote! {
-            #[cfg(any(feature = "test"))]
+            #[cfg(any(feature = "testable-program"))]
             0 => {
                 ::fankor::prelude::msg!("Testable Instruction");
 
@@ -130,7 +130,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
         }
 
         #[automatically_derived]
-        #[cfg(any(test, feature = "test"))]
+        #[cfg(any(test, feature = "test-utils"))]
         impl #name {
             pub fn new_program_test<'info>() -> ::solana_program_test::ProgramTest {
                 ::solana_program_test::ProgramTest::new(
