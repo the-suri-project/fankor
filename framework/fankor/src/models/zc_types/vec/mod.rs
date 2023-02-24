@@ -265,17 +265,20 @@ impl<'info, T: CopyType<'info>> Iterator for Iter<'info, T> {
             return None;
         }
 
+        if self.index != 0 {
+            let bytes = (*self.info.data).borrow();
+            let bytes = &bytes[self.offset..];
+
+            self.offset += T::ZeroCopyType::read_byte_size(bytes)
+                .expect("Deserialization failed in vector iterator");
+        }
+
         let result = Zc {
             info: self.info,
             offset: self.offset,
             _data: PhantomData,
         };
 
-        let bytes = (*self.info.data).borrow();
-        let bytes = &bytes[self.offset..];
-
-        self.offset += T::ZeroCopyType::read_byte_size(bytes)
-            .expect("Deserialization failed in vector iterator");
         self.index += 1;
 
         Some(result)
@@ -328,6 +331,39 @@ mod test {
         }
 
         assert_eq!(count, 5);
+    }
+
+    #[test]
+    fn test_iter_modifying() {
+        let mut lamports = 0;
+        let mut vector = vec![5, 0, 0, 0, 1, 3, 1, 2, 1, 3, 1, 2, 1, 3];
+        let info = create_account_info_for_tests(&mut lamports, &mut vector);
+        let (zc, _) = ZcVec::<Option<u8>>::new(&info, 0).unwrap();
+
+        zc.iter().for_each(|zc_el| {
+            let value = zc_el.try_value().unwrap().unwrap();
+
+            if value == 2 {
+                zc_el.try_write_value_unchecked(&None).unwrap();
+            }
+        });
+
+        let mut some_count = 0;
+        let mut none_count = 0;
+        for zc_el in zc {
+            match zc_el.try_value().unwrap() {
+                Some(v) => {
+                    assert_eq!(v, 3);
+                    some_count += 1;
+                }
+                None => {
+                    none_count += 1;
+                }
+            }
+        }
+
+        assert_eq!(some_count, 3);
+        assert_eq!(none_count, 2);
     }
 
     #[test]
