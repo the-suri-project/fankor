@@ -88,7 +88,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
 
                 let mut ix_data = ix_data;
                 let mut ix_accounts = accounts;
-                let accounts = <::fankor::prelude::TestableInstruction<'info> as fankor::traits::Instruction>::try_from(&context, &mut ix_data, &mut ix_accounts)?;
+                let accounts = <::fankor::prelude::TestInstruction<'info> as fankor::traits::Instruction>::try_from(&context, &mut ix_data, &mut ix_accounts)?;
 
                 if ix_accounts.len() != 0 {
                     return Err(::fankor::errors::FankorErrorCode::UnusedAccounts.into());

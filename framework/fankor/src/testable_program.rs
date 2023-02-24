@@ -16,9 +16,10 @@ use solana_program::sysvar::Sysvar;
 /// program testing.
 pub struct TestInstruction<'info> {
     /// The action to perform.
-    pub args: Argument<TestableInstructionMethod>,
+    pub args: Argument<TestInstructionAction>,
 
     /// The account to modify.
+    /// This account must be signer if args is `TestInstructionAction::Init`.
     pub account: UncheckedAccount<'info>,
 
     /// The account that pays/receives the rent difference.
@@ -29,7 +30,7 @@ pub struct TestInstruction<'info> {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, BorshSerialize, BorshDeserialize)]
-pub enum TestableInstructionMethod {
+pub enum TestInstructionAction {
     /// Initializes a new account.
     Init { bytes: FnkVec<u8> },
 
@@ -55,7 +56,7 @@ impl<'info> TestInstruction<'info> {
 
     pub fn processor(self, context: FankorContext<'info>) -> FankorResult<()> {
         match self.args.into_inner() {
-            TestableInstructionMethod::Init { bytes } => {
+            TestInstructionAction::Init { bytes } => {
                 msg!("Testable Instruction: Init");
 
                 // Init account.
@@ -83,7 +84,7 @@ impl<'info> TestInstruction<'info> {
                 let data_bytes = &mut data_bytes[..];
                 data_bytes.copy_from_slice(&bytes);
             }
-            TestableInstructionMethod::InitPDA { seeds, bytes } => {
+            TestInstructionAction::InitPDA { seeds, bytes } => {
                 msg!("Testable Instruction: InitPDA");
 
                 // Init account.
@@ -112,7 +113,7 @@ impl<'info> TestInstruction<'info> {
                 let data_bytes = &mut data_bytes[..];
                 data_bytes.copy_from_slice(&bytes);
             }
-            TestableInstructionMethod::Replace { bytes } => {
+            TestInstructionAction::Replace { bytes } => {
                 msg!("Testable Instruction: Replace");
 
                 // Realloc account.
@@ -132,7 +133,7 @@ impl<'info> TestInstruction<'info> {
                 let data_bytes = &mut data_bytes[..];
                 data_bytes.copy_from_slice(&bytes);
             }
-            TestableInstructionMethod::Append { bytes } => {
+            TestInstructionAction::Append { bytes } => {
                 msg!("Testable Instruction: Append");
 
                 // Realloc account.
@@ -153,7 +154,7 @@ impl<'info> TestInstruction<'info> {
                 let data_bytes = &mut data_bytes[length..];
                 data_bytes.copy_from_slice(&bytes);
             }
-            TestableInstructionMethod::Close => {
+            TestInstructionAction::Close => {
                 self.account.close(self.payer.info())?;
             }
         }
@@ -164,7 +165,7 @@ impl<'info> TestInstruction<'info> {
 
 #[automatically_derived]
 impl<'info> Instruction<'info> for TestInstruction<'info> {
-    type CPI = CpiTestInstruction<'info>;
+    type CPI = CpiTestInstruction;
     type LPI = LpiTestInstruction<'info>;
     fn try_from(
         context: &'info FankorContext<'info>,
@@ -172,7 +173,7 @@ impl<'info> Instruction<'info> for TestInstruction<'info> {
         accounts: &mut &'info [AccountInfo<'info>],
     ) -> FankorResult<Self> {
         let args =
-            <Argument<TestableInstructionMethod> as Instruction>::try_from(context, buf, accounts)?;
+            <Argument<TestInstructionAction> as Instruction>::try_from(context, buf, accounts)?;
         let account = <UncheckedAccount<'info> as Instruction>::try_from(context, buf, accounts)?;
         let payer = <UncheckedAccount<'info> as Instruction>::try_from(context, buf, accounts)?;
         let system_program =
@@ -195,21 +196,20 @@ impl<'info> TestInstruction<'info> {
     fn validate(&self, _context: &'info FankorContext<'info>) -> FankorResult<()> {
         let mut verification_config = AccountInfoVerification::default();
         let mut closure = |info: &AccountInfo<'info>| {
-            {
-                let writable = true;
-                if writable {
-                    if !info.is_writable {
-                        return Err(FankorErrorCode::AccountConstraintNotWritable {
-                            account: "account",
-                        }
-                        .into());
-                    }
-                } else if info.is_writable {
+            if !info.is_writable {
+                return Err(
+                    FankorErrorCode::AccountConstraintNotWritable { account: "account" }.into(),
+                );
+            }
+
+            if matches!(self.args.as_ref(), TestInstructionAction::Init { .. }) {
+                if !info.is_signer {
                     return Err(
-                        FankorErrorCode::AccountConstraintWritable { account: "account" }.into(),
+                        FankorErrorCode::AccountConstraintNotSigner { account: "account" }.into(),
                     );
                 }
             }
+
             Ok(())
         };
         verification_config.account_info = Some(&mut closure);
@@ -218,21 +218,18 @@ impl<'info> TestInstruction<'info> {
 
         let mut verification_config = AccountInfoVerification::default();
         let mut closure = |info: &AccountInfo<'info>| {
-            {
-                let writable = true;
-                if writable {
-                    if !info.is_writable {
-                        return Err(FankorErrorCode::AccountConstraintNotWritable {
-                            account: "payer",
-                        }
-                        .into());
-                    }
-                } else if info.is_writable {
-                    return Err(
-                        FankorErrorCode::AccountConstraintWritable { account: "payer" }.into(),
-                    );
-                }
+            if !info.is_writable {
+                return Err(
+                    FankorErrorCode::AccountConstraintNotWritable { account: "payer" }.into(),
+                );
             }
+
+            if !info.is_signer {
+                return Err(
+                    FankorErrorCode::AccountConstraintNotSigner { account: "payer" }.into(),
+                );
+            }
+
             Ok(())
         };
         verification_config.account_info = Some(&mut closure);
@@ -246,50 +243,16 @@ impl<'info> TestInstruction<'info> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-pub struct CpiTestInstruction<'info> {
-    pub args: <Argument<TestableInstructionMethod> as Instruction<'info>>::CPI,
-    pub account: <UncheckedAccount<'info> as Instruction<'info>>::CPI,
-    pub payer: <UncheckedAccount<'info> as Instruction<'info>>::CPI,
-    pub system_program: <Program<'info, System> as Instruction<'info>>::CPI,
-}
+pub struct CpiTestInstruction {}
 
-impl<'info> CpiInstruction<'info> for CpiTestInstruction<'info> {
+impl<'info> CpiInstruction<'info> for CpiTestInstruction {
     fn serialize_into_instruction_parts<W: std::io::Write>(
         &self,
-        writer: &mut W,
-        metas: &mut Vec<AccountMeta>,
-        infos: &mut Vec<AccountInfo<'info>>,
+        _writer: &mut W,
+        _metas: &mut Vec<AccountMeta>,
+        _infos: &mut Vec<AccountInfo<'info>>,
     ) -> FankorResult<()> {
-        CpiInstruction::serialize_into_instruction_parts(&self.args, writer, metas, infos)?;
-
-        {
-            let from = metas.len();
-            CpiInstruction::serialize_into_instruction_parts(&self.account, writer, metas, infos)?;
-            let to = metas.len();
-            let writable = true;
-            for meta in &mut metas[from..to] {
-                meta.is_writable = writable;
-            }
-        }
-
-        {
-            let from = metas.len();
-            CpiInstruction::serialize_into_instruction_parts(&self.payer, writer, metas, infos)?;
-            let to = metas.len();
-            let writable = true;
-            for meta in &mut metas[from..to] {
-                meta.is_writable = writable;
-            }
-        }
-
-        CpiInstruction::serialize_into_instruction_parts(
-            &self.system_program,
-            writer,
-            metas,
-            infos,
-        )?;
-
-        Ok(())
+        unreachable!("CpiTestInstruction should never be used")
     }
 }
 
@@ -298,7 +261,7 @@ impl<'info> CpiInstruction<'info> for CpiTestInstruction<'info> {
 // ----------------------------------------------------------------------------
 
 pub struct LpiTestInstruction<'info> {
-    pub args: <Argument<TestableInstructionMethod> as Instruction<'info>>::LPI,
+    pub args: <Argument<TestInstructionAction> as Instruction<'info>>::LPI,
     pub account: <UncheckedAccount<'info> as Instruction<'info>>::LPI,
     pub payer: <UncheckedAccount<'info> as Instruction<'info>>::LPI,
     pub system_program: <Program<'info, System> as Instruction<'info>>::LPI,
@@ -311,26 +274,15 @@ impl<'info> LpiInstruction for LpiTestInstruction<'info> {
         metas: &mut Vec<AccountMeta>,
     ) -> FankorResult<()> {
         LpiInstruction::serialize_into_instruction_parts(&self.args, writer, metas)?;
+        LpiInstruction::serialize_into_instruction_parts(&self.account, writer, metas)?;
+        let mut meta = metas.last_mut().unwrap();
+        meta.is_writable = true;
+        meta.is_signer = matches!(self.args.as_ref(), TestInstructionAction::Init { .. });
 
-        {
-            let from = metas.len();
-            LpiInstruction::serialize_into_instruction_parts(&self.account, writer, metas)?;
-            let to = metas.len();
-            let writable = true;
-            for meta in &mut metas[from..to] {
-                meta.is_writable = writable;
-            }
-        }
-
-        {
-            let from = metas.len();
-            LpiInstruction::serialize_into_instruction_parts(&self.payer, writer, metas)?;
-            let to = metas.len();
-            let writable = true;
-            for meta in &mut metas[from..to] {
-                meta.is_writable = writable;
-            }
-        }
+        LpiInstruction::serialize_into_instruction_parts(&self.payer, writer, metas)?;
+        meta = metas.last_mut().unwrap();
+        meta.is_writable = true;
+        meta.is_signer = true;
 
         LpiInstruction::serialize_into_instruction_parts(&self.system_program, writer, metas)?;
 
@@ -349,7 +301,9 @@ pub fn create_test_instruction<'info>(
 ) -> FankorResult<solana_program::instruction::Instruction> {
     let mut data = vec![0];
     let mut metas = Vec::new();
+
     LpiInstruction::serialize_into_instruction_parts(&accounts, &mut data, &mut metas)?;
+
     Ok(solana_program::instruction::Instruction {
         program_id: *program_id,
         accounts: metas,
