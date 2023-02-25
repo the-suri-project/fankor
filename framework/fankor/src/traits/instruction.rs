@@ -16,7 +16,7 @@ pub trait Instruction<'info>: Sized {
         &self,
         config: &mut AccountInfoVerification<'a, 'info>,
     ) -> FankorResult<()> {
-        unreachable!("Custom enums and structs cannot have check attributes");
+        Ok(())
     }
 
     fn try_from(
