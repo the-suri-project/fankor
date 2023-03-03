@@ -8,6 +8,7 @@ pub struct DataContext {
     pub program_name: &'static str,
     pub accounts: HashSet<Cow<'static, str>>,
     pub account_types: TsTypesCache,
+    pub account_type_extensions: TsTypesCache,
     pub account_schemas: TsTypesCache,
     pub account_schemas_use_methods: TsTypesCache,
     pub account_schemas_constants: TsTypesCache,
@@ -27,6 +28,7 @@ impl DataContext {
             program_name: "program",
             accounts: HashSet::new(),
             account_types: TsTypesCache::new(),
+            account_type_extensions: HashMap::new(),
             account_schemas: TsTypesCache::new(),
             account_schemas_use_methods: TsTypesCache::new(),
             account_schemas_constants: TsTypesCache::new(),
@@ -155,6 +157,22 @@ impl DataContext {
         Ok(())
     }
 
+    /// Adds an account type extension.
+    pub fn add_account_type_extensions(
+        &mut self,
+        name: &'static str,
+        data: Cow<'static, str>,
+    ) -> Result<(), String> {
+        if self.program_methods.contains_key(&Cow::Borrowed(name)) {
+            return Err(format!("Duplicated account type extension: '{}'", name));
+        }
+
+        self.account_type_extensions
+            .insert(Cow::Borrowed(name), data);
+
+        Ok(())
+    }
+
     /// Builds the TypeScript file from the data stored in the context.
     pub fn build_ts_file(&mut self) -> String {
         let mut buffer = String::new();
@@ -177,6 +195,14 @@ impl DataContext {
         account_types.sort_by(|a, b| a.0.cmp(b.0));
 
         for (_name, type_definition) in account_types {
+            buffer.push_str(type_definition);
+        }
+
+        // Build types extensions.
+        let mut account_type_extensions = self.account_type_extensions.iter().collect::<Vec<_>>();
+        account_type_extensions.sort_by(|a, b| a.0.cmp(b.0));
+
+        for (_name, type_definition) in account_type_extensions {
             buffer.push_str(type_definition);
         }
 

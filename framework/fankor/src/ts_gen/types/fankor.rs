@@ -1,5 +1,6 @@
 use crate::prelude::{
-    FnkArray, FnkBVec, FnkInt, FnkMap, FnkRange, FnkSet, FnkString, FnkUInt, FnkURange, FnkVec,
+    FnkArray, FnkBVec, FnkExtension, FnkInt, FnkMap, FnkRange, FnkSet, FnkString, FnkUInt,
+    FnkURange, FnkVec,
 };
 use crate::traits::{TsTypeGen, TsTypesCache};
 use std::any::{Any, TypeId};
@@ -253,5 +254,23 @@ impl<K: TsTypeGen, V: TsTypeGen> TsTypeGen for FnkBVec<K, V> {
             "fnk.FnkBVec({{ keySchema: {}, valueSchema: {} }})",
             inner_key_schema, inner_value_schema
         ))
+    }
+}
+
+impl TsTypeGen for FnkExtension {
+    fn value(&self) -> Cow<'static, str> {
+        Cow::Borrowed("0")
+    }
+
+    fn unit_value() -> Option<Cow<'static, str>> {
+        Some(Cow::Borrowed("0"))
+    }
+
+    fn value_type() -> Cow<'static, str> {
+        Cow::Borrowed("undefined")
+    }
+
+    fn schema_name() -> Cow<'static, str> {
+        Cow::Borrowed("fnk.U8")
     }
 }

@@ -1,7 +1,6 @@
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::traits::{CopyType, ZeroCopyType};
 use solana_program::account_info::AccountInfo;
-use std::mem::size_of;
 
 impl<'info> ZeroCopyType<'info> for bool {
     fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
@@ -30,6 +29,6 @@ impl<'info> CopyType<'info> for bool {
     type ZeroCopyType = bool;
 
     fn min_byte_size() -> usize {
-        size_of::<bool>()
+        1
     }
 }

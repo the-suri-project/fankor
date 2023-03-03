@@ -11,6 +11,10 @@ impl TsTypeGen for () {
         Cow::Borrowed("null")
     }
 
+    fn unit_value() -> Option<Cow<'static, str>> {
+        Some(Cow::Borrowed("null"))
+    }
+
     fn value_type() -> Cow<'static, str> {
         Cow::Borrowed("null")
     }

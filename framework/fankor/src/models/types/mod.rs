@@ -1,5 +1,6 @@
 pub use arrays::*;
 pub use binary_vectors::*;
+pub use extensions::*;
 pub use integers::*;
 pub use maps::*;
 pub use ranges::*;
@@ -10,6 +11,7 @@ pub use vectors::*;
 
 mod arrays;
 mod binary_vectors;
+mod extensions;
 mod integers;
 mod maps;
 mod ranges;

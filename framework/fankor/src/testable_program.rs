@@ -202,12 +202,10 @@ impl<'info> TestInstruction<'info> {
                 );
             }
 
-            if matches!(self.args.as_ref(), TestInstructionAction::Init { .. }) {
-                if !info.is_signer {
-                    return Err(
-                        FankorErrorCode::AccountConstraintNotSigner { account: "account" }.into(),
-                    );
-                }
+            if matches!(self.args.as_ref(), TestInstructionAction::Init { .. }) && !info.is_signer {
+                return Err(
+                    FankorErrorCode::AccountConstraintNotSigner { account: "account" }.into(),
+                );
             }
 
             Ok(())

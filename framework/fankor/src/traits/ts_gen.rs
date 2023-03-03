@@ -11,6 +11,13 @@ pub trait TsTypeGen {
 
     // STATIC METHODS ---------------------------------------------------------
 
+    /// If the the type is a unit type, i.e. it has always the same value and not
+    /// depends on user input, this method must return that value. Otherwise,
+    /// it must return None.
+    fn unit_value() -> Option<Cow<'static, str>> {
+        None
+    }
+
     /// Gets the type of the value.
     fn value_type() -> Cow<'static, str>;
 

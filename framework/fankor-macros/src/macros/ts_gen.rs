@@ -18,10 +18,9 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let schema_name = format!("{}Schema", name_str);
             let schema_constant_name = format!("T{}", name_str);
 
-            let mut constructor_replacements = Vec::new();
+            let mut ts_fields_replacements = Vec::new();
             let mut schema_replacements = Vec::new();
-            let mut ts_constructor_params = Vec::new();
-            let mut ts_schema_constructor_args = Vec::new();
+            let mut ts_fields = String::new();
             let mut ts_schema_fields = Vec::new();
             let mut equals_method_conditions = Vec::new();
 
@@ -31,17 +30,20 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 let field_name = format_ident!("{}", field_name_str, span = field_name.span());
                 let field_ty = &field.ty;
 
-                let constructor_replacement_str = format!("_r_constructor_{}_r_", field_name);
                 let schema_replacement_str = format!("_r_schema_{}_r_", field_name);
-                ts_constructor_params.push(format!(
-                    "public {}: {}",
-                    field_name, constructor_replacement_str
-                ));
-                ts_schema_constructor_args.push(format!("result.{}", field_name));
                 ts_schema_fields.push(format!("['{}', {}]", field_name, schema_replacement_str));
 
-                constructor_replacements.push(quote! {
-                    .replace(#constructor_replacement_str, &< #field_ty as TsTypeGen>::generate_type(registered_types))
+                let ts_field_replacement_format_unit_str =
+                    format!("private {} = {{}};", field_name);
+                let ts_field_replacement_format_str = format!("public {}: {{}};", field_name);
+                let ts_field_replacement_str = format!("_r_field_{}_r_", field_name);
+                ts_fields.push_str(&ts_field_replacement_str);
+                ts_fields_replacements.push(quote! {
+                    .replace(#ts_field_replacement_str,  &if let Some(unit_value) = < #field_ty as TsTypeGen>::unit_value() {
+                        format!(#ts_field_replacement_format_unit_str, unit_value)
+                    } else {
+                        format!(#ts_field_replacement_format_str, < #field_ty as TsTypeGen>::generate_type(registered_types))
+                    })
                 });
 
                 schema_replacements.push(quote! {
@@ -56,9 +58,14 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             let ts_type = format!(
                 "export class {} {{
+                    // FIELDS -----------------------------------------------------------------
+                    {}
+
                     // CONSTRUCTORS -----------------------------------------------------------
 
-                    constructor({}) {{}}
+                    constructor(data: fnk.ExcludeFunctionProperties<{}>) {{
+                        Object.assign(this, data);
+                    }}
 
                     // GETTERS ----------------------------------------------------------------
 
@@ -86,7 +93,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     }}
                 }}",
                 name_str,
-                ts_constructor_params.join(","),
+                ts_fields,
+                name_str,
                 schema_constant_name,
                 schema_constant_name,
                 name_str,
@@ -109,12 +117,12 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     // METHODS ----------------------------------------------------------------
 
                     serialize(writer: fnk.FnkBorshWriter, value: {}) {{
-                        this.innerSchema.serialize(writer, value);
+                        this.innerSchema.serialize(writer, value.data);
                     }}
 
                     deserialize(reader: fnk.FnkBorshReader) {{
-                        const result = this.innerSchema.deserialize(reader);
-                        return new {}({});
+                        const data = this.innerSchema.deserialize(reader);
+                        return new {}(data);
                     }}
                 }}",
                 schema_name,
@@ -123,7 +131,6 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 ts_schema_fields.join(","),
                 name_str,
                 name_str,
-                ts_schema_constructor_args.join(","),
             );
 
             let ts_schema_use_method_name = format!("use{}", schema_name);
@@ -174,7 +181,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         // Prevents infinite recursion.
                         registered_types.insert(name.clone(), std::borrow::Cow::Borrowed(""));
 
-                        let ts_type = #ts_type.to_string() #(#constructor_replacements)*;
+                        let ts_type = #ts_type.to_string() #(#ts_fields_replacements)*;
                         *registered_types.get_mut(&name).unwrap() = std::borrow::Cow::Owned(ts_type);
 
                         name
@@ -341,12 +348,12 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     }
                     Fields::Unit => {
                         ts_interfaces.push(format!(
-                            "export interface {} {{ type: '{}'; value: null; }}",
+                            "export interface {} {{ type: '{}'; }}",
                             interface_name, variant_name_str,
                         ));
 
                         ts_schema_fields.push(format!(
-                            "[{},'{}',fnk.Unit]",
+                            "[{},'{}']",
                             schema_discriminant_replacement_str, variant_name
                         ));
                     }
@@ -365,14 +372,6 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         return {};
                     }}
 
-                    get type() {{
-                        return this.data.type;
-                    }}
-
-                    get value() {{
-                        return this.data.value;
-                    }}
-
                     // METHODS ----------------------------------------------------------------
 
                     serialize(buffer?: Buffer) {{
@@ -382,7 +381,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     }}
 
                     equals(other: {}) {{
-                        return this.type === other.type && fnk.equals(this.value, other.value);
+                        return this.data.type === other.data.type && fnk.equals((this.data as any)?.value, (other.data as any)?.value);
                     }}
 
                     // STATIC METHODS ---------------------------------------------------------

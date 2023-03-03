@@ -27,7 +27,11 @@ export class EnumSchema<S extends ReadonlyArray<EnumVariant>>
         for (const variant of this.schema) {
             if (variant[1] === value.type) {
                 writer.writeByte(variant[0]);
-                variant[2].serialize(writer, value.value);
+
+                if (variant[2]) {
+                    variant[2].serialize(writer, (value as any).value);
+                }
+
                 return;
             }
         }
@@ -40,10 +44,16 @@ export class EnumSchema<S extends ReadonlyArray<EnumVariant>>
 
         for (const variant of this.schema) {
             if (variant[0] === discriminant) {
-                return {
-                    type: variant[1],
-                    value: variant[2].deserialize(reader),
-                };
+                if (variant[2]) {
+                    return {
+                        type: variant[1],
+                        value: variant[2].deserialize(reader),
+                    } as any;
+                } else {
+                    return {
+                        type: variant[1],
+                    } as any;
+                }
             }
         }
 
@@ -57,13 +67,19 @@ export class EnumSchema<S extends ReadonlyArray<EnumVariant>>
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-export type EnumVariant = readonly [number, string, FnkBorshSchema<any>];
+export type EnumVariant =
+    | readonly [number, string]
+    | readonly [number, string, FnkBorshSchema<any>];
 
 export type FromEnumSchema<S extends ReadonlyArray<EnumVariant>> = {
-    type: string;
-    value: FromEnumVariant<S>[number];
-};
+    [Index in keyof S]: FromEnumVariant<S[Index]>;
+}[number];
 
-export type FromEnumVariant<S extends ReadonlyArray<EnumVariant>> = {
-    [Index in keyof S]: UnwrapSchemaType<S[Index][2]>;
-};
+export type FromEnumVariant<S extends EnumVariant> = S[2] extends {}
+    ? {
+          type: string;
+          value: UnwrapSchemaType<S[2]>;
+      }
+    : {
+          type: string;
+      };

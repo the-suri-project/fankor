@@ -19,4 +19,6 @@ pub struct ZeroCopyStructAccountData {
     pub value1: u32,
     pub value2: String,
     pub value3: Vec<u8>,
+    pub value4: (),
+    pub value5: FnkExtension,
 }

@@ -6,6 +6,7 @@ pub enum EnumAccountData {
     A,
     B(u32),
     C { value1: u32, value2_snake: String },
+    D { value4: (), value5: FnkExtension },
 }
 
 #[derive(EnumDiscriminants, FankorZeroCopy)]

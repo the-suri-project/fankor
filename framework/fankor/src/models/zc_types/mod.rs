@@ -2,6 +2,7 @@ pub mod arrays;
 pub mod binary_vectors;
 pub mod bool;
 pub mod boxed;
+pub mod extensions;
 pub mod numbers;
 pub mod options;
 pub mod pubkeys;

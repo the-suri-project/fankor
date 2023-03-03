@@ -7,7 +7,6 @@ import {
     TString,
     TStruct,
     U64,
-    Unit,
 } from './serde';
 import { equals } from './utils';
 import { PublicKey } from '@solana/web3.js';
@@ -24,14 +23,6 @@ export class FankorErrorCode {
         return TFankorErrorCode;
     }
 
-    get type() {
-        return this.data.type;
-    }
-
-    get value() {
-        return this.data.value;
-    }
-
     // METHODS ----------------------------------------------------------------
 
     serialize(buffer?: Buffer) {
@@ -41,7 +32,10 @@ export class FankorErrorCode {
     }
 
     equals(other: FankorErrorCode) {
-        return this.type === other.type && equals(this.value, other.value);
+        return (
+            this.data.type === other.data.type &&
+            equals((this.data as any)?.value, (other.data as any)?.value)
+        );
     }
 
     // STATIC METHODS ---------------------------------------------------------
@@ -108,22 +102,18 @@ export type FankorErrorCodeTypes =
 
 export interface FankorErrorCode_DeclaredProgramIdMismatch {
     type: 'DeclaredProgramIdMismatch';
-    value: null;
 }
 
 export interface FankorErrorCode_MissingInstructionDiscriminant {
     type: 'MissingInstructionDiscriminant';
-    value: null;
 }
 
 export interface FankorErrorCode_InstructionDiscriminantNotFound {
     type: 'InstructionDiscriminantNotFound';
-    value: null;
 }
 
 export interface FankorErrorCode_UnusedAccounts {
     type: 'UnusedAccounts';
-    value: null;
 }
 
 export interface FankorErrorCode_MissingProgram {
@@ -143,7 +133,6 @@ export interface FankorErrorCode_InvalidPda {
 
 export interface FankorErrorCode_MissingSeedsAccount {
     type: 'MissingSeedsAccount';
-    value: null;
 }
 
 export interface FankorErrorCode_MissingPdaSeeds {
@@ -242,17 +231,14 @@ export interface FankorErrorCode_ProgramIsNotExecutable {
 
 export interface FankorErrorCode_NotEnoughAccountKeys {
     type: 'NotEnoughAccountKeys';
-    value: null;
 }
 
 export interface FankorErrorCode_NotAccountsExpected {
     type: 'NotAccountsExpected';
-    value: null;
 }
 
 export interface FankorErrorCode_NotEnoughValidAccountForVec {
     type: 'NotEnoughValidAccountForVec';
-    value: null;
 }
 
 export interface FankorErrorCode_AccountConstraintOwnerMismatch {
@@ -345,12 +331,10 @@ export interface FankorErrorCode_DuplicatedAccountWithDifferentType {
 
 export interface FankorErrorCode_AccountNotDefault {
     type: 'AccountNotDefault';
-    value: null;
 }
 
 export interface FankorErrorCode_EmptyIntermediateBuffer {
     type: 'EmptyIntermediateBuffer';
-    value: null;
 }
 
 export interface FankorErrorCode_IntermediateBufferIncorrectProgramId {
@@ -380,10 +364,10 @@ export interface FankorErrorCode_ZeroCopyPossibleDeadlock {
 
 export class FankorErrorCodeSchema implements FnkBorshSchema<FankorErrorCode> {
     innerSchema = TEnum([
-        [1000, 'DeclaredProgramIdMismatch', Unit],
-        [1001, 'MissingInstructionDiscriminant', Unit],
-        [1002, 'InstructionDiscriminantNotFound', Unit],
-        [1003, 'UnusedAccounts', Unit],
+        [1000, 'DeclaredProgramIdMismatch'],
+        [1001, 'MissingInstructionDiscriminant'],
+        [1002, 'InstructionDiscriminantNotFound'],
+        [1003, 'UnusedAccounts'],
         [
             1004,
             'MissingProgram',
@@ -405,12 +389,8 @@ export class FankorErrorCodeSchema implements FnkBorshSchema<FankorErrorCode> {
                 ['actual', TPublicKey],
             ] as const),
         ],
-        [1007, 'MissingSeedsAccount', Unit],
-        [
-            1008,
-            'MissingPdaSeeds',
-            TStruct([['account', TPublicKey]] as const),
-        ],
+        [1007, 'MissingSeedsAccount'],
+        [1008, 'MissingPdaSeeds', TStruct([['account', TPublicKey]] as const)],
         [
             1500,
             'DuplicatedWritableAccounts',
@@ -515,9 +495,9 @@ export class FankorErrorCodeSchema implements FnkBorshSchema<FankorErrorCode> {
             'ProgramIsNotExecutable',
             TStruct([['program', TPublicKey]] as const),
         ],
-        [1517, 'NotEnoughAccountKeys', Unit],
-        [1518, 'NotAccountsExpected', Unit],
-        [1519, 'NotEnoughValidAccountForVec', Unit],
+        [1517, 'NotEnoughAccountKeys'],
+        [1518, 'NotAccountsExpected'],
+        [1519, 'NotEnoughValidAccountForVec'],
         [
             1520,
             'AccountConstraintOwnerMismatch',
@@ -617,8 +597,8 @@ export class FankorErrorCodeSchema implements FnkBorshSchema<FankorErrorCode> {
             'DuplicatedAccountWithDifferentType',
             TStruct([['address', TPublicKey]] as const),
         ],
-        [1536, 'AccountNotDefault', Unit],
-        [2000, 'EmptyIntermediateBuffer', Unit],
+        [1536, 'AccountNotDefault'],
+        [2000, 'EmptyIntermediateBuffer'],
         [
             2001,
             'IntermediateBufferIncorrectProgramId',
@@ -652,7 +632,7 @@ export class FankorErrorCodeSchema implements FnkBorshSchema<FankorErrorCode> {
     // METHODS ----------------------------------------------------------------
 
     serialize(writer: FnkBorshWriter, value: FankorErrorCode) {
-        this.innerSchema.serialize(writer, value);
+        this.innerSchema.serialize(writer, value.data);
     }
 
     deserialize(reader: FnkBorshReader) {
