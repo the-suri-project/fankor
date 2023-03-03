@@ -4,9 +4,9 @@ import { FnkBorshReader } from '../../deserializer';
 import { FnkBorshSchema } from '../../borsh';
 
 const ZERO = new BN(0);
-const MIN_VALUE = new BN('-9223372036854775808'); // -2^63
-const MIN_I64_ABS = new BN('9223372036854775808'); // 2^63
-const MAX_VALUE = new BN('9223372036854775807'); // 2^63 - 1
+const MIN_VALUE = new BN(1).shln(63).neg(); // -2^63
+const MIN_I64_ABS = new BN(1).shln(63); // 2^63
+const MAX_VALUE = new BN(1).shln(63).subn(1); // 2^63 - 1
 const BN_0x1F = new BN(0x1f);
 const BN_0x20 = new BN(0x20);
 const BN_0x40 = new BN(0x40);

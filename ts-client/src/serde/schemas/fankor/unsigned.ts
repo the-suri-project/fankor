@@ -4,7 +4,7 @@ import { FnkBorshWriter } from '../../serializer';
 import { FnkBorshSchema } from '../../borsh';
 
 const ZERO = new BN(0);
-const MAX_VALUE = new BN('18446744073709551615'); // 2^64 - 1
+const MAX_VALUE = new BN(1).shln(64).subn(1); // 2^64 - 1
 const BN_0x3F = new BN(0x3f);
 const BN_0x40 = new BN(0x40);
 const FLAG_ENCODING_LIMIT = new BN(1).shln(14); // 2^14
