@@ -165,38 +165,61 @@ impl DataContext {
         buffer.push_str("import BN from 'bn.js';");
 
         // Build constants part.
-        for (name, (ty, value)) in self.constants.iter() {
+        let mut constants = self.constants.iter().collect::<Vec<_>>();
+        constants.sort_by(|a, b| a.0.cmp(b.0));
+
+        for (name, (ty, value)) in constants {
             buffer.push_str(format!("export const {}: {} = {};\n", name, ty, value).as_str());
         }
 
         // Build types.
-        for (_name, type_definition) in self.account_types.iter() {
+        let mut account_types = self.account_types.iter().collect::<Vec<_>>();
+        account_types.sort_by(|a, b| a.0.cmp(b.0));
+
+        for (_name, type_definition) in account_types {
             buffer.push_str(type_definition);
         }
 
         // Build schemas.
-        for (_name, schema) in self.account_schemas.iter() {
+        let mut account_schemas = self.account_schemas.iter().collect::<Vec<_>>();
+        account_schemas.sort_by(|a, b| a.0.cmp(b.0));
+
+        for (_name, schema) in account_schemas {
             buffer.push_str(schema);
         }
 
         // Build schema use methods.
-        for (_name, use_method) in self.account_schemas_use_methods.iter() {
+        let mut account_schemas_use_methods =
+            self.account_schemas_use_methods.iter().collect::<Vec<_>>();
+        account_schemas_use_methods.sort_by(|a, b| a.0.cmp(b.0));
+
+        for (_name, use_method) in account_schemas_use_methods {
             buffer.push_str(use_method);
         }
 
         // Build schema constants.
-        for (_name, constant) in self.account_schemas_constants.iter() {
+        let mut account_schemas_constants =
+            self.account_schemas_constants.iter().collect::<Vec<_>>();
+        account_schemas_constants.sort_by(|a, b| a.0.cmp(b.0));
+
+        for (_name, constant) in account_schemas_constants {
             buffer.push_str(constant);
         }
 
         // Build get meta methods.
-        for (_name, method) in self.get_meta_methods.iter() {
+        let mut get_meta_methods = self.get_meta_methods.iter().collect::<Vec<_>>();
+        get_meta_methods.sort_by(|a, b| a.0.cmp(b.0));
+
+        for (_name, method) in get_meta_methods {
             buffer.push_str(method);
         }
 
         // Build program methods.
+        let mut program_methods = self.program_methods.iter().collect::<Vec<_>>();
+        program_methods.sort_by(|a, b| a.0.cmp(b.0));
+
         buffer.push_str("export const instructions = {");
-        for (_name, method) in self.program_methods.iter() {
+        for (_name, method) in program_methods {
             buffer.push_str(method);
             buffer.push(',');
         }
