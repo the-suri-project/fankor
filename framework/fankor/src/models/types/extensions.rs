@@ -4,7 +4,7 @@ use std::io::{ErrorKind, Write};
 /// An extension placeholder with no meaning. It acts as unit type in Rust
 /// but occupies one byte valuing 0 in (de)serialization. Moreover, in
 /// TsGen it gets skipped in struct fields and it is auto populated.
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Default, Debug, Copy, Clone, PartialEq, Eq)]
 pub struct FnkExtension;
 
 impl BorshSerialize for FnkExtension {
