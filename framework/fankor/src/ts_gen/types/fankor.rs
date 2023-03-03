@@ -267,7 +267,7 @@ impl TsTypeGen for FnkExtension {
     }
 
     fn value_type() -> Cow<'static, str> {
-        Cow::Borrowed("undefined")
+        Cow::Borrowed("number")
     }
 
     fn schema_name() -> Cow<'static, str> {
