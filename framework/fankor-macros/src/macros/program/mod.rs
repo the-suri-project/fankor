@@ -59,9 +59,6 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
         quote! {
             #variant_name => {
                 ::fankor::prelude::msg!(#instruction_msg);
-
-                let mut ix_data = ix_data;
-                let mut ix_accounts = accounts;
                 let accounts = <#variant_name<'info> as fankor::traits::Instruction>::try_from(&context, &mut ix_data, &mut ix_accounts)?;
 
                 if ix_accounts.len() != 0 {
@@ -85,9 +82,6 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
             #[cfg(any(feature = "testable-program"))]
             0 => {
                 ::fankor::prelude::msg!("Testable Instruction");
-
-                let mut ix_data = ix_data;
-                let mut ix_accounts = accounts;
                 let accounts = <::fankor::prelude::TestInstruction<'info> as fankor::traits::Instruction>::try_from(&context, &mut ix_data, &mut ix_accounts)?;
 
                 if ix_accounts.len() != 0 {
@@ -225,6 +219,8 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
 
             #(#discriminant_constants)*
 
+            let mut ix_data = ix_data;
+            let mut ix_accounts = accounts;
             match sighash {
                 #testable_dispatch_method
                 #(#dispatch_methods,)*
