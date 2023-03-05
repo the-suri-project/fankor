@@ -22,6 +22,7 @@ pub struct ProgramMethod {
     pub name: Ident,
     pub snake_name: Ident,
     pub return_type: Option<TokenStream>,
+    pub boxed: bool,
     pub attrs: Vec<Attribute>,
 }
 
@@ -86,6 +87,7 @@ impl Program {
             let method_name = variant.ident.clone();
 
             let mut return_type = None;
+            let mut boxed = false;
             let mut attrs = Vec::new();
 
             for attribute in variant.attrs {
@@ -102,6 +104,15 @@ impl Program {
                     };
 
                     return_type = Some(result);
+                } else if attribute.path.is_ident("boxed") {
+                    if !attribute.tokens.is_empty() {
+                        return Err(Error::new(
+                            attribute_span,
+                            "The correct pattern is #[boxed]",
+                        ));
+                    }
+
+                    boxed = true;
                 } else {
                     attrs.push(attribute);
                 }
@@ -115,6 +126,7 @@ impl Program {
                 ),
                 name: method_name,
                 return_type,
+                boxed,
                 attrs,
             });
         }

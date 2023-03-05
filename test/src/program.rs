@@ -14,6 +14,7 @@ enum TestProgram {
     EnumAccounts,
 
     #[return_type = u8]
+    #[boxed]
     EnumAccountsWithoutArgs,
 }
 

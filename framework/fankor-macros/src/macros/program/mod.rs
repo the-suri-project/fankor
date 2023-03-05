@@ -55,11 +55,25 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
         discriminant_constants.push(quote! {
             const #variant_name: u8 = #discriminant_name::#variant_name.code();
         });
+        
+        let accounts = if v.boxed {
+            quote! {
+                let accounts = parse_accounts::<#variant_name<'info>>(
+                    context,
+                    &mut ix_data,
+                    &mut ix_accounts,
+                )?;
+            }
+        }else {
+            quote! {
+                let accounts = <#variant_name<'info> as fankor::traits::Instruction>::try_from(&context, &mut ix_data, &mut ix_accounts)?;
+            }
+        };
 
         quote! {
             #variant_name => {
                 ::fankor::prelude::msg!(#instruction_msg);
-                let accounts = <#variant_name<'info> as fankor::traits::Instruction>::try_from(&context, &mut ix_data, &mut ix_accounts)?;
+                #accounts
 
                 if ix_accounts.len() != 0 {
                     return Err(::fankor::errors::FankorErrorCode::UnusedAccounts.into());
@@ -82,7 +96,11 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
             #[cfg(any(feature = "testable-program"))]
             0 => {
                 ::fankor::prelude::msg!("Testable Instruction");
-                let accounts = <::fankor::prelude::TestInstruction<'info> as fankor::traits::Instruction>::try_from(&context, &mut ix_data, &mut ix_accounts)?;
+                let accounts = parse_accounts::<::fankor::prelude::TestInstruction<'info>>(
+                    context,
+                    &mut ix_data,
+                    &mut ix_accounts,
+                )?;
 
                 if ix_accounts.len() != 0 {
                     return Err(::fankor::errors::FankorErrorCode::UnusedAccounts.into());
@@ -226,6 +244,17 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
                 #(#dispatch_methods,)*
                 #dispatch_default
             }
+        }
+        
+        #[allow(dead_code)]
+        #[inline(never)]
+        #[automatically_derived]
+        fn parse_accounts<'info, T: ::fankor::traits::Instruction<'info>>(
+            context: &'info ::fankor::prelude::FankorContext<'info>,
+            ix_data: &mut &[u8],
+            ix_accounts: &mut &'info [::fankor::prelude::AccountInfo<'info>],
+        ) -> ::fankor::errors::FankorResult<Box<T>> {
+            Ok(Box::new(T::try_from(context, ix_data, ix_accounts)?))
         }
 
         #[cfg(not(feature = "library"))]
