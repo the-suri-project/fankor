@@ -170,6 +170,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
         }
         Item::Enum(item) => {
             let name = &item.ident;
+            let discriminants_name = format_ident!("{}Discriminant", name);
             let visibility = &item.vis;
             let (_, ty_generics, where_clause) = item.generics.split_for_impl();
 
@@ -321,13 +322,17 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 }
             });
 
+            let mut variant_consts = Vec::with_capacity(item.variants.len());
             let new_method =
                 item.variants
                     .iter()
-                    .enumerate()
-                    .map(|(i_variant, variant)| {
+                    .map(|variant| {
                         let variant_name = &variant.ident;
-                        let i_variant = i_variant as u8;
+                        let variant_const_name = format_ident!("{}Const", variant_name);
+
+                        variant_consts.push(quote! {
+                            const #variant_const_name: u8 = #discriminants_name::#variant_name.code();
+                        });
 
                         match &variant.fields {
                             Fields::Named(fields) => {
@@ -347,7 +352,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                 });
 
                                 quote! {
-                                    #i_variant => {
+                                    #variant_const_name => {
                                         #(#fields)*
 
                                         #zc_name::#variant_name{#(#field_names),*}
@@ -371,7 +376,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                 });
 
                                 quote! {
-                                    #i_variant => {
+                                    #variant_const_name => {
                                         #(#fields)*
 
                                         #zc_name::#variant_name(#(#field_names),*)
@@ -380,18 +385,17 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                             }
                             Fields::Unit => {
                                 quote! {
-                                    #i_variant => #zc_name::#variant_name
+                                    #variant_const_name => #zc_name::#variant_name
                                 }
                             }
                         }
-                    });
+                    }).collect::<Vec<_>>();
 
             let read_byte_size_method =
                 item.variants
                     .iter()
-                    .enumerate()
-                    .map(|(i_variant, variant)| {
-                        let i_variant = i_variant as u8;
+                    .map(|variant| {
+                        let variant_const_name = format_ident!("{}Const", variant.ident);
 
                         match &variant.fields {
                             Fields::Named(fields) => {
@@ -404,7 +408,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                 });
 
                                 quote! {
-                                    #i_variant => {
+                                    #variant_const_name => {
                                         #(#fields)*
                                     }
                                 }
@@ -419,14 +423,14 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                 });
 
                                 quote! {
-                                    #i_variant => {
+                                    #variant_const_name => {
                                         #(#fields)*
                                     }
                                 }
                             }
                             Fields::Unit => {
                                 quote! {
-                                    #i_variant => {}
+                                    #variant_const_name => {}
                                 }
                             }
                         }
@@ -464,6 +468,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     }
 
                     #[automatically_derived]
+                    #[allow(non_upper_case_globals)]
                     impl #zc_impl_generics ZeroCopyType<'info> for #name #ty_generics #where_clause {
                         fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
                             let bytes = info
@@ -477,6 +482,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                             let mut size = 1;
                             let flag = bytes[0];
+
+                            #(#variant_consts)*
 
                             let result = match flag {
                                 #(#new_method,)*
@@ -493,6 +500,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                             let mut size = 1;
                             let flag = bytes[0];
+
+                            #(#variant_consts)*
 
                             match flag {
                                 #(#read_byte_size_method,)*
@@ -533,6 +542,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     }
 
                     #[automatically_derived]
+                    #[allow(non_upper_case_globals)]
                     impl #zc_impl_generics ZeroCopyType<'info> for #zc_name #zc_ty_generics #zc_where_clause {
                         fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
                             let __offset = offset;
@@ -547,6 +557,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                             let mut size = 1;
                             let flag = bytes[0];
+
+                            #(#variant_consts)*
 
                             let result = match flag {
                                 #(#new_method,)*
@@ -563,6 +575,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                             let mut size = 1;
                             let flag = bytes[0];
+
+                            #(#variant_consts)*
 
                             match flag {
                                 #(#read_byte_size_method,)*
