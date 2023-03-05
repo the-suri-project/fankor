@@ -255,7 +255,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                 let field_type = &field.ty;
 
                                 quote! {
-                                    size += <#field_type as ::fankor::traits::CopyType>::min_byte_size();
+                                    variant_size += <#field_type as ::fankor::traits::CopyType>::min_byte_size();
                                 }
                             })
                             .collect::<Vec<_>>();
