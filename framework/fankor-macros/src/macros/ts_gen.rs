@@ -1,5 +1,6 @@
 use crate::Result;
 use convert_case::{Case, Converter};
+use proc_macro2::Ident;
 use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{Error, Fields, Item};
@@ -14,6 +15,22 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let name_str = name.to_string();
             let generics = &item.generics;
             let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
+            // Check for ts_gen attribute.
+            let mut account_discriminants = None;
+            for attr in &item.attrs {
+                if attr.path.is_ident("ts_gen") {
+                    if let Ok(ident) = attr.parse_args::<Ident>() {
+                        account_discriminants = Some(ident);
+                    } else {
+                        return Err(Error::new(
+                            attr.span(),
+                            "The correct pattern is #[ts_gen = <type>]",
+                        ));
+                    };
+                    break;
+                }
+            }
 
             let schema_name = format!("{}Schema", name_str);
             let schema_constant_name = format!("T{}", name_str);
@@ -125,36 +142,82 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 schema_constant_name,
             );
 
-            let ts_schema = format!(
-                "export class {} implements fnk.FnkBorshSchema<{}> {{
-                    innerSchema = null as any as ReturnType<{}['initSchema']>;
+            let ts_schema = if let Some(account_discriminants) = account_discriminants {
+                format!(
+                    "export class {} implements fnk.FnkBorshSchema<{}> {{
+                        innerSchema = null as any as ReturnType<{}['initSchema']>;
 
-                    // METHODS ----------------------------------------------------------------
+                        // METHODS ----------------------------------------------------------------
 
-                    initSchema() {{
-                        const innerSchema = fnk.TStruct([{}] as const);
-                        this.innerSchema = innerSchema;
-                        return innerSchema;
-                    }}
+                        initSchema() {{
+                            const innerSchema = fnk.TStruct([
+                                ['discriminant', fnk.U8],
+                                {}
+                            ] as const);
+                            this.innerSchema = innerSchema;
+                            return innerSchema;
+                        }}
 
-                    // METHODS ----------------------------------------------------------------
+                        // METHODS ----------------------------------------------------------------
 
-                    serialize(writer: fnk.FnkBorshWriter, value: {}) {{
-                        this.innerSchema.serialize(writer, value);
-                    }}
+                        serialize(writer: fnk.FnkBorshWriter, value: {}) {{
+                            this.innerSchema.serialize(writer, {{
+                                discriminant: {}.{},
+                                ...value
+                            }});
+                        }}
 
-                    deserialize(reader: fnk.FnkBorshReader) {{
-                        const data = this.innerSchema.deserialize(reader);
-                        return new {}(data);
-                    }}
-                }}",
-                schema_name,
-                name_str,
-                schema_name,
-                ts_schema_fields.join(","),
-                name_str,
-                name_str,
-            );
+                        deserialize(reader: fnk.FnkBorshReader) {{
+                            const data = this.innerSchema.deserialize(reader);
+                            if (data.discriminant !== {}.{}) {{
+                                throw new Error('Invalid discriminant');
+                            }}
+                            return new {}(data);
+                        }}
+                    }}",
+                    schema_name,
+                    name_str,
+                    schema_name,
+                    ts_schema_fields.join(","),
+                    name_str,
+                    account_discriminants,
+                    name_str,
+                    account_discriminants,
+                    name_str,
+                    name_str,
+                )
+            } else {
+                format!(
+                    "export class {} implements fnk.FnkBorshSchema<{}> {{
+                        innerSchema = null as any as ReturnType<{}['initSchema']>;
+
+                        // METHODS ----------------------------------------------------------------
+
+                        initSchema() {{
+                            const innerSchema = fnk.TStruct([{}] as const);
+                            this.innerSchema = innerSchema;
+                            return innerSchema;
+                        }}
+
+                        // METHODS ----------------------------------------------------------------
+
+                        serialize(writer: fnk.FnkBorshWriter, value: {}) {{
+                            this.innerSchema.serialize(writer, value);
+                        }}
+
+                        deserialize(reader: fnk.FnkBorshReader) {{
+                            const data = this.innerSchema.deserialize(reader);
+                            return new {}(data);
+                        }}
+                    }}",
+                    schema_name,
+                    name_str,
+                    schema_name,
+                    ts_schema_fields.join(","),
+                    name_str,
+                    name_str,
+                )
+            };
 
             let ts_schema_use_method_name = format!("use{}", schema_name);
             let ts_schema_use_method_call = format!("{}()", ts_schema_use_method_name);

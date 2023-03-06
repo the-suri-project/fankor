@@ -282,7 +282,7 @@ pub fn constant(args: TokenStream, input: TokenStream) -> TokenStream {
 
 /// This macro defines a constant in the program. This is used to map it to
 /// the TypeScript generated code.
-#[proc_macro_derive(TsGen)]
+#[proc_macro_derive(TsGen, attributes(ts_gen))]
 pub fn ts_gen(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 
