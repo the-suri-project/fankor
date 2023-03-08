@@ -11,25 +11,33 @@ export class FnkBorshReader {
         this.offset = offset ?? 0;
     }
 
-    readByte(): number {
+    peekByte(): number {
         if (this.offset + 1 > this.buffer.length) {
             throw new FnkBorshError(
                 `Expected buffer length(${1}) isn't within bounds`
             );
         }
 
-        const value = this.buffer.readUInt8(this.offset);
+        return this.buffer.readUInt8(this.offset);
+    }
+
+    readByte(): number {
+        const value = this.peekByte();
         this.offset += 1;
         return value;
     }
 
-    readBuffer(length: number): Buffer {
+    peekBuffer(length: number): Buffer {
         if (this.offset + length > this.buffer.length) {
             throw new FnkBorshError(
                 `Expected buffer length(${length}) isn't within bounds`
             );
         }
-        const result = this.buffer.slice(this.offset, this.offset + length);
+        return this.buffer.slice(this.offset, this.offset + length);
+    }
+
+    readBuffer(length: number): Buffer {
+        const result = this.peekBuffer(length);
         this.offset += length;
         return result;
     }

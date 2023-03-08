@@ -1,7 +1,9 @@
+use crate::fnk_syn::{FnkMetaArgument, FnkMetaArgumentList};
 use crate::Result;
 use convert_case::{Case, Converter};
 use proc_macro2::Ident;
 use quote::{format_ident, quote};
+use std::env::args;
 use syn::spanned::Spanned;
 use syn::{Error, Fields, Item};
 
@@ -18,14 +20,26 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             // Check for ts_gen attribute.
             let mut account_discriminants = None;
+
             for attr in &item.attrs {
                 if attr.path.is_ident("ts_gen") {
-                    if let Ok(ident) = attr.parse_args::<Ident>() {
-                        account_discriminants = Some(ident);
+                    if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
+                        args.error_on_duplicated()?;
+
+                        account_discriminants = args.pop_ident("account", true)?;
+
+                        if args.pop_plain("accounts", true)? {
+                            return Err(Error::new(
+                                input.span(),
+                                "Accounts cannot be used with an struct",
+                            ));
+                        }
+
+                        args.error_on_unknown()?;
                     } else {
                         return Err(Error::new(
                             attr.span(),
-                            "The correct pattern is #[ts_gen = <type>]",
+                            "The correct pattern is #[ts_gen(<meta_list>)]",
                         ));
                     };
                     break;
@@ -324,6 +338,34 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let generics = &item.generics;
             let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
+            // Check for ts_gen attribute.
+            let mut is_accounts = false;
+
+            for attr in &item.attrs {
+                if attr.path.is_ident("ts_gen") {
+                    if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
+                        args.error_on_duplicated()?;
+
+                        is_accounts = args.pop_plain("accounts", true)?;
+
+                        if args.pop_ident("account", true)?.is_some() {
+                            return Err(Error::new(
+                                input.span(),
+                                "Account cannot be used with an enum",
+                            ));
+                        }
+
+                        args.error_on_unknown()?;
+                    } else {
+                        return Err(Error::new(
+                            attr.span(),
+                            "The correct pattern is #[ts_gen(<meta_list>)]",
+                        ));
+                    };
+                    break;
+                }
+            }
+
             let types_name = format!("{}Types", name_str);
             let schema_name = format!("{}Schema", name_str);
             let discriminant_name = format_ident!("{}Discriminant", name);
@@ -492,6 +534,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 ts_interfaces.join("\n")
             );
 
+            let enum_schema_type = if is_accounts { "TAccountEnum" } else { "TEnum" };
+
             let ts_schema = format!(
                 "export class {} implements fnk.FnkBorshSchema<{}> {{
                     innerSchema = null as any as ReturnType<{}['initSchema']>;
@@ -499,7 +543,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     // METHODS ----------------------------------------------------------------
 
                     initSchema() {{
-                        const innerSchema = fnk.TEnum([{}] as const);
+                        const innerSchema = fnk.{}([{}] as const);
                         this.innerSchema = innerSchema;
                         return innerSchema;
                     }}
@@ -516,6 +560,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 schema_name,
                 name_str,
                 schema_name,
+                enum_schema_type,
                 ts_schema_fields.join(","),
                 name_str,
                 name_str,

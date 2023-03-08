@@ -8,6 +8,7 @@ mod struct_account;
 
 #[accounts]
 pub enum ProgramAccount {
+    #[discriminant = 5]
     StructAccountData,
     StructAccountData2,
     ZeroCopyStructAccountData,

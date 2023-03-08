@@ -272,6 +272,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
 
         #derive_enum_discriminants
         #[derive(FankorSerialize, FankorDeserialize, TsGen)]
+        #[ts_gen(accounts)]
         #[non_exhaustive]
         #[repr(u8)]
         #visibility enum #name #ty_generics #where_clause {

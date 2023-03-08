@@ -34,7 +34,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
 
     let result = quote! {
         #[derive(FankorSerialize, FankorDeserialize, TsGen)]
-        #[ts_gen(#account_discriminants_name)]
+        #[ts_gen(account = #account_discriminants_name)]
         #item
 
         #[automatically_derived]
