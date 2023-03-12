@@ -1,9 +1,7 @@
-use crate::fnk_syn::{FnkMetaArgument, FnkMetaArgumentList};
+use crate::fnk_syn::FnkMetaArgumentList;
 use crate::Result;
 use convert_case::{Case, Converter};
-use proc_macro2::Ident;
 use quote::{format_ident, quote};
-use std::env::args;
 use syn::spanned::Spanned;
 use syn::{Error, Fields, Item};
 
@@ -56,6 +54,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let mut ts_constructor_fields = String::new();
             let mut ts_schema_fields = Vec::new();
             let mut equals_method_conditions = Vec::new();
+            let mut clone_method_fields = Vec::new();
 
             for field in &item.fields {
                 let field_name = field.ident.as_ref().unwrap();
@@ -106,6 +105,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     "fnk.equals(this.{}, other.{})",
                     field_name_str, field_name_str
                 ));
+
+                clone_method_fields.push(format!("{}: fnk.clone(this.{})", field_name, field_name));
             }
 
             let ts_type = format!(
@@ -137,6 +138,10 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         return {};
                     }}
 
+                    clone(): {} {{
+                        return new {}({{ {} }});
+                    }}
+
                     // STATIC METHODS ---------------------------------------------------------
 
                     static deserialize(buffer: Buffer, offset?: number) {{
@@ -153,6 +158,9 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 schema_constant_name,
                 name_str,
                 equals_method_conditions.join(" && "),
+                name_str,
+                name_str,
+                clone_method_fields.join(","),
                 schema_constant_name,
             );
 
@@ -512,6 +520,10 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         return this.data.type === other.data.type && fnk.equals((this.data as any)?.value, (other.data as any)?.value);
                     }}
 
+                    clone(): {} {{
+                        return new {}(fnk.clone(this.data));
+                    }}
+
                     // STATIC METHODS ---------------------------------------------------------
 
                     static deserialize(buffer: Buffer, offset?: number) {{
@@ -527,6 +539,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 types_name,
                 schema_constant_name,
                 schema_constant_name,
+                name_str,
+                name_str,
                 name_str,
                 schema_constant_name,
                 types_name,
