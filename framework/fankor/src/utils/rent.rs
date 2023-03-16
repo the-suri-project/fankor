@@ -7,10 +7,12 @@ use solana_program::rent::Rent;
 use solana_program::sysvar::Sysvar;
 use std::cmp::Ordering;
 
-/// Makes an `account` be rent exempt. If `payer` is provided it ensures
-/// it to be rent-exempt with only the exact required amount.
+/// Makes an `account` be rent exempt. If `exact` is provided it ensures
+/// it to be rent-exempt with only the exact required amount, i.e.
+/// decreasing the account balance if needed.
 pub(crate) fn make_rent_exempt<'info>(
     new_size: usize,
+    exact: bool,
     payer: &AccountInfo<'info>,
     info: &AccountInfo<'info>,
     program: &Program<System>,
@@ -52,6 +54,10 @@ pub(crate) fn make_rent_exempt<'info>(
         }
         Ordering::Equal => Ok(()),
         Ordering::Greater => {
+            if !exact {
+                return Ok(());
+            }
+
             // Transfer tokens from the account to the payer.
             let lamports = current_balance - needed_balance;
 
@@ -61,8 +67,10 @@ pub(crate) fn make_rent_exempt<'info>(
             **info.lamports.borrow_mut() = info_lamports.checked_sub(lamports).unwrap();
             **payer.lamports.borrow_mut() = payer_lamports.checked_add(lamports).unwrap();
 
-            // If we do not do this no-op CPI and another CPI is made with just one of these
-            // accounts it will rise an error.
+            // This no-op CPI is made here to prevent an error that rises when we manually modify
+            // the lamports of accounts and after that someone makes a CPI without using it, for
+            // example using other accounts in the program. The problem is that the runtime only
+            // keeps track of the lamports changes of accounts that passes through CPIs.
             cpi::system_program::transfer(
                 program,
                 CpiTransfer {

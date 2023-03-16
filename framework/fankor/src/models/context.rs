@@ -46,6 +46,7 @@ pub enum FankorContextExitAction<'info> {
     /// Reallocates the account to contain all the data and optionally makes
     /// the account rent-exempt.
     Realloc {
+        exact: bool,
         zero_bytes: bool,
         payer: Option<&'info AccountInfo<'info>>,
         system_program: &'info AccountInfo<'info>,

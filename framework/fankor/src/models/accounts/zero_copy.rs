@@ -211,10 +211,28 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
         realloc_account_to_size(system_program, size, zero_bytes, self.info, payer)
     }
 
-    /// Makes the account rent-exempt by adding or removing funds from/to `payer`
-    /// if necessary.
+    /// Makes the account rent-exempt by adding funds from `payer` if necessary.
     pub fn make_rent_exempt(
         &self,
+        payer: &'info AccountInfo<'info>,
+        system_program: &Program<System>,
+    ) -> FankorResult<()> {
+        self._make_rent_exempt(false, payer, system_program)
+    }
+
+    /// Makes the account rent-exempt by adding or removing funds from/to `payer`
+    /// if necessary.
+    pub fn make_exact_rent_exempt(
+        &self,
+        payer: &'info AccountInfo<'info>,
+        system_program: &Program<System>,
+    ) -> FankorResult<()> {
+        self._make_rent_exempt(true, payer, system_program)
+    }
+
+    fn _make_rent_exempt(
+        &self,
+        exact: bool,
         payer: &'info AccountInfo<'info>,
         system_program: &Program<System>,
     ) -> FankorResult<()> {
@@ -243,7 +261,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
         }
 
         let new_size = self.info.data_len();
-        make_rent_exempt(new_size, payer, self.info, system_program)
+        make_rent_exempt(new_size, exact, payer, self.info, system_program)
     }
 
     /// Transmutes the current account into another type.
@@ -316,11 +334,32 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
         self.context().remove_exit_action(self.info);
     }
 
-    /// Makes the account be rent-exempt at exit.
+    /// Makes the account be rent-exempt at exit adding funds from `payer` if necessary.
     ///
     /// This replaces other exit actions associated with this account.
     pub fn make_rent_exempt_at_exit(
         &self,
+        payer: &'info AccountInfo<'info>,
+        system_program: &Program<'info, System>,
+    ) -> FankorResult<()> {
+        self._make_rent_exempt_at_exit(false, payer, system_program)
+    }
+
+    /// Makes the account be rent-exempt at exit adding or removing funds to/from
+    /// `payer` if necessary.
+    ///
+    /// This replaces other exit actions associated with this account.
+    pub fn make_exact_rent_exempt_at_exit(
+        &self,
+        payer: &'info AccountInfo<'info>,
+        system_program: &Program<'info, System>,
+    ) -> FankorResult<()> {
+        self._make_rent_exempt_at_exit(true, payer, system_program)
+    }
+
+    fn _make_rent_exempt_at_exit(
+        &self,
+        exact: bool,
         payer: &'info AccountInfo<'info>,
         system_program: &Program<'info, System>,
     ) -> FankorResult<()> {
@@ -351,8 +390,9 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
         self.context().set_exit_action(
             self.info,
             FankorContextExitAction::Realloc {
-                payer: Some(payer),
+                exact,
                 zero_bytes: false,
+                payer: Some(payer),
                 system_program: system_program.info(),
             },
         );
@@ -505,6 +545,7 @@ fn drop_aux<'info, T: AccountType + CopyType<'info>>(
             .into());
         }
         Some(FankorContextExitAction::Realloc {
+            exact,
             payer,
             system_program,
             ..
@@ -518,7 +559,11 @@ fn drop_aux<'info, T: AccountType + CopyType<'info>>(
                 }
             };
 
-            account.make_rent_exempt(payer, &Program::new(account.context(), system_program)?)?;
+            account._make_rent_exempt(
+                exact,
+                payer,
+                &Program::new(account.context(), system_program)?,
+            )?;
 
             // Prevent executing this action twice.
             account

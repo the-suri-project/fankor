@@ -144,10 +144,28 @@ impl<'info> UncheckedAccount<'info> {
         realloc_account_to_size(system_program, size, zero_bytes, self.info, payer)
     }
 
-    /// Makes the account rent-exempt by adding or removing funds from/to `payer`
-    /// if necessary.
+    /// Makes the account rent-exempt by adding funds from `payer` if necessary.
     pub fn make_rent_exempt(
         &self,
+        payer: &'info AccountInfo<'info>,
+        system_program: &Program<System>,
+    ) -> FankorResult<()> {
+        self._make_rent_exempt(false, payer, system_program)
+    }
+
+    /// Makes the account rent-exempt by adding or removing funds from/to `payer`
+    /// if necessary.
+    pub fn make_exact_rent_exempt(
+        &self,
+        payer: &'info AccountInfo<'info>,
+        system_program: &Program<System>,
+    ) -> FankorResult<()> {
+        self._make_rent_exempt(true, payer, system_program)
+    }
+
+    fn _make_rent_exempt(
+        &self,
+        exact: bool,
         payer: &'info AccountInfo<'info>,
         system_program: &Program<System>,
     ) -> FankorResult<()> {
@@ -176,7 +194,7 @@ impl<'info> UncheckedAccount<'info> {
         }
 
         let new_size = self.info.data_len();
-        make_rent_exempt(new_size, payer, self.info, system_program)
+        make_rent_exempt(new_size, exact, payer, self.info, system_program)
     }
 }
 

@@ -249,10 +249,28 @@ impl<'info, T: AccountType> Account<'info, T> {
         realloc_account_to_size(system_program, size, zero_bytes, self.info, payer)
     }
 
-    /// Makes the account rent-exempt by adding or removing funds from/to `payer`
-    /// if necessary.
+    /// Makes the account rent-exempt by adding funds from `payer` if necessary.
     pub fn make_rent_exempt(
         &self,
+        payer: &'info AccountInfo<'info>,
+        system_program: &Program<System>,
+    ) -> FankorResult<()> {
+        self._make_rent_exempt(false, payer, system_program)
+    }
+
+    /// Makes the account rent-exempt by adding or removing funds from/to `payer`
+    /// if necessary.
+    pub fn make_exact_rent_exempt(
+        &self,
+        payer: &'info AccountInfo<'info>,
+        system_program: &Program<System>,
+    ) -> FankorResult<()> {
+        self._make_rent_exempt(true, payer, system_program)
+    }
+
+    fn _make_rent_exempt(
+        &self,
+        exact: bool,
         payer: &'info AccountInfo<'info>,
         system_program: &Program<System>,
     ) -> FankorResult<()> {
@@ -281,7 +299,7 @@ impl<'info, T: AccountType> Account<'info, T> {
         }
 
         let new_size = self.info.data_len();
-        make_rent_exempt(new_size, payer, self.info, system_program)
+        make_rent_exempt(new_size, exact, payer, self.info, system_program)
     }
 
     /// Transmutes the current account into another type.
@@ -386,6 +404,7 @@ impl<'info, T: AccountType> Account<'info, T> {
         self.context().set_exit_action(
             self.info,
             FankorContextExitAction::Realloc {
+                exact: false,
                 payer,
                 zero_bytes,
                 system_program: system_program.info(),
@@ -480,11 +499,31 @@ impl<'info, T: AccountType + CopyType<'info>> Account<'info, T> {
         )
     }
 
-    /// Makes the account rent-exempt by adding or removing funds from/to `payer`
-    /// if necessary. The size to calculate the rent is the actual account `data` size
+    /// Makes the account rent-exempt by adding funds from `payer` if necessary.
+    /// The size to calculate the rent is the actual account `data` size
     /// plus the discriminant.
     pub fn make_rent_exempt_to_contain_data(
         &self,
+        payer: &'info AccountInfo<'info>,
+        system_program: &Program<System>,
+    ) -> FankorResult<()> {
+        self._make_rent_exempt_to_contain_data(false, payer, system_program)
+    }
+
+    /// Makes the account rent-exempt by adding or removing funds from/to `payer`
+    /// if necessary. The size to calculate the rent is the actual account `data` size
+    /// plus the discriminant.
+    pub fn make_exact_rent_exempt_to_contain_data(
+        &self,
+        payer: &'info AccountInfo<'info>,
+        system_program: &Program<System>,
+    ) -> FankorResult<()> {
+        self._make_rent_exempt_to_contain_data(true, payer, system_program)
+    }
+
+    fn _make_rent_exempt_to_contain_data(
+        &self,
+        exact: bool,
         payer: &'info AccountInfo<'info>,
         system_program: &Program<System>,
     ) -> FankorResult<()> {
@@ -513,7 +552,7 @@ impl<'info, T: AccountType + CopyType<'info>> Account<'info, T> {
         }
 
         let new_size = self.data.byte_size() + 1 /* account discriminant */;
-        make_rent_exempt(new_size, payer, self.info, system_program)
+        make_rent_exempt(new_size, exact, payer, self.info, system_program)
     }
 }
 
@@ -626,6 +665,7 @@ fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
             zero_bytes,
             payer,
             system_program,
+            ..
         }) => {
             // Serialize.
             let mut serialized = Vec::with_capacity(account.info.data_len());
