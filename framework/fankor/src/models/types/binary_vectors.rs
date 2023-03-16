@@ -1,3 +1,4 @@
+use crate::traits::CopyType;
 use borsh::{BorshDeserialize, BorshSerialize};
 use std::cmp::Ordering;
 use std::fmt::Debug;
@@ -135,7 +136,7 @@ impl<K: Debug, V: Debug> FnkBVec<K, V> {
     }
 }
 
-impl<K: Ord + Copy, V: Copy> FnkBVec<K, V> {
+impl<'info, K: Ord + Copy + CopyType<'info>, V: Copy + CopyType<'info>> FnkBVec<K, V> {
     // METHODS ----------------------------------------------------------------
 
     /// Returns a reference to the value corresponding to the key.
@@ -783,7 +784,7 @@ pub(crate) struct Node<K, V> {
     pub height: u8,
 }
 
-impl<K, V> Node<K, V> {
+impl<'info, K: CopyType<'info>, V: CopyType<'info>> Node<K, V> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     pub fn new(key: K, value: V) -> Self {
@@ -798,8 +799,8 @@ impl<K, V> Node<K, V> {
 
     // GETTERS ----------------------------------------------------------------
 
-    pub const fn byte_size() -> usize {
-        size_of::<K>() + size_of::<V>() + size_of::<u16>() * 2 + size_of::<u8>()
+    pub fn byte_size() -> usize {
+        K::min_byte_size() + V::min_byte_size() + size_of::<u16>() * 2 + size_of::<u8>()
     }
 }
 

@@ -186,7 +186,7 @@ impl<
             let data = self.read_node(root_position)?;
             Ok(Some((
                 data.key,
-                Zc::new_unchecked(self.info, self.content_offset() + size_of::<K>()),
+                Zc::new_unchecked(self.info, self.content_offset() + K::min_byte_size()),
             )))
         }
     }
@@ -238,7 +238,7 @@ impl<
     fn read_node_value(&self, index: u16) -> FankorResult<V> {
         let mut offset = self.content_offset();
         offset += index as usize * Node::<K, V>::byte_size();
-        offset += size_of::<K>();
+        offset += K::min_byte_size();
 
         let bytes =
             self.info
@@ -258,7 +258,7 @@ impl<
     fn read_node_left_child_at(&self, index: u16) -> FankorResult<u16> {
         let mut offset = self.content_offset();
         offset += index as usize * Node::<K, V>::byte_size();
-        offset += size_of::<K>() + size_of::<V>();
+        offset += K::min_byte_size() + V::min_byte_size();
 
         let bytes =
             self.info
@@ -278,7 +278,7 @@ impl<
     fn read_node_right_child_at(&self, index: u16) -> FankorResult<u16> {
         let mut offset = self.content_offset();
         offset += index as usize * Node::<K, V>::byte_size();
-        offset += size_of::<K>() + size_of::<V>() + size_of::<u16>();
+        offset += K::min_byte_size() + V::min_byte_size() + size_of::<u16>();
 
         let bytes =
             self.info
@@ -298,7 +298,7 @@ impl<
     fn read_node_height(&self, index: u16) -> FankorResult<u8> {
         let mut offset = self.content_offset();
         offset += index as usize * Node::<K, V>::byte_size();
-        offset += size_of::<K>() + size_of::<V>() + size_of::<u16>() * 2;
+        offset += K::min_byte_size() + V::min_byte_size() + size_of::<u16>() * 2;
 
         let bytes =
             self.info
@@ -318,7 +318,7 @@ impl<
     fn read_node_value_zc(&self, index: u16) -> FankorResult<Zc<'info, V>> {
         let mut offset = self.content_offset();
         offset += index as usize * Node::<K, V>::byte_size();
-        Ok(Zc::new_unchecked(self.info, offset + size_of::<K>()))
+        Ok(Zc::new_unchecked(self.info, offset + K::min_byte_size()))
     }
 
     /// Writes a node at `index`.
@@ -377,7 +377,7 @@ impl<
     fn write_node_value(&self, index: u16, value: &V) -> FankorResult<()> {
         let mut offset = self.content_offset();
         offset += index as usize * Node::<K, V>::byte_size();
-        offset += size_of::<K>();
+        offset += K::min_byte_size();
 
         let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
             FankorErrorCode::ZeroCopyPossibleDeadlock {
@@ -399,7 +399,7 @@ impl<
     fn write_node_left_child_at(&self, index: u16, left_child_at: u16) -> FankorResult<()> {
         let mut offset = self.content_offset();
         offset += index as usize * Node::<K, V>::byte_size();
-        offset += size_of::<K>() + size_of::<V>();
+        offset += K::min_byte_size() + V::min_byte_size();
 
         let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
             FankorErrorCode::ZeroCopyPossibleDeadlock {
@@ -421,7 +421,7 @@ impl<
     fn write_node_right_child_at(&self, index: u16, right_child_at: u16) -> FankorResult<()> {
         let mut offset = self.content_offset();
         offset += index as usize * Node::<K, V>::byte_size();
-        offset += size_of::<K>() + size_of::<V>() + size_of::<u16>();
+        offset += K::min_byte_size() + V::min_byte_size() + size_of::<u16>();
 
         let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
             FankorErrorCode::ZeroCopyPossibleDeadlock {
@@ -443,7 +443,7 @@ impl<
     fn write_node_height(&self, index: u16, height: u8) -> FankorResult<()> {
         let mut offset = self.content_offset();
         offset += index as usize * Node::<K, V>::byte_size();
-        offset += size_of::<K>() + size_of::<V>() + size_of::<u16>() * 2;
+        offset += K::min_byte_size() + V::min_byte_size() + size_of::<u16>() * 2;
 
         let mut bytes = self.info.data.try_borrow_mut().map_err(|_| {
             FankorErrorCode::ZeroCopyPossibleDeadlock {
