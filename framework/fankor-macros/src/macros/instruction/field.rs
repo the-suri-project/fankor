@@ -13,7 +13,7 @@ use crate::Result;
 
 pub struct Field {
     pub name: Ident,
-    pub ty: Type,
+    pub ty: Option<Type>,
     pub vis: Visibility,
     pub kind: FieldKind,
     // Attributes.
@@ -57,7 +57,7 @@ impl Field {
         let mut new_field = Field {
             name: field.ident.unwrap(),
             kind: discriminate_type(&field.ty),
-            ty: field.ty,
+            ty: Some(field.ty),
             vis: field.vis,
             owner: None,
             address: None,
@@ -94,7 +94,32 @@ impl Field {
                 let mut new_field = Field {
                     name: variant.ident,
                     kind: discriminate_type(&ty),
-                    ty,
+                    ty: Some(ty),
+                    vis: Visibility::Inherited,
+                    owner: None,
+                    address: None,
+                    initialized: None,
+                    writable: None,
+                    executable: None,
+                    rent_exempt: None,
+                    signer: None,
+                    pda: None,
+                    pda_bytes: None,
+                    pda_program_id: None,
+                    constraints: Vec::new(),
+                    data: Vec::new(),
+                    attrs: Vec::new(),
+                };
+
+                new_field.parse_attributes(variant.attrs, true)?;
+
+                Ok(new_field)
+            }
+            Fields::Unit => {
+                let mut new_field = Field {
+                    name: variant.ident,
+                    kind: FieldKind::Other,
+                    ty: None,
                     vis: Visibility::Inherited,
                     owner: None,
                     address: None,

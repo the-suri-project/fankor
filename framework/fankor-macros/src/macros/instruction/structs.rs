@@ -27,7 +27,7 @@ pub fn process_struct(
 
     let final_fields = mapped_fields.iter().map(|v| {
         let name = &v.name;
-        let ty = &v.ty;
+        let ty = v.ty.as_ref().unwrap();
         let attrs = &v.attrs;
         let vis = &v.vis;
 
@@ -39,7 +39,7 @@ pub fn process_struct(
 
     let try_from_fn_deserialize = mapped_fields.iter().map(|v| {
         let name = &v.name;
-        let ty = &v.ty;
+        let ty = v.ty.as_ref().unwrap();
 
         quote! {
             let #name = <#ty as ::fankor::traits::Instruction>::try_from(context, buf, accounts)?;
@@ -341,7 +341,7 @@ pub fn process_struct(
     let cpi_name = format_ident!("Cpi{}", name);
     let cpi_fields = mapped_fields.iter().map(|v| {
         let name = &v.name;
-        let ty = &v.ty;
+        let ty = v.ty.as_ref().unwrap();
 
         quote! {
             pub #name:<#ty as ::fankor::traits::Instruction<'info>>::CPI
@@ -403,7 +403,7 @@ pub fn process_struct(
     let lpi_name = format_ident!("Lpi{}", name);
     let lpi_fields = mapped_fields.iter().map(|v| {
         let name = &v.name;
-        let ty = &v.ty;
+        let ty = v.ty.as_ref().unwrap();
 
         quote! {
             pub #name:<#ty as ::fankor::traits::Instruction<'info>>::LPI
@@ -575,7 +575,7 @@ pub fn process_struct(
     let mut metas_fields = Vec::new();
     let case_converter = Converter::new().from_case(Case::Snake).to_case(Case::Camel);
     let ts_types = mapped_fields.iter().map(|v| {
-        let ty = &v.ty;
+        let ty = v.ty.as_ref().unwrap();
         let field_name = case_converter.convert(v.name.to_string());
         let types_replacement_str = format!("_r_interface_types_{}_r_", v.name);
         let metas_replacement_str = format!("_r_interface_metas_{}_r_", v.name);

@@ -1,11 +1,10 @@
-use crate::fnk_syn::FnkMetaArgumentList;
-use crate::macros::instruction::arguments::{InstructionArguments, Validation};
 use quote::{format_ident, quote};
 use syn::ItemEnum;
 
-use crate::Result;
-
+use crate::fnk_syn::FnkMetaArgumentList;
+use crate::macros::instruction::arguments::{InstructionArguments, Validation};
 use crate::macros::instruction::field::{check_fields, Field, FieldKind};
+use crate::Result;
 
 pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_macro::TokenStream> {
     let arguments = InstructionArguments::from(args)?;
@@ -35,49 +34,64 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
         let attrs = &mapped_field.attrs;
         let const_name = format_ident!("{}Discriminant", variant_name);
 
-        final_enum_variants.push(quote! {
-            #(#attrs)*
-            #variant_name(#ty)
-        });
+        if let Some(ty) = ty {
+            final_enum_variants.push(quote! {
+                #(#attrs)*
+                #variant_name(#ty)
+            });
+
+            try_from_method_deserialize.push(quote! {
+                #const_name => {
+                    let mut new_buf = &buf[1..];
+                    let mut new_accounts = *accounts;
+                    let result = <#ty as ::fankor::traits::Instruction>::try_from(context, &mut new_buf, &mut new_accounts)?;
+
+                    *accounts = new_accounts;
+                    *buf = new_buf;
+
+                    #name::#variant_name(result)
+                }
+            });
+
+            validate_method_variants.push(match &mapped_field.kind {
+                // Rest is placed here because the instruction struct can be named like that.
+                FieldKind::Other | FieldKind::Rest => quote! {
+                    Self::#variant_name(v) => {
+                        v.validate(context)?;
+                    }
+                },
+                FieldKind::Option(_) => quote! {
+                    Self::#variant_name(v) => {
+                        if let Some(v) = v {
+                            v.validate(context)?;
+                        }
+                    }
+                },
+                FieldKind::Vec(_) => quote! {
+                    Self::#variant_name(v) => {
+                        for v2 in v {
+                            v2.validate(context)?;
+                        }
+                    }
+                },
+            });
+        } else {
+            final_enum_variants.push(quote! {
+                #(#attrs)*
+                #variant_name
+            });
+
+            try_from_method_deserialize.push(quote! {
+                #const_name => #name::#variant_name,
+            });
+
+            validate_method_variants.push(quote! {
+                Self::#variant_name => {}
+            });
+        }
 
         variant_consts.push(quote! {
             pub const #const_name: u8 = #discriminant_name::#variant_name.code();
-        });
-
-        try_from_method_deserialize.push(quote! {
-            #const_name => {
-                let mut new_buf = &buf[1..];
-                let mut new_accounts = *accounts;
-                let result = <#ty as ::fankor::traits::Instruction>::try_from(context, &mut new_buf, &mut new_accounts)?;
-
-                *accounts = new_accounts;
-                *buf = new_buf;
-
-                #name::#variant_name(result)
-            }
-        });
-
-        validate_method_variants.push(match &mapped_field.kind {
-            // Rest is placed here because the instruction struct can be named like that.
-            FieldKind::Other | FieldKind::Rest => quote! {
-                Self::#variant_name(v) => {
-                    v.validate(context)?;
-                }
-            },
-            FieldKind::Option(_) => quote! {
-                Self::#variant_name(v) => {
-                    if let Some(v) = v {
-                        v.validate(context)?;
-                    }
-                }
-            },
-            FieldKind::Vec(_) => quote! {
-                Self::#variant_name(v) => {
-                    for v2 in v {
-                        v2.validate(context)?;
-                    }
-                }
-            },
         });
 
         discriminants.push(quote!(
@@ -91,8 +105,14 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
         let name = &v.name;
         let ty = &v.ty;
 
-        quote! {
-            #name(<#ty as ::fankor::traits::Instruction<'info>>::CPI)
+        if let Some(ty) = ty {
+            quote! {
+                #name(<#ty as ::fankor::traits::Instruction<'info>>::CPI)
+            }
+        } else {
+            quote! {
+                #name
+            }
         }
     });
     let cpi_fn_elements = mapped_fields
@@ -126,24 +146,30 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
                 (quote! {}, quote! {})
             };
 
-            if any {
-                quote! {
-                    #cpi_name::#variant_name(v) => {
-                        let from = metas.len();
-                        ::fankor::traits::CpiInstruction::serialize_into_instruction_parts(v, writer, metas, infos)?;
-                        let to = metas.len();
-                        #writable_let
-                        #signer_let
+            if v.ty.is_some() {
+                if any {
+                    quote! {
+                        #cpi_name::#variant_name(v) => {
+                            let from = metas.len();
+                            ::fankor::traits::CpiInstruction::serialize_into_instruction_parts(v, writer, metas, infos)?;
+                            let to = metas.len();
+                            #writable_let
+                            #signer_let
 
-                        for meta in &mut metas[from..to] {
-                            #writable_for
-                            #signer_for
+                            for meta in &mut metas[from..to] {
+                                #writable_for
+                                #signer_for
+                            }
                         }
                     }
+                } else {
+                    quote! {
+                        #cpi_name::#variant_name(v) => ::fankor::traits::CpiInstruction::serialize_into_instruction_parts(v, writer, metas, infos)?
+                    }
                 }
-            } else {
+            }else {
                 quote! {
-                    #cpi_name::#variant_name(v) => ::fankor::traits::CpiInstruction::serialize_into_instruction_parts(v, writer, metas, infos)?
+                    #cpi_name::#variant_name => {}
                 }
             }
         });
@@ -154,8 +180,14 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
         let name = &v.name;
         let ty = &v.ty;
 
-        quote! {
-            #name(<#ty as ::fankor::traits::Instruction<'info>>::LPI)
+        if let Some(ty) = ty {
+            quote! {
+                #name(<#ty as ::fankor::traits::Instruction<'info>>::LPI)
+            }
+        } else {
+            quote! {
+                #name
+            }
         }
     });
     let lpi_fn_elements = mapped_fields.iter().map(|v| {
@@ -188,24 +220,30 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
             (quote! {}, quote! {})
         };
 
-        if any {
-            quote! {
-                #lpi_name::#variant_name(v) => {
-                    let from = metas.len();
-                    ::fankor::traits::LpiInstruction::serialize_into_instruction_parts(v, writer, metas)?;
-                    let to = metas.len();
-                    #writable_let
-                    #signer_let
+        if v.ty.is_some() {
+            if any {
+                quote! {
+                    #lpi_name::#variant_name(v) => {
+                        let from = metas.len();
+                        ::fankor::traits::LpiInstruction::serialize_into_instruction_parts(v, writer, metas)?;
+                        let to = metas.len();
+                        #writable_let
+                        #signer_let
 
-                    for meta in &mut metas[from..to] {
-                        #writable_for
-                        #signer_for
+                        for meta in &mut metas[from..to] {
+                            #writable_for
+                            #signer_for
+                        }
                     }
                 }
+            } else {
+                quote! {
+                    #lpi_name::#variant_name(v) => ::fankor::traits::LpiInstruction::serialize_into_instruction_parts(v, writer, metas)?
+                }
             }
-        } else {
+        }else {
             quote! {
-                #lpi_name::#variant_name(v) => ::fankor::traits::LpiInstruction::serialize_into_instruction_parts(v, writer, metas)?
+                #lpi_name::#variant_name => {}
             }
         }
     });
@@ -375,15 +413,22 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
         let metas_replacement_str = format!("_r_interface_metas_{}_r_", name);
 
         ts_type_names.push(name.clone());
-        type_replacements.push(quote! {
-             .replace(#types_replacement_str, &< #ty as TsInstructionGen>::generate_type(registered_types))
-        });
-        metas_fields.push(format!("case '{}': writer.writeByte({}.{}); {} break;", v.name, discriminant_name, variant_name, metas_replacement_str));
-        metas_replacements.push(quote! {
-             .replace(#metas_replacement_str, &< #ty as TsInstructionGen>::get_external_account_metas(Cow::Owned(format!("{}.value", value)), false, false))
-        });
 
-        format!("export interface {} {{ type: '{}', value: {} }}", name, v.name, types_replacement_str)
+        if let Some(ty) = ty {
+            type_replacements.push(quote! {
+                 .replace(#types_replacement_str, &< #ty as TsInstructionGen>::generate_type(registered_types))
+            });
+            metas_fields.push(format!("case '{}': writer.writeByte({}.{}); {} break;", v.name, discriminant_name, variant_name, metas_replacement_str));
+            metas_replacements.push(quote! {
+                 .replace(#metas_replacement_str, &< #ty as TsInstructionGen>::get_external_account_metas(Cow::Owned(format!("{}.value", value)), false, false))
+            });
+
+            format!("export interface {} {{ type: '{}', value: {} }}", name, v.name, types_replacement_str)
+        }else {
+            metas_fields.push(format!("case '{}': writer.writeByte({}.{}); break;", v.name, discriminant_name, variant_name));
+
+            format!("export interface {} {{ type: '{}' }}", name, v.name)
+        }
     }).collect::<Vec<_>>();
 
     let ts_type = format!(

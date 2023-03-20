@@ -157,6 +157,8 @@ pub enum EnumAccountsWithoutArgs<'info> {
 
     #[discriminant = 5]
     OptionalAccount(Option<StructAccountsWithoutAssociatedType<'info>>),
+
+    EmptyVariant,
 }
 
 #[allow(dead_code)]
