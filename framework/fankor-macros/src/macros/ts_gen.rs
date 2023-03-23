@@ -190,7 +190,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         }}
 
                         deserialize(reader: fnk.FnkBorshReader) {{
-                            const data = this.innerSchema.deserialize(reader);
+                            const data:any = this.innerSchema.deserialize(reader);
                             if (data.discriminant !== {}.{}) {{
                                 throw new Error('Invalid discriminant');
                             }}
@@ -228,7 +228,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         }}
 
                         deserialize(reader: fnk.FnkBorshReader) {{
-                            const data = this.innerSchema.deserialize(reader);
+                            const data:any = this.innerSchema.deserialize(reader);
                             return new {}(data);
                         }}
                     }}",
