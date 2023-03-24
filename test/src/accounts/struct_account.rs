@@ -2,6 +2,7 @@ use crate::accounts::{ProgramAccount, ProgramAccountDiscriminant};
 use fankor::prelude::*;
 
 #[account(base = ProgramAccount)]
+#[derive(FankorZeroCopy)]
 pub struct StructAccountData {
     pub value1: u32,
     pub value2: String,

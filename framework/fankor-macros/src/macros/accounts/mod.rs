@@ -271,7 +271,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
         #(#const_asserts)*
 
         #derive_enum_discriminants
-        #[derive(FankorSerialize, FankorDeserialize, TsGen)]
+        #[derive(FankorSerialize, FankorDeserialize, FankorZeroCopy, TsGen)]
         #[ts_gen(accounts)]
         #[non_exhaustive]
         #[repr(u8)]

@@ -85,9 +85,10 @@ pub fn zero_copy(input: TokenStream) -> TokenStream {
 
 /// This macro marks defines a new account list implementing the traits:
 /// - `Accounts`
-/// - `BorshSerialize`
-/// - `BorshDeserialize`
+/// - `FankorSerialize`
+/// - `FankorDeserialize`
 /// - `EnumDiscriminants`
+/// - `FankorZeroCopy`
 /// - `TsGen`
 #[proc_macro_attribute]
 pub fn accounts(args: TokenStream, input: TokenStream) -> TokenStream {
