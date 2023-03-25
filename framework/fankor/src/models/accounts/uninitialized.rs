@@ -173,7 +173,7 @@ impl<'info> UninitializedAccount<'info> {
         system_program: &Program<System>,
     ) -> FankorResult<Account<'info, T>> {
         let rent = Rent::get()?;
-        let space = value.byte_size() + 1 /* account discriminant */;
+        let space = value.byte_size();
         let lamports = rent.minimum_balance(space);
 
         cpi::system_program::create_account(
@@ -201,7 +201,7 @@ impl<'info> UninitializedAccount<'info> {
         system_program: &Program<System>,
     ) -> FankorResult<Account<'info, T>> {
         let rent = Rent::get()?;
-        let space = value.byte_size() + 1 /* account discriminant */;
+        let space = value.byte_size();
         let lamports = rent.minimum_balance(space);
 
         cpi::system_program::create_account(

@@ -461,7 +461,7 @@ impl<'info, T: AccountType + CopyType<'info>> Account<'info, T> {
     pub fn is_value_rent_exempt(&self) -> bool {
         let info = self.info();
         let lamports = info.lamports();
-        let data_len = self.data.byte_size() + 1 /* account discriminant */;
+        let data_len = self.data.byte_size();
 
         let rent = Rent::get().expect("Cannot access Rent Sysvar");
 
@@ -491,12 +491,7 @@ impl<'info, T: AccountType + CopyType<'info>> Account<'info, T> {
         payer: Option<&'info AccountInfo<'info>>,
         system_program: &Program<System>,
     ) -> FankorResult<()> {
-        self.realloc_unchecked(
-            self.data.byte_size() + 1, /* account discriminant */
-            zero_bytes,
-            payer,
-            system_program,
-        )
+        self.realloc_unchecked(self.data.byte_size(), zero_bytes, payer, system_program)
     }
 
     /// Makes the account rent-exempt by adding funds from `payer` if necessary.
@@ -551,7 +546,7 @@ impl<'info, T: AccountType + CopyType<'info>> Account<'info, T> {
             .into());
         }
 
-        let new_size = self.data.byte_size() + 1 /* account discriminant */;
+        let new_size = self.data.byte_size();
         make_rent_exempt(new_size, exact, payer, self.info, system_program)
     }
 }
