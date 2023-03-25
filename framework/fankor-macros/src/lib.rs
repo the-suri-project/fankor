@@ -69,7 +69,7 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 
 /// Implements the ZeroCopyType and CopyType traits for the given struct.
-#[proc_macro_derive(FankorZeroCopy)]
+#[proc_macro_derive(FankorZeroCopy, attributes(zero_copy))]
 pub fn zero_copy(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 

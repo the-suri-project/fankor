@@ -3,6 +3,7 @@ use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{Error, Fields, Item};
 
+use crate::fnk_syn::FnkMetaArgumentList;
 use crate::Result;
 
 pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
@@ -12,6 +13,36 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let visibility = &item.vis;
 
             let (_, ty_generics, where_clause) = item.generics.split_for_impl();
+
+            // Check for zero_copy attribute.
+            let mut extra_offset = 0usize;
+
+            for attr in &item.attrs {
+                if attr.path.is_ident("zero_copy") {
+                    if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
+                        args.error_on_duplicated()?;
+
+                        if args.pop_plain("account", true)? {
+                            extra_offset = 1;
+                        }
+
+                        if args.pop_plain("accounts", true)? {
+                            return Err(Error::new(
+                                input.span(),
+                                "Accounts cannot be used with an struct",
+                            ));
+                        }
+
+                        args.error_on_unknown()?;
+                    } else {
+                        return Err(Error::new(
+                            attr.span(),
+                            "The correct pattern is #[zero_copy(<meta_list>)]",
+                        ));
+                    };
+                    break;
+                }
+            }
 
             let byte_size_method = item.fields.iter().map(|field| {
                 let field_name = &field.ident;
@@ -65,16 +96,17 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                 let res = quote! {
                     #visibility fn #field_name(&self) -> FankorResult<Zc<'info, #field_ty>> {
+                        let offset = self.offset + #extra_offset; // Account discriminant
                         let bytes = self.info.try_borrow_data()
                             .map_err(|_| FankorErrorCode::ZeroCopyPossibleDeadlock {
                                 type_name: std::any::type_name::<Self>(),
                             })?;
-                        let bytes = &bytes[self.offset..];
+                        let bytes = &bytes[offset..];
                         let mut size = 0;
 
                         #(#zc_field_methods_aux)*
 
-                        Ok(Zc::new_unchecked(self.info, self.offset + size))
+                        Ok(Zc::new_unchecked(self.info, offset + size))
                     }
                 };
 
@@ -119,13 +151,13 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     type ZeroCopyType = #zc_name #zc_ty_generics;
 
                     fn byte_size(&self) -> usize {
-                        let mut size = 0;
+                        let mut size = #extra_offset; // Account discriminant
                         #(#byte_size_method)*
                         size
                     }
 
                     fn min_byte_size() -> usize {
-                        let mut size = 0;
+                        let mut size = #extra_offset; // Account discriminant
                         #(#min_byte_size_method)*
                         size
                     }
@@ -155,7 +187,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     }
 
                     fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
-                        let mut size = 0;
+                        let mut size = #extra_offset; // Account discriminant
                         #(#read_byte_size_method)*
                         Ok(size)
                     }
@@ -181,6 +213,36 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             let (zc_impl_generics, zc_ty_generics, zc_where_clause) =
                 aux_zc_generics.split_for_impl();
+
+            // Check for zero_copy attribute.
+            let mut initial_size = 1usize;
+
+            for attr in &item.attrs {
+                if attr.path.is_ident("zero_copy") {
+                    if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
+                        args.error_on_duplicated()?;
+
+                        if args.pop_plain("accounts", true)? {
+                            initial_size = 0;
+                        }
+
+                        if args.pop_plain("account", true)? {
+                            return Err(Error::new(
+                                input.span(),
+                                "Accounts cannot be used with an enum",
+                            ));
+                        }
+
+                        args.error_on_unknown()?;
+                    } else {
+                        return Err(Error::new(
+                            attr.span(),
+                            "The correct pattern is #[zero_copy(<meta_list>)]",
+                        ));
+                    };
+                    break;
+                }
+            }
 
             let mut min_byte_size_method = Vec::with_capacity(item.variants.len());
             let byte_size_method = item.variants.iter().map(|variant| {
@@ -262,7 +324,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                         min_byte_size_method.push(quote! {
                             {
-                                let mut variant_size = 1;
+                                let mut variant_size = #initial_size;
                                 #(#min_fields)*
                                 size = size.min(variant_size);
                             }
@@ -513,13 +575,27 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     }
                 }
             } else {
+                let min_byte_size_body = if min_byte_size_method.is_empty() {
+                    quote! {
+                        1
+                    }
+                } else {
+                    quote! {
+                        let mut size = usize::MAX;
+
+                        #(#min_byte_size_method)*
+
+                        size
+                    }
+                };
+                
                 quote! {
                     #[automatically_derived]
                     impl #zc_impl_generics CopyType<'info> for #name #ty_generics #where_clause {
                         type ZeroCopyType = #zc_name #zc_ty_generics;
 
                         fn byte_size(&self) -> usize {
-                            let mut size = 1;
+                            let mut size = #initial_size;
 
                             match self {
                                 #(#byte_size_method),*
@@ -529,11 +605,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         }
 
                         fn min_byte_size() -> usize {
-                            let mut size = 1;
-
-                            #(#min_byte_size_method)*
-
-                            size
+                            #min_byte_size_body
                         }
                     }
 
@@ -555,7 +627,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                 return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
                             }
 
-                            let mut size = 1;
+                            let mut size = #initial_size;
                             let flag = bytes[0];
 
                             #(#variant_consts)*
@@ -573,7 +645,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                 return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
                             }
 
-                            let mut size = 1;
+                            let mut size = #initial_size;
                             let flag = bytes[0];
 
                             #(#variant_consts)*
