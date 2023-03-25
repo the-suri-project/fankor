@@ -20,7 +20,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let mut account_discriminants = None;
 
             for attr in &item.attrs {
-                if attr.path.is_ident("ts_gen") {
+                if attr.path.is_ident("fankor") {
                     if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
                         args.error_on_duplicated()?;
 
@@ -350,7 +350,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let mut is_accounts = false;
 
             for attr in &item.attrs {
-                if attr.path.is_ident("ts_gen") {
+                if attr.path.is_ident("fankor") {
                     if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
                         args.error_on_duplicated()?;
 

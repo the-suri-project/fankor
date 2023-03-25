@@ -4,7 +4,7 @@ use crate::cpi::token_2022::{CpiInitializeAccount3, CpiInitializeMint2, CpiIniti
 use crate::errors::FankorResult;
 use crate::models::programs::macros::impl_account;
 use crate::models::{Account, Program, System, UninitializedAccount};
-use crate::traits::{AccountDeserialize, AccountSerialize, ProgramType};
+use crate::traits::ProgramType;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use solana_program::program_pack::Pack;
@@ -98,7 +98,7 @@ impl Mint2022 {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            Mint2022::try_deserialize(&mut data)?,
+            Mint2022::deserialize(&mut data)?,
         )
     }
 
@@ -146,7 +146,7 @@ impl Mint2022 {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            Mint2022::try_deserialize(&mut data)?,
+            Mint2022::deserialize(&mut data)?,
         )
     }
 }
@@ -194,7 +194,7 @@ impl TokenAccount2022 {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            TokenAccount2022::try_deserialize(&mut data)?,
+            TokenAccount2022::deserialize(&mut data)?,
         )
     }
 
@@ -239,7 +239,7 @@ impl TokenAccount2022 {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            TokenAccount2022::try_deserialize(&mut data)?,
+            TokenAccount2022::deserialize(&mut data)?,
         )
     }
 }
@@ -287,7 +287,7 @@ impl TokenMultisig2022 {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            TokenMultisig2022::try_deserialize(&mut data)?,
+            TokenMultisig2022::deserialize(&mut data)?,
         )
     }
 
@@ -332,7 +332,7 @@ impl TokenMultisig2022 {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            TokenMultisig2022::try_deserialize(&mut data)?,
+            TokenMultisig2022::deserialize(&mut data)?,
         )
     }
 }

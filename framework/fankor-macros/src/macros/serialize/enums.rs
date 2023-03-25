@@ -1,10 +1,34 @@
+use crate::fnk_syn::FnkMetaArgumentList;
 use core::convert::TryFrom;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote};
-use syn::{Attribute, Fields, Ident, ItemEnum, Meta, WhereClause};
+use syn::spanned::Spanned;
+use syn::{Attribute, Error, Fields, Ident, ItemEnum, Meta, WhereClause};
 
 pub fn enum_ser(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2> {
     let name = &input.ident;
+
+    // Check for zero_copy attribute.
+    let mut is_accounts = false;
+
+    for attr in &input.attrs {
+        if attr.path.is_ident("fankor") {
+            if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
+                args.error_on_duplicated()?;
+
+                is_accounts = args.pop_plain("accounts", true)?;
+
+                args.error_on_unknown()?;
+            } else {
+                return Err(Error::new(
+                    attr.span(),
+                    "The correct pattern is #[fankor_serde(<meta_list>)]",
+                ));
+            };
+            break;
+        }
+    }
+
     let discriminant_name = format_ident!("{}Discriminant", name);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut where_clause = where_clause.map_or_else(
@@ -94,14 +118,22 @@ pub fn enum_ser(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2
         ));
     }
 
+    let variant_writer = if is_accounts {
+        quote! {}
+    } else {
+        quote! {
+            let variant_idx: u8 = match self {
+                #variant_idx_body
+            };
+            writer.write_all(&variant_idx.to_le_bytes())?;
+        }
+    };
+
     Ok(quote! {
         #[automatically_derived]
         impl #impl_generics #crate_name::ser::BorshSerialize for #name #ty_generics #where_clause {
             fn serialize<W: #crate_name::maybestd::io::Write>(&self, writer: &mut W) -> core::result::Result<(), #crate_name::maybestd::io::Error> {
-                let variant_idx: u8 = match self {
-                    #variant_idx_body
-                };
-                writer.write_all(&variant_idx.to_le_bytes())?;
+                #variant_writer
 
                 match self {
                     #fields_body

@@ -1,8 +1,9 @@
 mod enums;
+mod structs;
 
 use crate::macros::deserialize::enums::enum_de;
+use crate::macros::deserialize::structs::struct_de;
 use crate::Result;
-use borsh_derive_internal::struct_de;
 use proc_macro2::Span;
 use quote::quote;
 use syn::spanned::Spanned;

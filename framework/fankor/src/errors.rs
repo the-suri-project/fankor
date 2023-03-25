@@ -83,21 +83,9 @@ pub enum FankorErrorCode {
     #[discriminant = 1500]
     DuplicatedWritableAccounts { address: Pubkey },
 
-    /// No 8 byte discriminant was found on the account
-    #[msg("No 8 byte discriminant was found on the account: {}", account)]
-    AccountDiscriminantNotFound { account: String },
-
     /// The account discriminant did not match account's one
     #[msg("The account discriminant did not match account {}'s one", account)]
     AccountDiscriminantMismatch { account: String },
-
-    /// Failed to serialize the account
-    #[msg("Failed to serialize the account: {}", account)]
-    AccountDidNotSerialize { account: String },
-
-    /// Failed to deserialize the account
-    #[msg("Failed to deserialize the account: {}", account)]
-    AccountDidNotDeserialize { account: String },
 
     /// Failed to deserialize the instruction account
     #[msg("Failed to deserialize the instruction account: {}", account)]

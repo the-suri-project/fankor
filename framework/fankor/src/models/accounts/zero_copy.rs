@@ -301,7 +301,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
 
         // Serialize the new value.
         let mut data_bytes = Vec::with_capacity(new_account.info().data_len());
-        new_account.data().try_serialize(&mut data_bytes)?;
+        new_account.data().serialize(&mut data_bytes)?;
 
         // Realloc account.
         new_account.realloc_unchecked(data_bytes.len(), zero_bytes, Some(payer), system_program)?;

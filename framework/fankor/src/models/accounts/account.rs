@@ -158,7 +158,7 @@ impl<'info, T: AccountType> Account<'info, T> {
         let result = {
             let info = self.info();
             let mut data: &[u8] = &info.try_borrow_data()?;
-            T::try_deserialize(&mut data)?
+            T::deserialize(&mut data)?
         };
         self.data = Box::new(result);
 
@@ -195,7 +195,7 @@ impl<'info, T: AccountType> Account<'info, T> {
         let mut data = self.info.try_borrow_mut_data()?;
         let dst: &mut [u8] = &mut data;
         let mut writer = ArrayWriter::new(dst);
-        self.data.try_serialize(&mut writer)?;
+        self.data.serialize(&mut writer)?;
 
         Ok(())
     }
@@ -344,7 +344,7 @@ impl<'info, T: AccountType> Account<'info, T> {
 
         // Serialize the new value.
         let mut data_bytes = Vec::with_capacity(new_account.info().data_len());
-        new_account.data().try_serialize(&mut data_bytes)?;
+        new_account.data().serialize(&mut data_bytes)?;
 
         // Realloc account.
         new_account.realloc_unchecked(data_bytes.len(), zero_bytes, Some(payer), system_program)?;
@@ -587,7 +587,7 @@ impl<'info, T: AccountType> Instruction<'info> for Account<'info, T> {
         }
 
         let mut data: &[u8] = &info.try_borrow_data()?;
-        let result = Account::new_unchecked(context, info, T::try_deserialize(&mut data)?);
+        let result = Account::new_unchecked(context, info, T::deserialize(&mut data)?);
 
         *accounts = &accounts[1..];
         Ok(result)
@@ -664,7 +664,7 @@ fn drop_aux<T: AccountType>(account: &mut Account<T>) -> FankorResult<()> {
         }) => {
             // Serialize.
             let mut serialized = Vec::with_capacity(account.info.data_len());
-            account.data.try_serialize(&mut serialized)?;
+            account.data.serialize(&mut serialized)?;
 
             // Reallocate.
             account.realloc_unchecked(

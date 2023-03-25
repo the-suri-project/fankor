@@ -30,7 +30,6 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
     let arguments = AccountsArguments::from(args)?;
 
     let name = enum_item.ident;
-    let name_str = name.to_string();
     let discriminant_name = format_ident!("{}Discriminant", name);
 
     assert!(
@@ -272,8 +271,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
 
         #derive_enum_discriminants
         #[derive(FankorSerialize, FankorDeserialize, FankorZeroCopy, TsGen)]
-        #[ts_gen(accounts)]
-        #[zero_copy(accounts)]
+        #[fankor(accounts)]
         #[non_exhaustive]
         #[repr(u8)]
         #visibility enum #name #ty_generics #where_clause {
@@ -290,32 +288,6 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
         }
 
         #(#from_methods)*
-
-        #[automatically_derived]
-        impl #impl_generics ::fankor::traits::AccountSerialize for #name #ty_generics #where_clause {
-            fn try_serialize<W: std::io::Write>(&self, writer: &mut W) -> ::fankor::errors::FankorResult<()> {
-                if ::fankor::prelude::borsh::BorshSerialize::serialize(self, writer).is_err() {
-                    return Err(::fankor::errors::FankorErrorCode::AccountDidNotSerialize {
-                        account: #name_str.to_string()
-                    }.into());
-                }
-                Ok(())
-            }
-        }
-
-        #[automatically_derived]
-        impl #impl_generics ::fankor::traits::AccountDeserialize for #name #ty_generics #where_clause {
-            fn try_deserialize(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
-                Self::try_deserialize_unchecked(buf)
-            }
-
-            fn try_deserialize_unchecked(buf: &mut &[u8]) -> ::fankor::errors::FankorResult<Self> {
-                ::fankor::prelude::borsh::BorshDeserialize::deserialize(buf)
-                    .map_err(|_| ::fankor::errors::FankorErrorCode::AccountDidNotDeserialize {
-                    account: #name_str.to_string()
-                }.into())
-            }
-        }
 
         #[automatically_derived]
         impl #impl_generics ::fankor::traits::AccountType for #name #ty_generics #where_clause {

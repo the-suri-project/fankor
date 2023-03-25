@@ -39,7 +39,7 @@ pub fn const_pubkey(args: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 
 /// A custom implementation of BorshSerialize that fix an issue with the where clause.
-#[proc_macro_derive(FankorSerialize, attributes(borsh_skip))]
+#[proc_macro_derive(FankorSerialize, attributes(borsh_skip, fankor))]
 pub fn serialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 
@@ -54,7 +54,7 @@ pub fn serialize(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 
 /// A custom implementation of BorshDeserialize that fix an issue with the where clause.
-#[proc_macro_derive(FankorDeserialize, attributes(borsh_skip, borsh_init))]
+#[proc_macro_derive(FankorDeserialize, attributes(borsh_skip, borsh_init, fankor))]
 pub fn deserialize(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 
@@ -69,7 +69,7 @@ pub fn deserialize(input: TokenStream) -> TokenStream {
 // ----------------------------------------------------------------------------
 
 /// Implements the ZeroCopyType and CopyType traits for the given struct.
-#[proc_macro_derive(FankorZeroCopy, attributes(zero_copy))]
+#[proc_macro_derive(FankorZeroCopy, attributes(fankor))]
 pub fn zero_copy(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 
@@ -283,7 +283,7 @@ pub fn constant(args: TokenStream, input: TokenStream) -> TokenStream {
 
 /// This macro defines a constant in the program. This is used to map it to
 /// the TypeScript generated code.
-#[proc_macro_derive(TsGen, attributes(ts_gen))]
+#[proc_macro_derive(TsGen, attributes(fankor))]
 pub fn ts_gen(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as Item);
 

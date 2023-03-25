@@ -4,7 +4,7 @@ use crate::cpi::system_program::CpiCreateAccount;
 use crate::errors::FankorResult;
 use crate::models::programs::macros::impl_account;
 use crate::models::{Account, Program, System, Token, UninitializedAccount};
-use crate::traits::{AccountDeserialize, AccountSerialize, ProgramType};
+use crate::traits::ProgramType;
 use borsh::{BorshDeserialize, BorshSerialize};
 use mpl_token_metadata::state::{
     Collection, CollectionDetails, Creator, TokenMetadataAccount, Uses, BURN, COLLECTION_AUTHORITY,
@@ -224,7 +224,7 @@ impl MetadataAccount {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            MetadataAccount::try_deserialize(&mut data)?,
+            MetadataAccount::deserialize(&mut data)?,
         )
     }
 
@@ -296,7 +296,7 @@ impl MetadataAccount {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            MetadataAccount::try_deserialize(&mut data)?,
+            MetadataAccount::deserialize(&mut data)?,
         )
     }
 }
@@ -357,7 +357,7 @@ impl MasterEditionV2 {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            MasterEditionV2::try_deserialize(&mut data)?,
+            MasterEditionV2::deserialize(&mut data)?,
         )
     }
 
@@ -415,7 +415,7 @@ impl MasterEditionV2 {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            MasterEditionV2::try_deserialize(&mut data)?,
+            MasterEditionV2::deserialize(&mut data)?,
         )
     }
 }

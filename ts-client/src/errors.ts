@@ -8,7 +8,7 @@ import {
     TStruct,
     U64,
 } from './serde';
-import { equals } from './utils';
+import { clone, equals } from './utils';
 import { PublicKey } from '@solana/web3.js';
 import BN from 'bn.js';
 
@@ -38,6 +38,10 @@ export class FankorErrorCode {
         );
     }
 
+    clone(): FankorErrorCode {
+        return new FankorErrorCode(clone(this.data));
+    }
+
     // STATIC METHODS ---------------------------------------------------------
 
     static deserialize(buffer: Buffer, offset?: number) {
@@ -57,10 +61,8 @@ export type FankorErrorCodeTypes =
     | FankorErrorCode_MissingSeedsAccount
     | FankorErrorCode_MissingPdaSeeds
     | FankorErrorCode_DuplicatedWritableAccounts
-    | FankorErrorCode_AccountDiscriminantNotFound
     | FankorErrorCode_AccountDiscriminantMismatch
-    | FankorErrorCode_AccountDidNotSerialize
-    | FankorErrorCode_AccountDidNotDeserialize
+    | FankorErrorCode_InstructionDidNotDeserialize
     | FankorErrorCode_AccountNotOwnedByProgram
     | FankorErrorCode_ReadonlyAccountModification
     | FankorErrorCode_MutRefToReadonlyAccount
@@ -74,6 +76,7 @@ export type FankorErrorCodeTypes =
     | FankorErrorCode_InvalidProgram
     | FankorErrorCode_ProgramIsNotExecutable
     | FankorErrorCode_NotEnoughAccountKeys
+    | FankorErrorCode_NotEnoughDataToDeserializeInstruction
     | FankorErrorCode_NotAccountsExpected
     | FankorErrorCode_NotEnoughValidAccountForVec
     | FankorErrorCode_AccountConstraintOwnerMismatch
@@ -95,10 +98,14 @@ export type FankorErrorCodeTypes =
     | FankorErrorCode_AccountNotDefault
     | FankorErrorCode_EmptyIntermediateBuffer
     | FankorErrorCode_IntermediateBufferIncorrectProgramId
+    | FankorErrorCode_TooManyAccounts
     | FankorErrorCode_ZeroCopyCannotDeserialize
     | FankorErrorCode_ZeroCopyNotEnoughLength
     | FankorErrorCode_ZeroCopyInvalidEnumDiscriminant
-    | FankorErrorCode_ZeroCopyPossibleDeadlock;
+    | FankorErrorCode_ZeroCopyPossibleDeadlock
+    | FankorErrorCode_ZeroCopyLengthFieldOverflow
+    | FankorErrorCode_ZeroCopyIncorrectPrecedingField
+    | FankorErrorCode_ZeroCopyInvalidMove;
 
 export interface FankorErrorCode_DeclaredProgramIdMismatch {
     type: 'DeclaredProgramIdMismatch';
@@ -145,23 +152,13 @@ export interface FankorErrorCode_DuplicatedWritableAccounts {
     value: { address: PublicKey };
 }
 
-export interface FankorErrorCode_AccountDiscriminantNotFound {
-    type: 'AccountDiscriminantNotFound';
-    value: { account: string };
-}
-
 export interface FankorErrorCode_AccountDiscriminantMismatch {
     type: 'AccountDiscriminantMismatch';
     value: { account: string };
 }
 
-export interface FankorErrorCode_AccountDidNotSerialize {
-    type: 'AccountDidNotSerialize';
-    value: { account: string };
-}
-
-export interface FankorErrorCode_AccountDidNotDeserialize {
-    type: 'AccountDidNotDeserialize';
+export interface FankorErrorCode_InstructionDidNotDeserialize {
+    type: 'InstructionDidNotDeserialize';
     value: { account: string };
 }
 
@@ -202,11 +199,7 @@ export interface FankorErrorCode_AccountAlreadyInitialized {
 
 export interface FankorErrorCode_AccountOwnedByWrongProgram {
     type: 'AccountOwnedByWrongProgram';
-    value: {
-        address: PublicKey;
-        expected: PublicKey;
-        actual: PublicKey;
-    };
+    value: { address: PublicKey; expected: PublicKey; actual: PublicKey };
 }
 
 export interface FankorErrorCode_IncorrectSysvarAccount {
@@ -233,6 +226,10 @@ export interface FankorErrorCode_NotEnoughAccountKeys {
     type: 'NotEnoughAccountKeys';
 }
 
+export interface FankorErrorCode_NotEnoughDataToDeserializeInstruction {
+    type: 'NotEnoughDataToDeserializeInstruction';
+}
+
 export interface FankorErrorCode_NotAccountsExpected {
     type: 'NotAccountsExpected';
 }
@@ -243,20 +240,12 @@ export interface FankorErrorCode_NotEnoughValidAccountForVec {
 
 export interface FankorErrorCode_AccountConstraintOwnerMismatch {
     type: 'AccountConstraintOwnerMismatch';
-    value: {
-        actual: PublicKey;
-        expected: PublicKey;
-        account: string;
-    };
+    value: { actual: PublicKey; expected: PublicKey; account: string };
 }
 
 export interface FankorErrorCode_AccountConstraintAddressMismatch {
     type: 'AccountConstraintAddressMismatch';
-    value: {
-        actual: PublicKey;
-        expected: PublicKey;
-        account: string;
-    };
+    value: { actual: PublicKey; expected: PublicKey; account: string };
 }
 
 export interface FankorErrorCode_AccountConstraintNotInitialized {
@@ -342,6 +331,11 @@ export interface FankorErrorCode_IntermediateBufferIncorrectProgramId {
     value: { actual: PublicKey; expected: PublicKey };
 }
 
+export interface FankorErrorCode_TooManyAccounts {
+    type: 'TooManyAccounts';
+    value: { size: BN };
+}
+
 export interface FankorErrorCode_ZeroCopyCannotDeserialize {
     type: 'ZeroCopyCannotDeserialize';
     value: { typeName: string };
@@ -362,274 +356,293 @@ export interface FankorErrorCode_ZeroCopyPossibleDeadlock {
     value: { typeName: string };
 }
 
+export interface FankorErrorCode_ZeroCopyLengthFieldOverflow {
+    type: 'ZeroCopyLengthFieldOverflow';
+}
+
+export interface FankorErrorCode_ZeroCopyIncorrectPrecedingField {
+    type: 'ZeroCopyIncorrectPrecedingField';
+}
+
+export interface FankorErrorCode_ZeroCopyInvalidMove {
+    type: 'ZeroCopyInvalidMove';
+}
+
 export class FankorErrorCodeSchema implements FnkBorshSchema<FankorErrorCode> {
-    innerSchema = TEnum([
-        [1000, 'DeclaredProgramIdMismatch'],
-        [1001, 'MissingInstructionDiscriminant'],
-        [1002, 'InstructionDiscriminantNotFound'],
-        [1003, 'UnusedAccounts'],
-        [
-            1004,
-            'MissingProgram',
-            TStruct([
-                ['address', TPublicKey],
-                ['name', TString],
-            ] as const),
-        ],
-        [
-            1005,
-            'CannotFindValidPdaWithProvidedSeeds',
-            TStruct([['programId', TPublicKey]] as const),
-        ],
-        [
-            1006,
-            'InvalidPda',
-            TStruct([
-                ['expected', TPublicKey],
-                ['actual', TPublicKey],
-            ] as const),
-        ],
-        [1007, 'MissingSeedsAccount'],
-        [1008, 'MissingPdaSeeds', TStruct([['account', TPublicKey]] as const)],
-        [
-            1500,
-            'DuplicatedWritableAccounts',
-            TStruct([['address', TPublicKey]] as const),
-        ],
-        [
-            1501,
-            'AccountDiscriminantNotFound',
-            TStruct([['account', TString]] as const),
-        ],
-        [
-            1502,
-            'AccountDiscriminantMismatch',
-            TStruct([['account', TString]] as const),
-        ],
-        [
-            1503,
-            'AccountDidNotSerialize',
-            TStruct([['account', TString]] as const),
-        ],
-        [
-            1504,
-            'AccountDidNotDeserialize',
-            TStruct([['account', TString]] as const),
-        ],
-        [
-            1505,
-            'AccountNotOwnedByProgram',
-            TStruct([
-                ['address', TPublicKey],
-                ['action', TString],
-            ] as const),
-        ],
-        [
-            1506,
-            'ReadonlyAccountModification',
-            TStruct([
-                ['address', TPublicKey],
-                ['action', TString],
-            ] as const),
-        ],
-        [
-            1507,
-            'MutRefToReadonlyAccount',
-            TStruct([['address', TPublicKey]] as const),
-        ],
-        [
-            1508,
-            'NewFromClosedAccount',
-            TStruct([['address', TPublicKey]] as const),
-        ],
-        [
-            1509,
-            'AccountNotRentExempt',
-            TStruct([['account', TPublicKey]] as const),
-        ],
-        [
-            1510,
-            'AccountNotInitialized',
-            TStruct([['address', TPublicKey]] as const),
-        ],
-        [
-            1511,
-            'AccountAlreadyInitialized',
-            TStruct([['address', TPublicKey]] as const),
-        ],
-        [
-            1512,
-            'AccountOwnedByWrongProgram',
-            TStruct([
-                ['address', TPublicKey],
-                ['expected', TPublicKey],
-                ['actual', TPublicKey],
-            ] as const),
-        ],
-        [
-            1513,
-            'IncorrectSysvarAccount',
-            TStruct([
-                ['actual', TPublicKey],
-                ['expected', TPublicKey],
-            ] as const),
-        ],
-        [
-            1514,
-            'AlreadyClosedAccount',
-            TStruct([
-                ['address', TPublicKey],
-                ['action', TString],
-            ] as const),
-        ],
-        [
-            1515,
-            'InvalidProgram',
-            TStruct([
-                ['expected', TPublicKey],
-                ['actual', TPublicKey],
-            ] as const),
-        ],
-        [
-            1516,
-            'ProgramIsNotExecutable',
-            TStruct([['program', TPublicKey]] as const),
-        ],
-        [1517, 'NotEnoughAccountKeys'],
-        [1518, 'NotAccountsExpected'],
-        [1519, 'NotEnoughValidAccountForVec'],
-        [
-            1520,
-            'AccountConstraintOwnerMismatch',
-            TStruct([
-                ['actual', TPublicKey],
-                ['expected', TPublicKey],
-                ['account', TString],
-            ] as const),
-        ],
-        [
-            1521,
-            'AccountConstraintAddressMismatch',
-            TStruct([
-                ['actual', TPublicKey],
-                ['expected', TPublicKey],
-                ['account', TString],
-            ] as const),
-        ],
-        [
-            1522,
-            'AccountConstraintNotInitialized',
-            TStruct([['account', TString]] as const),
-        ],
-        [
-            1523,
-            'AccountConstraintInitialized',
-            TStruct([['account', TString]] as const),
-        ],
-        [
-            1524,
-            'AccountConstraintNotWritable',
-            TStruct([['account', TString]] as const),
-        ],
-        [
-            1525,
-            'AccountConstraintWritable',
-            TStruct([['account', TString]] as const),
-        ],
-        [
-            1526,
-            'AccountConstraintNotExecutable',
-            TStruct([['account', TString]] as const),
-        ],
-        [
-            1527,
-            'AccountConstraintExecutable',
-            TStruct([['account', TString]] as const),
-        ],
-        [
-            1528,
-            'AccountConstraintNotRentExempt',
-            TStruct([['account', TString]] as const),
-        ],
-        [
-            1529,
-            'AccountConstraintRentExempt',
-            TStruct([['account', TString]] as const),
-        ],
-        [
-            1530,
-            'AccountConstraintNotSigner',
-            TStruct([['account', TString]] as const),
-        ],
-        [
-            1531,
-            'AccountConstraintSigner',
-            TStruct([['account', TString]] as const),
-        ],
-        [
-            1532,
-            'AccountConstraintMinimumMismatch',
-            TStruct([
-                ['actual', U64],
-                ['expected', U64],
-                ['account', TString],
-            ] as const),
-        ],
-        [
-            1533,
-            'AccountConstraintMaximumMismatch',
-            TStruct([
-                ['actual', U64],
-                ['expected', U64],
-                ['account', TString],
-            ] as const),
-        ],
-        [
-            1534,
-            'AccountConstraintFailed',
-            TStruct([
-                ['account', TString],
-                ['constraint', TString],
-            ] as const),
-        ],
-        [
-            1535,
-            'DuplicatedAccountWithDifferentType',
-            TStruct([['address', TPublicKey]] as const),
-        ],
-        [1536, 'AccountNotDefault'],
-        [2000, 'EmptyIntermediateBuffer'],
-        [
-            2001,
-            'IntermediateBufferIncorrectProgramId',
-            TStruct([
-                ['actual', TPublicKey],
-                ['expected', TPublicKey],
-            ] as const),
-        ],
-        [
-            2500,
-            'ZeroCopyCannotDeserialize',
-            TStruct([['typeName', TString]] as const),
-        ],
-        [
-            2501,
-            'ZeroCopyNotEnoughLength',
-            TStruct([['typeName', TString]] as const),
-        ],
-        [
-            2502,
-            'ZeroCopyInvalidEnumDiscriminant',
-            TStruct([['typeName', TString]] as const),
-        ],
-        [
-            2503,
-            'ZeroCopyPossibleDeadlock',
-            TStruct([['typeName', TString]] as const),
-        ],
-    ] as const);
+    innerSchema = null as any as ReturnType<
+        FankorErrorCodeSchema['initSchema']
+    >;
 
     // METHODS ----------------------------------------------------------------
+
+    initSchema() {
+        const innerSchema = TEnum([
+            [1000, 'DeclaredProgramIdMismatch'],
+            [1001, 'MissingInstructionDiscriminant'],
+            [1002, 'InstructionDiscriminantNotFound'],
+            [1003, 'UnusedAccounts'],
+            [
+                1004,
+                'MissingProgram',
+                TStruct([
+                    ['address', TPublicKey],
+                    ['name', TString],
+                ] as const),
+            ],
+            [
+                1005,
+                'CannotFindValidPdaWithProvidedSeeds',
+                TStruct([['programId', TPublicKey]] as const),
+            ],
+            [
+                1006,
+                'InvalidPda',
+                TStruct([
+                    ['expected', TPublicKey],
+                    ['actual', TPublicKey],
+                ] as const),
+            ],
+            [1007, 'MissingSeedsAccount'],
+            [
+                1008,
+                'MissingPdaSeeds',
+                TStruct([['account', TPublicKey]] as const),
+            ],
+            [
+                1500,
+                'DuplicatedWritableAccounts',
+                TStruct([['address', TPublicKey]] as const),
+            ],
+            [
+                1501,
+                'AccountDiscriminantMismatch',
+                TStruct([['account', TString]] as const),
+            ],
+            [
+                1502,
+                'InstructionDidNotDeserialize',
+                TStruct([['account', TString]] as const),
+            ],
+            [
+                1503,
+                'AccountNotOwnedByProgram',
+                TStruct([
+                    ['address', TPublicKey],
+                    ['action', TString],
+                ] as const),
+            ],
+            [
+                1504,
+                'ReadonlyAccountModification',
+                TStruct([
+                    ['address', TPublicKey],
+                    ['action', TString],
+                ] as const),
+            ],
+            [
+                1505,
+                'MutRefToReadonlyAccount',
+                TStruct([['address', TPublicKey]] as const),
+            ],
+            [
+                1506,
+                'NewFromClosedAccount',
+                TStruct([['address', TPublicKey]] as const),
+            ],
+            [
+                1507,
+                'AccountNotRentExempt',
+                TStruct([['account', TPublicKey]] as const),
+            ],
+            [
+                1508,
+                'AccountNotInitialized',
+                TStruct([['address', TPublicKey]] as const),
+            ],
+            [
+                1509,
+                'AccountAlreadyInitialized',
+                TStruct([['address', TPublicKey]] as const),
+            ],
+            [
+                1510,
+                'AccountOwnedByWrongProgram',
+                TStruct([
+                    ['address', TPublicKey],
+                    ['expected', TPublicKey],
+                    ['actual', TPublicKey],
+                ] as const),
+            ],
+            [
+                1511,
+                'IncorrectSysvarAccount',
+                TStruct([
+                    ['actual', TPublicKey],
+                    ['expected', TPublicKey],
+                ] as const),
+            ],
+            [
+                1512,
+                'AlreadyClosedAccount',
+                TStruct([
+                    ['address', TPublicKey],
+                    ['action', TString],
+                ] as const),
+            ],
+            [
+                1513,
+                'InvalidProgram',
+                TStruct([
+                    ['expected', TPublicKey],
+                    ['actual', TPublicKey],
+                ] as const),
+            ],
+            [
+                1514,
+                'ProgramIsNotExecutable',
+                TStruct([['program', TPublicKey]] as const),
+            ],
+            [1515, 'NotEnoughAccountKeys'],
+            [1516, 'NotEnoughDataToDeserializeInstruction'],
+            [1517, 'NotAccountsExpected'],
+            [1518, 'NotEnoughValidAccountForVec'],
+            [
+                1519,
+                'AccountConstraintOwnerMismatch',
+                TStruct([
+                    ['actual', TPublicKey],
+                    ['expected', TPublicKey],
+                    ['account', TString],
+                ] as const),
+            ],
+            [
+                1520,
+                'AccountConstraintAddressMismatch',
+                TStruct([
+                    ['actual', TPublicKey],
+                    ['expected', TPublicKey],
+                    ['account', TString],
+                ] as const),
+            ],
+            [
+                1521,
+                'AccountConstraintNotInitialized',
+                TStruct([['account', TString]] as const),
+            ],
+            [
+                1522,
+                'AccountConstraintInitialized',
+                TStruct([['account', TString]] as const),
+            ],
+            [
+                1523,
+                'AccountConstraintNotWritable',
+                TStruct([['account', TString]] as const),
+            ],
+            [
+                1524,
+                'AccountConstraintWritable',
+                TStruct([['account', TString]] as const),
+            ],
+            [
+                1525,
+                'AccountConstraintNotExecutable',
+                TStruct([['account', TString]] as const),
+            ],
+            [
+                1526,
+                'AccountConstraintExecutable',
+                TStruct([['account', TString]] as const),
+            ],
+            [
+                1527,
+                'AccountConstraintNotRentExempt',
+                TStruct([['account', TString]] as const),
+            ],
+            [
+                1528,
+                'AccountConstraintRentExempt',
+                TStruct([['account', TString]] as const),
+            ],
+            [
+                1529,
+                'AccountConstraintNotSigner',
+                TStruct([['account', TString]] as const),
+            ],
+            [
+                1530,
+                'AccountConstraintSigner',
+                TStruct([['account', TString]] as const),
+            ],
+            [
+                1531,
+                'AccountConstraintMinimumMismatch',
+                TStruct([
+                    ['actual', U64],
+                    ['expected', U64],
+                    ['account', TString],
+                ] as const),
+            ],
+            [
+                1532,
+                'AccountConstraintMaximumMismatch',
+                TStruct([
+                    ['actual', U64],
+                    ['expected', U64],
+                    ['account', TString],
+                ] as const),
+            ],
+            [
+                1533,
+                'AccountConstraintFailed',
+                TStruct([
+                    ['account', TString],
+                    ['constraint', TString],
+                ] as const),
+            ],
+            [
+                1534,
+                'DuplicatedAccountWithDifferentType',
+                TStruct([['address', TPublicKey]] as const),
+            ],
+            [1535, 'AccountNotDefault'],
+            [2000, 'EmptyIntermediateBuffer'],
+            [
+                2001,
+                'IntermediateBufferIncorrectProgramId',
+                TStruct([
+                    ['actual', TPublicKey],
+                    ['expected', TPublicKey],
+                ] as const),
+            ],
+            [2002, 'TooManyAccounts', TStruct([['size', U64]] as const)],
+            [
+                2500,
+                'ZeroCopyCannotDeserialize',
+                TStruct([['typeName', TString]] as const),
+            ],
+            [
+                2501,
+                'ZeroCopyNotEnoughLength',
+                TStruct([['typeName', TString]] as const),
+            ],
+            [
+                2502,
+                'ZeroCopyInvalidEnumDiscriminant',
+                TStruct([['typeName', TString]] as const),
+            ],
+            [
+                2503,
+                'ZeroCopyPossibleDeadlock',
+                TStruct([['typeName', TString]] as const),
+            ],
+            [2504, 'ZeroCopyLengthFieldOverflow'],
+            [2505, 'ZeroCopyIncorrectPrecedingField'],
+            [2506, 'ZeroCopyInvalidMove'],
+        ] as const);
+        this.innerSchema = innerSchema;
+        return innerSchema;
+    }
 
     serialize(writer: FnkBorshWriter, value: FankorErrorCode) {
         this.innerSchema.serialize(writer, value.data);
@@ -646,10 +659,10 @@ const useFankorErrorCodeSchema = (() => {
     return () => {
         if (variable === null) {
             variable = new FankorErrorCodeSchema();
+            variable.initSchema();
         }
 
         return variable;
     };
 })();
-
 export const TFankorErrorCode = useFankorErrorCodeSchema();

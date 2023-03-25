@@ -1,5 +1,4 @@
-use crate::errors::FankorResult;
-use crate::traits::{AccountDeserialize, AccountSerialize, ProgramType};
+use crate::traits::ProgramType;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::bpf_loader_upgradeable;
 use solana_program::pubkey::Pubkey;
@@ -60,24 +59,6 @@ impl Default for UpgradeableLoaderAccount {
 }
 
 #[cfg(any(feature = "test-utils", test))]
-impl AccountSerialize for UpgradeableLoaderAccount {
-    fn try_serialize<W: Write>(&self, writer: &mut W) -> FankorResult<()> {
-        let buf =
-            bincode::serialize(&self.0).map_err(|e| std::io::Error::new(ErrorKind::Other, e))?;
-        writer.write_all(&buf)?;
-
-        Ok(())
-    }
-}
-
-#[cfg(not(any(feature = "test-utils", test)))]
-impl AccountSerialize for UpgradeableLoaderAccount {
-    fn try_serialize<W: Write>(&self, _writer: &mut W) -> FankorResult<()> {
-        unreachable!("Cannot write accounts that does not belong to the current program")
-    }
-}
-
-#[cfg(any(feature = "test-utils", test))]
 impl BorshSerialize for UpgradeableLoaderAccount {
     fn serialize<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
         let buf =
@@ -92,18 +73,6 @@ impl BorshSerialize for UpgradeableLoaderAccount {
 impl BorshSerialize for UpgradeableLoaderAccount {
     fn serialize<W: Write>(&self, _writer: &mut W) -> std::io::Result<()> {
         unreachable!("Cannot write accounts that does not belong to the current program")
-    }
-}
-
-impl AccountDeserialize for UpgradeableLoaderAccount {
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> FankorResult<Self> {
-        let result = bincode::deserialize(buf)
-            .map(UpgradeableLoaderAccount)
-            .map_err(|e| std::io::Error::new(ErrorKind::Other, e))?;
-
-        *buf = &[];
-
-        Ok(result)
     }
 }
 

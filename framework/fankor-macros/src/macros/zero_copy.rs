@@ -18,11 +18,11 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let mut extra_offset = 0usize;
 
             for attr in &item.attrs {
-                if attr.path.is_ident("zero_copy") {
+                if attr.path.is_ident("fankor") {
                     if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
                         args.error_on_duplicated()?;
 
-                        if args.pop_plain("account", true)? {
+                        if args.pop_ident("account", true)?.is_some() {
                             extra_offset = 1;
                         }
 
@@ -218,7 +218,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let mut initial_size = 1usize;
 
             for attr in &item.attrs {
-                if attr.path.is_ident("zero_copy") {
+                if attr.path.is_ident("fankor") {
                     if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
                         args.error_on_duplicated()?;
 

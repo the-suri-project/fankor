@@ -1,3 +1,4 @@
+use crate::fnk_syn::FnkMetaArgumentList;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote, ToTokens};
 use syn::spanned::Spanned;
@@ -5,6 +6,28 @@ use syn::{Attribute, Error, Fields, Ident, ItemEnum, Meta, NestedMeta, Path, Whe
 
 pub fn enum_de(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2> {
     let name = &input.ident;
+
+    // Check for zero_copy attribute.
+    let mut is_accounts = false;
+
+    for attr in &input.attrs {
+        if attr.path.is_ident("fankor") {
+            if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
+                args.error_on_duplicated()?;
+
+                is_accounts = args.pop_plain("accounts", true)?;
+
+                args.error_on_unknown()?;
+            } else {
+                return Err(Error::new(
+                    attr.span(),
+                    "The correct pattern is #[fankor_serde(<meta_list>)]",
+                ));
+            };
+            break;
+        }
+    }
+
     let discriminant_name = format_ident!("{}Discriminant", name);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     let mut where_clause = where_clause.map_or_else(
@@ -79,13 +102,26 @@ pub fn enum_de(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2>
         });
     }
 
+    let variant_reader = if is_accounts {
+        quote! {
+            let variant_idx: u8 = {
+                let mut aux_buf = *buf;
+                #crate_name::BorshDeserialize::deserialize(&mut aux_buf)?
+            };
+        }
+    } else {
+        quote! {
+            let variant_idx: u8 = #crate_name::BorshDeserialize::deserialize(buf)?;
+        }
+    };
+
     if let Some(method_ident) = init_method {
         Ok(quote! {
             #[automatically_derived]
             impl #impl_generics #crate_name::de::BorshDeserialize for #name #ty_generics #where_clause {
                 fn deserialize(buf: &mut &[u8]) -> core::result::Result<Self, #crate_name::maybestd::io::Error> {
                     #variant_consts
-                    let variant_idx: u8 = #crate_name::BorshDeserialize::deserialize(buf)?;
+                    #variant_reader
                     let mut return_value = match variant_idx {
                         #variant_arms
                         _ => {
@@ -109,7 +145,7 @@ pub fn enum_de(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2>
             impl #impl_generics #crate_name::de::BorshDeserialize for #name #ty_generics #where_clause {
                 fn deserialize(buf: &mut &[u8]) -> core::result::Result<Self, #crate_name::maybestd::io::Error> {
                     #variant_consts
-                    let variant_idx: u8 = #crate_name::BorshDeserialize::deserialize(buf)?;
+                    #variant_reader
                     let return_value = match variant_idx {
                         #variant_arms
                         _ => {

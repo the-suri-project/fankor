@@ -1,6 +1,5 @@
-use fankor::prelude::*;
-
 pub use enum_account::*;
+use fankor::prelude::*;
 pub use struct_account::*;
 
 mod enum_account;
@@ -31,8 +30,9 @@ pub enum ProgramAccountZeroSubSet {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::accounts::StructAccountData;
+
+    use super::*;
 
     #[test]
     fn test_size() {
@@ -66,14 +66,16 @@ mod test {
     }
 
     #[test]
-    fn test_zc_read() {
+    fn test_zc_read_write() {
         let mut lamports = 0;
         let mut vector = vec![5u8, 1u8, 0, 0, 0, 4u8, 0, 0, 0];
         let string = "test";
+
         for b in string.bytes() {
             vector.push(b);
         }
 
+        let vector_save = vector.clone();
         let info = create_account_info_for_tests(&mut lamports, &mut vector);
         let zc = Zc::<ProgramAccount>::new_unchecked(&info, 0);
         let value = zc.try_value().unwrap();
@@ -91,5 +93,19 @@ mod test {
                 panic!("Unexpected discriminant");
             }
         }
+
+        {
+            let mut bytes = zc.info().try_borrow_mut_data().unwrap();
+            bytes.fill(0);
+            bytes[0] = 5;
+        }
+        zc.try_write_value_unchecked(&ProgramAccount::StructAccountData(StructAccountData {
+            value1: 1,
+            value2: "test".to_string(),
+        }))
+        .unwrap();
+
+        let data = info.try_borrow_data().unwrap();
+        assert_eq!(*data, &vector_save);
     }
 }

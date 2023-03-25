@@ -4,7 +4,7 @@ use crate::cpi::token::{CpiInitializeAccount3, CpiInitializeMint2, CpiInitialize
 use crate::errors::FankorResult;
 use crate::models::programs::macros::impl_account;
 use crate::models::{Account, Program, System, UninitializedAccount};
-use crate::traits::{AccountDeserialize, AccountSerialize, ProgramType};
+use crate::traits::ProgramType;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use solana_program::program_pack::Pack;
@@ -94,7 +94,7 @@ impl Mint {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            Mint::try_deserialize(&mut data)?,
+            Mint::deserialize(&mut data)?,
         )
     }
 
@@ -142,7 +142,7 @@ impl Mint {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            Mint::try_deserialize(&mut data)?,
+            Mint::deserialize(&mut data)?,
         )
     }
 }
@@ -190,7 +190,7 @@ impl TokenAccount {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            TokenAccount::try_deserialize(&mut data)?,
+            TokenAccount::deserialize(&mut data)?,
         )
     }
 
@@ -235,7 +235,7 @@ impl TokenAccount {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            TokenAccount::try_deserialize(&mut data)?,
+            TokenAccount::deserialize(&mut data)?,
         )
     }
 }
@@ -283,7 +283,7 @@ impl TokenMultisig {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            TokenMultisig::try_deserialize(&mut data)?,
+            TokenMultisig::deserialize(&mut data)?,
         )
     }
 
@@ -328,7 +328,7 @@ impl TokenMultisig {
         Account::new(
             account_to_init.context(),
             account_to_init_info,
-            TokenMultisig::try_deserialize(&mut data)?,
+            TokenMultisig::deserialize(&mut data)?,
         )
     }
 }
