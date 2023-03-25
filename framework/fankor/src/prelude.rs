@@ -13,6 +13,8 @@ pub use crate::utils::type_id_of;
 pub use crate::utils::writers::ArrayWriter;
 pub use crate::utils::writers::VecWriter;
 pub use borsh;
+pub use borsh::BorshDeserialize;
+pub use borsh::BorshSerialize;
 pub use bs58;
 pub use fankor_macros::*;
 #[cfg(feature = "metadata-program")]

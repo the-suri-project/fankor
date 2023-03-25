@@ -55,7 +55,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
         discriminant_constants.push(quote! {
             const #variant_name: u8 = #discriminant_name::#variant_name.code();
         });
-        
+
         let accounts = if v.boxed {
             quote! {
                 let accounts = parse_accounts::<#variant_name<'info>>(
@@ -83,7 +83,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
 
                 // Write return data.
                 if type_id_of(&result) != type_id_of(&()) {
-                    ::fankor::prelude::solana_program::program::set_return_data(&::fankor::prelude::borsh::BorshSerialize::try_to_vec(&result).unwrap());
+                    ::fankor::prelude::solana_program::program::set_return_data(&::fankor::prelude::BorshSerialize::try_to_vec(&result).unwrap());
                 }
 
                 Ok(())
@@ -245,7 +245,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
                 #dispatch_default
             }
         }
-        
+
         #[allow(dead_code)]
         #[inline(never)]
         #[automatically_derived]

@@ -543,7 +543,7 @@ pub fn process_struct(
                 metas: &mut Vec<AccountMeta>,
                 infos: &mut Vec<AccountInfo<'info>>,
             ) -> FankorResult<()> {
-                use ::fankor::prelude::borsh::BorshSerialize;
+                use ::fankor::prelude::BorshSerialize;
                 #(#cpi_fn_elements)*
                 Ok(())
             }
@@ -561,7 +561,7 @@ pub fn process_struct(
                 writer: &mut W,
                 metas: &mut Vec<::fankor::prelude::solana_program::instruction::AccountMeta>
             ) -> ::fankor::errors::FankorResult<()> {
-                use ::fankor::prelude::borsh::BorshSerialize;
+                use ::fankor::prelude::BorshSerialize;
                 #(#lpi_fn_elements)*
                 Ok(())
             }

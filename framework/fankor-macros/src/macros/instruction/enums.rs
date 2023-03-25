@@ -352,7 +352,7 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
                 metas: &mut Vec<AccountMeta>,
                 infos: &mut Vec<AccountInfo<'info>>,
             ) -> FankorResult<()> {
-                use ::fankor::prelude::borsh::BorshSerialize;
+                use ::fankor::prelude::BorshSerialize;
 
                 self.discriminant().code().serialize(writer)?;
 
@@ -386,7 +386,7 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
                 writer: &mut W,
                 metas: &mut Vec<::fankor::prelude::solana_program::instruction::AccountMeta>
             ) -> ::fankor::errors::FankorResult<()> {
-                use ::fankor::prelude::borsh::BorshSerialize;
+                use ::fankor::prelude::BorshSerialize;
 
                 self.discriminant().code().serialize(writer)?;
 
