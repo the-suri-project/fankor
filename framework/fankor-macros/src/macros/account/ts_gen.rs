@@ -5,12 +5,12 @@ use syn::Item;
 
 pub fn ts_gen(input: &Item) -> Result<TokenStream> {
     // Process input.
-    let item = match &input {
-        Item::Struct(item) => item,
+    let name = match &input {
+        Item::Struct(item) => &item.ident,
+        Item::Enum(item) => &item.ident,
         _ => unreachable!(),
     };
 
-    let name = &item.ident;
     let name_str = name.to_string();
 
     let type_extension = format!(

@@ -15,12 +15,13 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
     let arguments = AccountArguments::from(args)?;
 
     // Process input.
-    let (name, generics, item) = match &input {
-        Item::Struct(item) => (&item.ident, &item.generics, quote! { #item }),
+    let (name, generics, item, is_enum) = match &input {
+        Item::Struct(item) => (&item.ident, &item.generics, quote! { #item }, false),
+        Item::Enum(item) => (&item.ident, &item.generics, quote! { #item }, true),
         _ => {
             return Err(Error::new(
                 input.span(),
-                "account macro can only be applied to struct declarations",
+                "account macro can only be applied to struct or enum declarations",
             ));
         }
     };
@@ -31,7 +32,16 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
     let account_discriminants_name = format_ident!("{}Discriminant", accounts_name);
     let ts_gen = ts_gen(&input)?;
 
+    let enum_discriminant_attr = if is_enum {
+        quote! {
+            #[derive(EnumDiscriminants)]
+        }
+    } else {
+        quote! {}
+    };
+
     let result = quote! {
+        #enum_discriminant_attr
         #[derive(FankorSerialize, FankorDeserialize, FankorZeroCopy, TsGen)]
         #[fankor(account = #account_discriminants_name)]
         #item

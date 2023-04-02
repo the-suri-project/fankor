@@ -16,7 +16,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let generics = &item.generics;
             let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-            // Check for ts_gen attribute.
+            // Check for fankor attribute.
             let mut account_discriminants = None;
 
             for attr in &item.attrs {
@@ -37,7 +37,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     } else {
                         return Err(Error::new(
                             attr.span(),
-                            "The correct pattern is #[ts_gen(<meta_list>)]",
+                            "The correct pattern is #[fankor(<meta_list>)]",
                         ));
                     };
                     break;
@@ -346,7 +346,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let generics = &item.generics;
             let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
-            // Check for ts_gen attribute.
+            // Check for fankor attribute.
+            let mut account_discriminants = None;
             let mut is_accounts = false;
 
             for attr in &item.attrs {
@@ -354,20 +355,33 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
                         args.error_on_duplicated()?;
 
-                        is_accounts = args.pop_plain("accounts", true)?;
+                        if let Some(v) = args.pop_ident("account", true)? {
+                            if is_accounts {
+                                return Err(Error::new(
+                                    attr.span(),
+                                    "Cannot define both fankor::accounts and fankor::account attributes",
+                                ));
+                            }
 
-                        if args.pop_ident("account", true)?.is_some() {
-                            return Err(Error::new(
-                                input.span(),
-                                "Account cannot be used with an enum",
-                            ));
+                            account_discriminants = Some(v);
+                        }
+
+                        if args.pop_plain("accounts", true)? {
+                            if account_discriminants.is_some() {
+                                return Err(Error::new(
+                                    attr.span(),
+                                    "Cannot define both fankor::accounts and fankor::account attributes",
+                                ));
+                            }
+
+                            is_accounts = true;
                         }
 
                         args.error_on_unknown()?;
                     } else {
                         return Err(Error::new(
                             attr.span(),
-                            "The correct pattern is #[ts_gen(<meta_list>)]",
+                            "The correct pattern is #[fankor(<meta_list>)]",
                         ));
                     };
                     break;
@@ -548,38 +562,81 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                 ts_interfaces.join("\n")
             );
 
-            let enum_schema_type = if is_accounts { "TAccountEnum" } else { "TEnum" };
+            let ts_schema = if let Some(account_discriminants) = account_discriminants {
+                format!(
+                    "export class {} implements fnk.FnkBorshSchema<{}> {{
+                        innerSchema = null as any as ReturnType<{}['initSchema']>;
 
-            let ts_schema = format!(
-                "export class {} implements fnk.FnkBorshSchema<{}> {{
-                    innerSchema = null as any as ReturnType<{}['initSchema']>;
+                        // METHODS ----------------------------------------------------------------
 
-                    // METHODS ----------------------------------------------------------------
+                        initSchema() {{
+                            const innerSchema = fnk.TStruct([
+                                ['discriminant', fnk.U8],
+                                ['value', fnk.TEnum([{}] as const)]
+                            ] as const);
+                            this.innerSchema = innerSchema;
+                            return innerSchema;
+                        }}
 
-                    initSchema() {{
-                        const innerSchema = fnk.{}([{}] as const);
-                        this.innerSchema = innerSchema;
-                        return innerSchema;
-                    }}
+                        serialize(writer: fnk.FnkBorshWriter, value: {}) {{
+                            this.innerSchema.serialize(writer, {{
+                                discriminant: {}.{},
+                                value: value.data,
+                            }});
+                        }}
 
-                    serialize(writer: fnk.FnkBorshWriter, value: {}) {{
-                        this.innerSchema.serialize(writer, value.data);
-                    }}
+                        deserialize(reader: fnk.FnkBorshReader) {{
+                            const data:any = this.innerSchema.deserialize(reader);
+                            if (data.discriminant !== {}.{}) {{
+                                throw new Error('Invalid discriminant');
+                            }}
+                            return new {}(data.value);
+                        }}
+                    }}",
+                    schema_name,
+                    name_str,
+                    schema_name,
+                    ts_schema_fields.join(","),
+                    name_str,
+                    account_discriminants,
+                    name_str,
+                    account_discriminants,
+                    name_str,
+                    name_str,
+                )
+            } else {
+                let enum_schema_type = if is_accounts { "TAccountEnum" } else { "TEnum" };
 
-                    deserialize(reader: fnk.FnkBorshReader) {{
-                        const result = this.innerSchema.deserialize(reader);
-                        return new {}(result as {});
-                    }}
-                }}",
-                schema_name,
-                name_str,
-                schema_name,
-                enum_schema_type,
-                ts_schema_fields.join(","),
-                name_str,
-                name_str,
-                types_name,
-            );
+                format!(
+                    "export class {} implements fnk.FnkBorshSchema<{}> {{
+                        innerSchema = null as any as ReturnType<{}['initSchema']>;
+
+                        // METHODS ----------------------------------------------------------------
+
+                        initSchema() {{
+                            const innerSchema = fnk.{}([{}] as const);
+                            this.innerSchema = innerSchema;
+                            return innerSchema;
+                        }}
+
+                        serialize(writer: fnk.FnkBorshWriter, value: {}) {{
+                            this.innerSchema.serialize(writer, value.data);
+                        }}
+
+                        deserialize(reader: fnk.FnkBorshReader) {{
+                            const result:any = this.innerSchema.deserialize(reader);
+                            return new {}(result);
+                        }}
+                    }}",
+                    schema_name,
+                    name_str,
+                    schema_name,
+                    enum_schema_type,
+                    ts_schema_fields.join(","),
+                    name_str,
+                    name_str,
+                )
+            };
 
             let ts_schema_use_method_name = format!("use{}", schema_name);
             let ts_schema_use_method_call = format!("{}()", ts_schema_use_method_name);
@@ -681,7 +738,10 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             (result, name)
         }
         _ => {
-            unreachable!()
+            return Err(Error::new(
+                input.span(),
+                "TsGen can only be derived for enums and structs",
+            ));
         }
     };
 

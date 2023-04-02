@@ -14,7 +14,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
             let (_, ty_generics, where_clause) = item.generics.split_for_impl();
 
-            // Check for zero_copy attribute.
+            // Check for fankor attribute.
             let mut extra_offset = 0usize;
 
             for attr in &item.attrs {
@@ -37,7 +37,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     } else {
                         return Err(Error::new(
                             attr.span(),
-                            "The correct pattern is #[zero_copy(<meta_list>)]",
+                            "The correct pattern is #[fankor(<meta_list>)]",
                         ));
                     };
                     break;
@@ -214,8 +214,9 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let (zc_impl_generics, zc_ty_generics, zc_where_clause) =
                 aux_zc_generics.split_for_impl();
 
-            // Check for zero_copy attribute.
+            // Check for fankor attribute.
             let mut initial_size = 1usize;
+            let mut extra_offset = 0usize;
 
             for attr in &item.attrs {
                 if attr.path.is_ident("fankor") {
@@ -223,21 +224,32 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         args.error_on_duplicated()?;
 
                         if args.pop_plain("accounts", true)? {
+                            if extra_offset != 0 {
+                                return Err(Error::new(
+                                    attr.span(),
+                                    "Cannot define both fankor::accounts and fankor::account attributes",
+                                ));
+                            }
+
                             initial_size = 0;
                         }
 
-                        if args.pop_plain("account", true)? {
-                            return Err(Error::new(
-                                input.span(),
-                                "Accounts cannot be used with an enum",
-                            ));
+                        if args.pop_ident("account", true)?.is_some() {
+                            if initial_size != 1 {
+                                return Err(Error::new(
+                                    attr.span(),
+                                    "Cannot define both fankor::accounts and fankor::account attributes",
+                                ));
+                            }
+
+                            extra_offset = 1;
                         }
 
                         args.error_on_unknown()?;
                     } else {
                         return Err(Error::new(
                             attr.span(),
-                            "The correct pattern is #[zero_copy(<meta_list>)]",
+                            "The correct pattern is #[fankor(<meta_list>)]",
                         ));
                     };
                     break;
@@ -245,6 +257,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             }
 
             let mut min_byte_size_method = Vec::with_capacity(item.variants.len());
+            let mut are_empty_variants = false;
             let byte_size_method = item.variants.iter().map(|variant| {
                 let variant_name = &variant.ident;
 
@@ -337,6 +350,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         }
                     }
                     Fields::Unit => {
+                        are_empty_variants = true;
+
                         quote! {
                             #name::#variant_name => {}
                         }
@@ -525,7 +540,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                         type ZeroCopyType = #name #ty_generics;
 
                         fn min_byte_size() -> usize {
-                            1
+                            1 + #extra_offset // Account discriminant
                         }
                     }
 
@@ -542,8 +557,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                 return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
                             }
 
-                            let mut size = 1;
-                            let flag = bytes[0];
+                            let mut size = 1 + #extra_offset; // Account discriminant
+                            let flag = bytes[#extra_offset];
 
                             #(#variant_consts)*
 
@@ -560,8 +575,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                 return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
                             }
 
-                            let mut size = 1;
-                            let flag = bytes[0];
+                            let mut size = 1 + #extra_offset; // Account discriminant
+                            let flag = bytes[#extra_offset];
 
                             #(#variant_consts)*
 
@@ -575,9 +590,9 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                     }
                 }
             } else {
-                let min_byte_size_body = if min_byte_size_method.is_empty() {
+                let min_byte_size_body = if are_empty_variants || min_byte_size_method.is_empty() {
                     quote! {
-                        1
+                        1 + #extra_offset
                     }
                 } else {
                     quote! {
@@ -585,17 +600,17 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                         #(#min_byte_size_method)*
 
-                        size
+                        size + #extra_offset // Account discriminant
                     }
                 };
-                
+
                 quote! {
                     #[automatically_derived]
                     impl #zc_impl_generics CopyType<'info> for #name #ty_generics #where_clause {
                         type ZeroCopyType = #zc_name #zc_ty_generics;
 
                         fn byte_size(&self) -> usize {
-                            let mut size = #initial_size;
+                            let mut size = #initial_size + #extra_offset; // Account discriminant
 
                             match self {
                                 #(#byte_size_method),*
@@ -627,8 +642,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                 return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
                             }
 
-                            let mut size = #initial_size;
-                            let flag = bytes[0];
+                            let mut size = #initial_size + #extra_offset; // Account discriminant
+                            let flag = bytes[#extra_offset];
 
                             #(#variant_consts)*
 
@@ -645,8 +660,8 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
                                 return Err(FankorErrorCode::ZeroCopyNotEnoughLength { type_name: std::any::type_name::<Self>() }.into());
                             }
 
-                            let mut size = #initial_size;
-                            let flag = bytes[0];
+                            let mut size = #initial_size + #extra_offset; // Account discriminant
+                            let flag = bytes[#extra_offset];
 
                             #(#variant_consts)*
 

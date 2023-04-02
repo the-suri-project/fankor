@@ -11,6 +11,7 @@ pub enum ProgramAccount {
     StructAccountData,
     StructAccountData2,
     ZeroCopyStructAccountData,
+    EnumAccountData,
 }
 
 #[accounts(base = ProgramAccount)]
@@ -42,7 +43,7 @@ mod test {
         });
 
         assert_eq!(value.byte_size(), 1 + 4 + 4 + 4);
-        assert_eq!(ProgramAccount::min_byte_size(), 1 + 4);
+        assert_eq!(ProgramAccount::min_byte_size(), 1 + 1); // Empty enum variant
     }
 
     #[test]

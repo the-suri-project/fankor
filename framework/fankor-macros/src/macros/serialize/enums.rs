@@ -8,7 +8,8 @@ use syn::{Attribute, Error, Fields, Ident, ItemEnum, Meta, WhereClause};
 pub fn enum_ser(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2> {
     let name = &input.ident;
 
-    // Check for zero_copy attribute.
+    // Check for fankor attribute.
+    let mut account_discriminants = None;
     let mut is_accounts = false;
 
     for attr in &input.attrs {
@@ -16,18 +17,46 @@ pub fn enum_ser(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2
             if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
                 args.error_on_duplicated()?;
 
-                is_accounts = args.pop_plain("accounts", true)?;
+                if let Some(v) = args.pop_ident("account", true)? {
+                    if is_accounts {
+                        return Err(Error::new(
+                            attr.span(),
+                            "Cannot define both fankor::accounts and fankor::account attributes",
+                        ));
+                    }
+
+                    account_discriminants = Some(v);
+                }
+
+                if args.pop_plain("accounts", true)? {
+                    if account_discriminants.is_some() {
+                        return Err(Error::new(
+                            attr.span(),
+                            "Cannot define both fankor::accounts and fankor::account attributes",
+                        ));
+                    }
+
+                    is_accounts = true;
+                }
 
                 args.error_on_unknown()?;
             } else {
                 return Err(Error::new(
                     attr.span(),
-                    "The correct pattern is #[fankor_serde(<meta_list>)]",
+                    "The correct pattern is #[fankor(<meta_list>)]",
                 ));
             };
             break;
         }
     }
+
+    let account_discriminants = if let Some(account_discriminants) = account_discriminants {
+        quote! {
+            #crate_name::BorshSerialize::serialize(&#account_discriminants::#name.code(), writer)?;
+        }
+    } else {
+        quote! {}
+    };
 
     let discriminant_name = format_ident!("{}Discriminant", name);
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
@@ -133,6 +162,7 @@ pub fn enum_ser(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2
         #[automatically_derived]
         impl #impl_generics #crate_name::ser::BorshSerialize for #name #ty_generics #where_clause {
             fn serialize<W: #crate_name::maybestd::io::Write>(&self, writer: &mut W) -> core::result::Result<(), #crate_name::maybestd::io::Error> {
+                #account_discriminants
                 #variant_writer
 
                 match self {

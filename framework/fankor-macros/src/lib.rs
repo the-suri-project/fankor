@@ -108,7 +108,6 @@ pub fn accounts(args: TokenStream, input: TokenStream) -> TokenStream {
 /// This macro marks defines a new account implementing the traits:
 /// - `Account`
 /// - `EnumDiscriminants` if the type is an enum.
-/// - `StructFields` if the type is an struct.
 /// - `FankorSerialize`
 /// - `FankorDeserialize`
 /// - `FankorZeroCopy`
@@ -244,7 +243,6 @@ pub fn program(args: TokenStream, input: TokenStream) -> TokenStream {
 
 /// This macro executes the following macros over the given type:
 /// - `EnumDiscriminants` if the type is an enum.
-/// - `StructFields` if the type is an struct.
 /// - `FankorSerialize`
 /// - `FankorDeserialize`
 /// - `FankorZeroCopy`

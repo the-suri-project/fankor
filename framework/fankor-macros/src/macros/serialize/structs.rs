@@ -9,7 +9,7 @@ use syn::{Error, Fields, Ident, Index, ItemStruct, WhereClause};
 pub fn struct_ser(input: &ItemStruct, crate_name: Ident) -> syn::Result<TokenStream2> {
     let name = &input.ident;
 
-    // Check for zero_copy attribute.
+    // Check for fankor attribute.
     let mut account_discriminants = None;
 
     for attr in &input.attrs {
@@ -19,11 +19,18 @@ pub fn struct_ser(input: &ItemStruct, crate_name: Ident) -> syn::Result<TokenStr
 
                 account_discriminants = args.pop_ident("account", true)?;
 
+                if args.pop_plain("accounts", true)? {
+                    return Err(Error::new(
+                        input.span(),
+                        "Accounts cannot be used with an struct",
+                    ));
+                }
+
                 args.error_on_unknown()?;
             } else {
                 return Err(Error::new(
                     attr.span(),
-                    "The correct pattern is #[fankor_serde(<meta_list>)]",
+                    "The correct pattern is #[fankor(<meta_list>)]",
                 ));
             };
             break;

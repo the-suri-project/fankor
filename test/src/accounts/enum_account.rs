@@ -1,7 +1,7 @@
+use crate::accounts::ProgramAccountDiscriminant;
 use fankor::prelude::*;
 
-#[fankor_base]
-#[derive(FieldOffsets)]
+#[account(base = ProgramAccount)]
 pub enum EnumAccountData {
     A,
     B(u32),
@@ -23,7 +23,6 @@ pub enum ZeroCopyEnumWithoutValues {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::accounts::StructAccountData;
 
     #[test]
     fn test_size() {
@@ -32,18 +31,23 @@ mod test {
             value2_snake: "test".to_string(),
         };
 
-        assert_eq!(value.byte_size(), 1 + 4 + 4 + 4);
-        assert_eq!(StructAccountData::min_byte_size(), 1 + 4 + 4);
+        assert_eq!(value.byte_size(), 1 + 1 + 4 + 4 + 4);
+        assert_eq!(EnumAccountData::min_byte_size(), 1 + 1);
+
+        let value = ZeroCopyEnumWithoutValues::A;
+
+        assert_eq!(value.byte_size(), 1);
+        assert_eq!(ZeroCopyEnumWithoutValues::min_byte_size(), 1);
     }
 
     #[test]
     fn test_zc_size() {
         let mut lamports = 0;
-        let mut vector = vec![2u8, 1, 0, 0, 0, 2u8, 0, 0, 0, 33, 44];
+        let mut vector = vec![8u8, 2, 1, 0, 0, 0, 2u8, 0, 0, 0, 33, 44];
         let info = create_account_info_for_tests(&mut lamports, &mut vector);
         let zc = Zc::<EnumAccountData>::new_unchecked(&info, 0);
 
-        assert_eq!(zc.byte_size().unwrap(), 1 + 4 + 4 + 2);
+        assert_eq!(zc.byte_size().unwrap(), 1 + 1 + 4 + 4 + 2);
 
         let zc_value = zc.zc_value().unwrap();
         match zc_value {
@@ -63,7 +67,7 @@ mod test {
     #[test]
     fn test_zc_read() {
         let mut lamports = 0;
-        let mut vector = vec![2u8, 1, 0, 0, 0, 4u8, 0, 0, 0];
+        let mut vector = vec![8u8, 2, 1, 0, 0, 0, 4u8, 0, 0, 0];
         let string = "test";
 
         for b in string.bytes() {
