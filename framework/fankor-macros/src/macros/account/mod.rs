@@ -35,6 +35,8 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
     let enum_discriminant_attr = if is_enum {
         quote! {
             #[derive(EnumDiscriminants)]
+            #[non_exhaustive]
+            #[repr(u8)]
         }
     } else {
         quote! {}
