@@ -36,10 +36,10 @@ solana-security-txt = "1.1.0"
 solana-sdk = { version = "1.15.0", optional = true }
 spl-associated-token-account = { version = "1.1.2", optional = true, features = ["no-entrypoint"] }
 spl-token = { version = "3.5.0", optional = true, features = ["no-entrypoint"] }
-spl-token-2022 = { version = "0.5.0", optional = true, features = ["no-entrypoint"] }
+spl-token-2022 = { version = "0.6.1", optional = true, features = ["no-entrypoint"] }
 static_assertions = "1.1.0"
 mpl-token-metadata = { version = "1.8.1", optional = true, features = ["no-entrypoint"] }
-time = "0.3.17"
+time = "=0.3.17"
 fankor-macros = { path = "../fankor-macros" }
 
 [dev-dependencies]
@@ -49,4 +49,4 @@ solana-program-test = { version = "1.15.0" }
 solana-sdk = { version = "1.15.0" }
 spl-associated-token-account = { version = "1.1.2", features = ["no-entrypoint"] }
 spl-token = { version = "3.5.0", features = ["no-entrypoint"] }
-spl-token-2022 = { version = "0.5.0", features = ["no-entrypoint"] }
+spl-token-2022 = { version = "0.6.1", features = ["no-entrypoint"] }
