@@ -1,9 +1,10 @@
 use crate::cpi;
+use crate::cpi::associated_token::CpiCreateAssociatedTokenAccount;
 use crate::cpi::system_program::CpiCreateAccount;
 use crate::cpi::token_2022::{CpiInitializeAccount3, CpiInitializeMint2, CpiInitializeMultisig2};
 use crate::errors::FankorResult;
 use crate::models::programs::macros::impl_account;
-use crate::models::{Account, Program, System, UninitializedAccount};
+use crate::models::{Account, AssociatedToken, Program, System, UninitializedAccount};
 use crate::traits::ProgramType;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
@@ -235,6 +236,37 @@ impl TokenAccount2022 {
             &[],
         )?;
 
+        let mut data: &[u8] = &account_to_init_info.try_borrow_data()?;
+        Account::new(
+            account_to_init.context(),
+            account_to_init_info,
+            TokenAccount2022::deserialize(&mut data)?,
+        )
+    }
+
+    /// Initializes a TokenAccount in an associated token account.
+    pub fn init_associated<'info>(
+        account_to_init: UninitializedAccount<'info>,
+        owner: AccountInfo<'info>,
+        mint: AccountInfo<'info>,
+        payer: AccountInfo<'info>,
+        _system_program: &Program<System>,
+        token_program: &Program<'info, Token2022>,
+        associated_token_program: &Program<AssociatedToken>,
+        seeds: &[&[&[u8]]],
+    ) -> FankorResult<Account<'info, TokenAccount2022>> {
+        cpi::associated_token::create_associated_token_account(
+            associated_token_program,
+            CpiCreateAssociatedTokenAccount {
+                funding_address: payer,
+                wallet_address: owner,
+                token_mint_address: mint,
+                token_program: token_program.info().clone(),
+            },
+            seeds,
+        )?;
+
+        let account_to_init_info = account_to_init.info();
         let mut data: &[u8] = &account_to_init_info.try_borrow_data()?;
         Account::new(
             account_to_init.context(),
