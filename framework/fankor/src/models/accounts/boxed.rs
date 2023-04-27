@@ -29,7 +29,17 @@ impl<'info, T: Instruction<'info>> Instruction<'info> for Box<T> {
     }
 }
 
-impl<'info, T: SingleInstructionAccount<'info>> SingleInstructionAccount<'info> for Box<T> {}
+impl<'info, T: SingleInstructionAccount<'info>> SingleInstructionAccount<'info> for Box<T> {
+    fn info(&self) -> &'info AccountInfo<'info> {
+        let aux: &T = self;
+        aux.info()
+    }
+
+    fn context(&self) -> &'info FankorContext<'info> {
+        let aux: &T = self;
+        aux.context()
+    }
+}
 
 impl<'info, T: PdaChecker<'info>> PdaChecker<'info> for Box<T> {
     fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {

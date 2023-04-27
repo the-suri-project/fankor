@@ -1,6 +1,7 @@
 use crate::errors::FankorResult;
 use crate::models::FankorContext;
 use solana_program::account_info::AccountInfo;
+use solana_program::clock::Epoch;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
 use std::io::Write;
@@ -31,7 +32,39 @@ pub trait Instruction<'info>: Sized {
 // ----------------------------------------------------------------------------
 
 /// Flag for types that use just one account.
-pub trait SingleInstructionAccount<'info>: Instruction<'info> {}
+pub trait SingleInstructionAccount<'info>: Instruction<'info> {
+    fn address(&self) -> &'info Pubkey {
+        self.info().key
+    }
+
+    fn owner(&self) -> &'info Pubkey {
+        self.info().owner
+    }
+
+    fn is_writable(&self) -> bool {
+        self.info().is_writable
+    }
+
+    fn is_signer(&self) -> bool {
+        self.info().is_signer
+    }
+
+    fn is_executable(&self) -> bool {
+        self.info().executable
+    }
+
+    fn balance(&self) -> u64 {
+        self.info().lamports()
+    }
+
+    fn rent_epoch(&self) -> Epoch {
+        self.info().rent_epoch
+    }
+
+    fn info(&self) -> &'info AccountInfo<'info>;
+
+    fn context(&self) -> &'info FankorContext<'info>;
+}
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------

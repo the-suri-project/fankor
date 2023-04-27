@@ -117,7 +117,15 @@ impl<'info, T: SysvarId> Instruction<'info> for SysvarAccount<'info, T> {
     }
 }
 
-impl<'info, T: SysvarId> SingleInstructionAccount<'info> for SysvarAccount<'info, T> {}
+impl<'info, T: SysvarId> SingleInstructionAccount<'info> for SysvarAccount<'info, T> {
+    fn info(&self) -> &'info AccountInfo<'info> {
+        self.info
+    }
+
+    fn context(&self) -> &'info FankorContext<'info> {
+        self.context
+    }
+}
 
 impl<'info, T: SysvarId> PdaChecker<'info> for SysvarAccount<'info, T> {
     fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {

@@ -122,7 +122,15 @@ impl<'info, T: ProgramType> Instruction<'info> for Program<'info, T> {
     }
 }
 
-impl<'info, T: ProgramType> SingleInstructionAccount<'info> for Program<'info, T> {}
+impl<'info, T: ProgramType> SingleInstructionAccount<'info> for Program<'info, T> {
+    fn info(&self) -> &'info AccountInfo<'info> {
+        self.info
+    }
+
+    fn context(&self) -> &'info FankorContext<'info> {
+        self.context
+    }
+}
 
 impl<'info, T: ProgramType> PdaChecker<'info> for Program<'info, T> {
     fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {

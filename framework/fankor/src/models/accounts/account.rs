@@ -594,7 +594,15 @@ impl<'info, T: AccountType> Instruction<'info> for Account<'info, T> {
     }
 }
 
-impl<'info, T: AccountType> SingleInstructionAccount<'info> for Account<'info, T> {}
+impl<'info, T: AccountType> SingleInstructionAccount<'info> for Account<'info, T> {
+    fn info(&self) -> &'info AccountInfo<'info> {
+        self.info
+    }
+
+    fn context(&self) -> &'info FankorContext<'info> {
+        self.context
+    }
+}
 
 impl<'info, T: AccountType> PdaChecker<'info> for Account<'info, T> {
     fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {

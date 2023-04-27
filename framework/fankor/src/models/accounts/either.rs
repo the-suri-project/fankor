@@ -118,6 +118,19 @@ impl<'info, L: Instruction<'info>, R: Instruction<'info>> Instruction<'info> for
 impl<'info, L: SingleInstructionAccount<'info>, R: SingleInstructionAccount<'info>>
     SingleInstructionAccount<'info> for Either<L, R>
 {
+    fn info(&self) -> &'info AccountInfo<'info> {
+        match self {
+            Either::Left(v) => v.info(),
+            Either::Right(v) => v.info(),
+        }
+    }
+
+    fn context(&self) -> &'info FankorContext<'info> {
+        match self {
+            Either::Left(v) => v.context(),
+            Either::Right(v) => v.context(),
+        }
+    }
 }
 
 impl<'info, L: PdaChecker<'info>, R: PdaChecker<'info>> PdaChecker<'info> for Either<L, R> {

@@ -499,6 +499,13 @@ impl<'info, T: AccountType + CopyType<'info>> Instruction<'info> for ZcAccount<'
 impl<'info, T: AccountType + CopyType<'info>> SingleInstructionAccount<'info>
     for ZcAccount<'info, T>
 {
+    fn info(&self) -> &'info AccountInfo<'info> {
+        self.info
+    }
+
+    fn context(&self) -> &'info FankorContext<'info> {
+        self.context
+    }
 }
 
 impl<'info, T: AccountType + CopyType<'info>> PdaChecker<'info> for ZcAccount<'info, T> {

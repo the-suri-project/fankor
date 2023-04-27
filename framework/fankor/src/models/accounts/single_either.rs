@@ -114,6 +114,19 @@ impl<'info, L: Instruction<'info>, R: Instruction<'info>> Instruction<'info>
 impl<'info, L: SingleInstructionAccount<'info>, R: SingleInstructionAccount<'info>>
     SingleInstructionAccount<'info> for SingleEither<L, R>
 {
+    fn info(&self) -> &'info AccountInfo<'info> {
+        match self {
+            SingleEither::Left(v) => v.info(),
+            SingleEither::Right(v) => v.info(),
+        }
+    }
+
+    fn context(&self) -> &'info FankorContext<'info> {
+        match self {
+            SingleEither::Left(v) => v.context(),
+            SingleEither::Right(v) => v.context(),
+        }
+    }
 }
 
 impl<'info, L: PdaChecker<'info>, R: PdaChecker<'info>> PdaChecker<'info> for SingleEither<L, R> {

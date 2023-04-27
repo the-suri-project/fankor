@@ -249,7 +249,15 @@ impl<'info> Instruction<'info> for UninitializedAccount<'info> {
     }
 }
 
-impl<'info> SingleInstructionAccount<'info> for UninitializedAccount<'info> {}
+impl<'info> SingleInstructionAccount<'info> for UninitializedAccount<'info> {
+    fn info(&self) -> &'info AccountInfo<'info> {
+        self.info
+    }
+
+    fn context(&self) -> &'info FankorContext<'info> {
+        self.context
+    }
+}
 
 impl<'info> PdaChecker<'info> for UninitializedAccount<'info> {
     fn pda_info(&self) -> Option<&'info AccountInfo<'info>> {

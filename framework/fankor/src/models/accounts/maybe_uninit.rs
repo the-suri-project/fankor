@@ -110,6 +110,19 @@ impl<'info, T: Instruction<'info>> Instruction<'info> for MaybeUninitialized<'in
 impl<'info, T: SingleInstructionAccount<'info>> SingleInstructionAccount<'info>
     for MaybeUninitialized<'info, T>
 {
+    fn info(&self) -> &'info AccountInfo<'info> {
+        match self {
+            MaybeUninitialized::Init(v) => v.info(),
+            MaybeUninitialized::Uninit(v) => v.info(),
+        }
+    }
+
+    fn context(&self) -> &'info FankorContext<'info> {
+        match self {
+            MaybeUninitialized::Init(v) => v.context(),
+            MaybeUninitialized::Uninit(v) => v.context(),
+        }
+    }
 }
 
 impl<'info, T: PdaChecker<'info>> PdaChecker<'info> for MaybeUninitialized<'info, T> {
