@@ -549,7 +549,7 @@ impl Field {
                                     if v.elems.len() == 3 {
                                         self.pda = Some(DataAndError {
                                             data: quote! {
-                                                AssociatedToken::get_pda_seeds_2022 #value
+                                                AssociatedToken::get_pda_seeds_with_program #value
                                             },
                                             error: meta.error.map(|e| quote! {#e}),
                                         });
