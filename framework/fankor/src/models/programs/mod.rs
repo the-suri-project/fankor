@@ -1,4 +1,4 @@
-#[cfg(feature = "token-program")]
+#[cfg(any(feature = "spl-associated-token-account"))]
 pub use associated_token::*;
 #[cfg(feature = "bpf-loader-program")]
 pub use bpf_loader::*;

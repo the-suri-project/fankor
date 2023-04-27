@@ -458,6 +458,62 @@ impl Field {
 
                             self.pda_program_id = Some(quote! {AssociatedToken::address()});
                         }
+                        "associated_token_2022_pda" => {
+                            if is_enum {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The associated_token_2022_pda argument is not allowed in enums",
+                                ));
+                            }
+
+                            if self.pda.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The associated_token_2022_pda argument can only be defined once",
+                                ));
+                            }
+
+                            if self.pda_program_id.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The associated_token_2022_pda is incompatible with the pda_program_id argument",
+                                ));
+                            }
+
+                            if meta.error.is_some() {
+                                return Err(Error::new(
+                                    name.span(),
+                                    "The associated_token_2022_pda argument cannot have an error field",
+                                ));
+                            }
+
+                            // Check value.
+                            match &value {
+                                Expr::Tuple(v) => {
+                                    if v.elems.len() == 2 {
+                                        self.pda = Some(DataAndError {
+                                            data: quote! {
+                                                AssociatedToken::get_pda_seeds_2022 #value
+                                            },
+                                            error: meta.error.map(|e| quote! {#e}),
+                                        });
+                                    } else {
+                                        return Err(Error::new(
+                                            name.span(),
+                                            "The associated_token_2022_pda argument must be a tuple with two elements: (wallet, mint)",
+                                        ));
+                                    }
+                                }
+                                _ => {
+                                    return Err(Error::new(
+                                        name.span(),
+                                        "The associated_token_2022_pda argument must be a tuple with two elements: (wallet, mint)",
+                                    ));
+                                }
+                            }
+
+                            self.pda_program_id = Some(quote! {AssociatedToken::address()});
+                        }
                         "metadata_pda" => {
                             if is_enum {
                                 return Err(Error::new(
@@ -712,6 +768,12 @@ impl Field {
                             return Err(Error::new(
                                 name.span(),
                                 "The associated_token_pda argument must use a value: pda_program_id = <expr>",
+                            ));
+                        }
+                        "associated_token_2022_pda" => {
+                            return Err(Error::new(
+                                name.span(),
+                                "The associated_token_2022_pda argument must use a value: pda_program_id = <expr>",
                             ));
                         }
                         "metadata_pda" => {
