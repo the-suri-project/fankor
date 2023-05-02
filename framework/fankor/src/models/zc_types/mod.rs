@@ -554,6 +554,30 @@ impl<'info, T: CopyType<'info> + BorshSerialize> Zc<'info, T> {
 
         Ok(())
     }
+
+    /// Writes a zero-copy value in the buffer specifying the previous size.
+    ///
+    /// # Safety
+    /// This method can fail if `value` does not fit in the buffer.
+    ///
+    /// MAKE SURE THAT THIS IS THE ONLY REFERENCE TO THE SAME ACCOUNT, OTHERWISE
+    /// YOU WILL OVERWRITE DATA.
+    pub fn try_write_zc_value_with_size_unchecked(
+        &self,
+        value: &Zc<'info, T>,
+        previous_size: usize,
+    ) -> FankorResult<()> {
+        let original_value_bytes = value.info.data.try_borrow().map_err(|_| {
+            FankorErrorCode::ZeroCopyPossibleDeadlock {
+                type_name: std::any::type_name::<Self>(),
+            }
+        })?;
+        let value_bytes = &original_value_bytes[self.offset..];
+        let value_size = T::ZeroCopyType::read_byte_size(value_bytes)?;
+        let value_bytes = &value_bytes[..value_size];
+
+        self.try_write_bytes_with_sizes_unchecked(value_bytes, previous_size)
+    }
 }
 
 impl<'info, T: CopyType<'info>> Zc<'info, T> {
