@@ -2,12 +2,11 @@ use crate::fnk_syn::FnkMetaArgumentList;
 use crate::Result;
 use proc_macro2::TokenStream;
 use quote::ToTokens;
-use syn::Attribute;
 
 pub struct InstructionArguments {
     pub initial_validation: Option<Validation>,
     pub final_validation: Option<Validation>,
-    pub attributes: Vec<Attribute>,
+    pub phantom: bool,
 }
 
 pub enum Validation {
@@ -41,7 +40,7 @@ impl InstructionArguments {
                     None => None,
                 }
             },
-            attributes: Vec::new(),
+            phantom: args.pop_plain("phantom", true)?,
         };
 
         args.error_on_unknown()?;

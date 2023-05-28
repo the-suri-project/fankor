@@ -1,12 +1,11 @@
-use crate::fnk_syn::FnkMetaArgumentList;
 use convert_case::{Case, Converter};
 use quote::{format_ident, quote};
 use syn::ItemStruct;
 
-use crate::Result;
-
+use crate::fnk_syn::FnkMetaArgumentList;
 use crate::macros::instruction::arguments::{InstructionArguments, Validation};
 use crate::macros::instruction::field::{check_fields, Field};
+use crate::Result;
 
 pub fn process_struct(
     args: FnkMetaArgumentList,
@@ -37,12 +36,25 @@ pub fn process_struct(
         }
     });
 
-    let try_from_fn_deserialize = mapped_fields.iter().map(|v| {
-        let name = &v.name;
+    let (phantom_field, phantom_field_builder) = if arguments.phantom {
+        (
+            quote! {
+                __phantom: ::std::marker::PhantomData<&'info ()>
+            },
+            quote! {
+                __phantom: ::std::marker::PhantomData
+            },
+        )
+    } else {
+        (quote! {}, quote! {})
+    };
+
+    let try_from_fn_deserialize = mapped_fields.iter().enumerate().map(|(i, v)| {
+        let var_name = format_ident!("__v{}", i);
         let ty = v.ty.as_ref().unwrap();
 
         quote! {
-            let #name = <#ty as ::fankor::traits::Instruction>::try_from(context, buf, accounts)?;
+            let #var_name = <#ty as ::fankor::traits::Instruction>::try_from(context, buf, accounts)?;
         }
     });
 
@@ -335,7 +347,14 @@ pub fn process_struct(
         Ok(result)
     }).collect::<Result<Vec<_>>>()?;
 
-    let fields = item.fields.iter().map(|v| &v.ident);
+    let fields = item.fields.iter().enumerate().map(|(i, v)| {
+        let name = v.ident.as_ref().unwrap();
+        let var_name = format_ident!("__v{}", i);
+
+        quote! {
+            #name: #var_name
+        }
+    });
 
     // CpiInstruction implementation
     let cpi_name = format_ident!("Cpi{}", name);
@@ -481,16 +500,23 @@ pub fn process_struct(
     });
 
     // Result
+    let phantom_lifetime = if arguments.phantom && mapped_fields.is_empty() {
+        quote! {}
+    } else {
+        quote! { <'info> }
+    };
+
     let result = quote! {
         #(#attributes)*
         #visibility struct #name #ty_generics #where_clause {
             #(#final_fields,)*
+            #phantom_field
         }
 
         #[automatically_derived]
         impl #impl_generics ::fankor::traits::Instruction<'info> for #name #ty_generics #where_clause {
-            type CPI = #cpi_name <'info>;
-            type LPI = #lpi_name <'info>;
+            type CPI = #cpi_name #phantom_lifetime;
+            type LPI = #lpi_name #phantom_lifetime;
 
             fn try_from(
                 context: &'info FankorContext<'info>,
@@ -500,7 +526,8 @@ pub fn process_struct(
                 #(#try_from_fn_deserialize)*
 
                 let result = Self {
-                    #(#fields),*
+                    #(#fields,)*
+                    #phantom_field_builder
                 };
 
                 // Validate instruction.
@@ -531,12 +558,12 @@ pub fn process_struct(
         }
 
         #[automatically_derived]
-        #visibility struct #cpi_name <'info> {
+        #visibility struct #cpi_name #phantom_lifetime {
             #(#cpi_fields),*
         }
 
         #[automatically_derived]
-        impl <'info> ::fankor::traits::CpiInstruction<'info> for #cpi_name <'info> {
+        impl <'info> ::fankor::traits::CpiInstruction<'info> for #cpi_name #phantom_lifetime {
             fn serialize_into_instruction_parts<W: std::io::Write>(
                 &self,
                 writer: &mut W,
@@ -550,12 +577,12 @@ pub fn process_struct(
         }
 
         #[automatically_derived]
-        #visibility struct #lpi_name <'info> {
+        #visibility struct #lpi_name #phantom_lifetime {
             #(#lpi_fields),*
         }
 
         #[automatically_derived]
-        impl <'info> ::fankor::traits::LpiInstruction for #lpi_name <'info> {
+        impl #phantom_lifetime ::fankor::traits::LpiInstruction for #lpi_name #phantom_lifetime {
             fn serialize_into_instruction_parts<W: std::io::Write>(
                 &self,
                 writer: &mut W,
