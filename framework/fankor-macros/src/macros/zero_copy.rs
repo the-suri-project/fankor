@@ -1,7 +1,7 @@
 use convert_case::{Case, Converter};
 use quote::{format_ident, quote};
-use syn::spanned::Spanned;
 use syn::{Error, Fields, Item};
+use syn::spanned::Spanned;
 
 use crate::fnk_syn::FnkMetaArgumentList;
 use crate::Result;

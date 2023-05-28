@@ -1,12 +1,14 @@
-use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::zc_types::vec::Iter;
-use crate::models::Zc;
-use crate::prelude::{FnkMap, FnkSet, FnkUInt, FnkVec};
-use crate::traits::{CopyType, ZeroCopyType};
-use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::account_info::AccountInfo;
 use std::marker::PhantomData;
 use std::mem::size_of;
+
+use borsh::{BorshDeserialize, BorshSerialize};
+use solana_program::account_info::AccountInfo;
+
+use crate::errors::{FankorErrorCode, FankorResult};
+use crate::models::Zc;
+use crate::models::zc_types::vec::Iter;
+use crate::prelude::{FnkMap, FnkSet, FnkUInt, FnkVec};
+use crate::traits::{CopyType, ZeroCopyType};
 
 pub struct ZcFnkVec<'info, T: CopyType<'info>> {
     info: &'info AccountInfo<'info>,
@@ -314,12 +316,15 @@ impl<'info, T: CopyType<'info>> IntoIterator for ZcFnkVec<'info, T> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::tests::create_account_info_for_tests;
-    use solana_program::pubkey::Pubkey;
     use std::cell::RefCell;
     use std::mem::size_of;
     use std::rc::Rc;
+
+    use solana_program::pubkey::Pubkey;
+
+    use crate::tests::create_account_info_for_tests;
+
+    use super::*;
 
     #[test]
     fn test_read_byte_length() {
@@ -485,7 +490,7 @@ mod test {
             let value = zc_el.try_value()?;
             Ok(value != 1)
         })
-        .unwrap();
+            .unwrap();
 
         assert_eq!(zc.len().unwrap(), 3);
 

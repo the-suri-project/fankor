@@ -1,6 +1,8 @@
-use crate::fnk_syn::FnkMetaArgumentList;
 use proc_macro::TokenStream;
-use syn::{parse_macro_input, Item, LitStr};
+
+use syn::{Item, LitStr, parse_macro_input};
+
+use crate::fnk_syn::FnkMetaArgumentList;
 
 mod fnk_syn;
 mod macros;

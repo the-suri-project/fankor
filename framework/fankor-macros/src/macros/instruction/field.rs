@@ -1,13 +1,13 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::parse::{Parse, ParseStream};
-use syn::parse_quote::ParseQuote;
-use syn::punctuated::Punctuated;
-use syn::spanned::Spanned;
 use syn::{
     Attribute, Error, Expr, Fields, GenericArgument, PathArguments, Token, Type, Variant,
     Visibility,
 };
+use syn::parse::{Parse, ParseStream};
+use syn::parse_quote::ParseQuote;
+use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
 
 use crate::Result;
 
@@ -642,15 +642,15 @@ impl Field {
                         }
                         "validate" => {
                             return Err(Error::new(
-                                    name.span(),
-                                    "The validate argument is only allowed without values, i.e. #[validate]",
-                                ));
+                                name.span(),
+                                "The validate argument is only allowed without values, i.e. #[validate]",
+                            ));
                         }
                         "validate_with_args" => {
                             return Err(Error::new(
-                                    name.span(),
-                                    "The validate_with_args argument is only allowed without values, i.e. #[validate_with_args]",
-                                ));
+                                name.span(),
+                                "The validate_with_args argument is only allowed without values, i.e. #[validate_with_args]",
+                            ));
                         }
                         _ => {
                             return Err(Error::new(name.span(), "Unknown argument"));

@@ -1,3 +1,16 @@
+use std::any::type_name;
+use std::fmt;
+use std::fmt::{Debug, Formatter};
+use std::io::Write;
+use std::marker::PhantomData;
+
+use solana_program::account_info::AccountInfo;
+use solana_program::clock::Epoch;
+use solana_program::pubkey::Pubkey;
+use solana_program::rent::Rent;
+use solana_program::system_program;
+use solana_program::sysvar::Sysvar;
+
 use crate::errors::{Error, FankorErrorCode, FankorResult};
 use crate::models::{Account, FankorContext, FankorContextExitAction, Program, System, Zc};
 use crate::prelude::CopyType;
@@ -8,17 +21,6 @@ use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use crate::utils::rent::make_rent_exempt;
 use crate::utils::writers::ArrayWriter;
-use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_program::system_program;
-use solana_program::sysvar::Sysvar;
-use std::any::type_name;
-use std::fmt;
-use std::fmt::{Debug, Formatter};
-use std::io::Write;
-use std::marker::PhantomData;
 
 /// An initialized account deserialized in Zero Copy mode.
 pub struct ZcAccount<'info, T: AccountType + CopyType<'info>> {

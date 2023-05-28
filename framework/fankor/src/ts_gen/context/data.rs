@@ -1,7 +1,9 @@
-use crate::traits::{TsInstructionGen, TsTypeGen, TsTypesCache};
-use convert_case::{Case, Converter};
 use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
+
+use convert_case::{Case, Converter};
+
+use crate::traits::{TsInstructionGen, TsTypeGen, TsTypesCache};
 
 /// Contains the info for building the IDL.
 pub struct DataContext {

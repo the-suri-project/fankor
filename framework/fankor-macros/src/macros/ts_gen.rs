@@ -1,9 +1,10 @@
-use crate::fnk_syn::FnkMetaArgumentList;
-use crate::Result;
 use convert_case::{Case, Converter};
 use quote::{format_ident, quote};
-use syn::spanned::Spanned;
 use syn::{Error, Fields, Item};
+use syn::spanned::Spanned;
+
+use crate::fnk_syn::FnkMetaArgumentList;
+use crate::Result;
 
 pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
     let case_converter = Converter::new().from_case(Case::Snake).to_case(Case::Camel);

@@ -1,12 +1,14 @@
-use crate::errors::FankorResult;
-use crate::models::FankorContext;
-use crate::traits::{AccountInfoVerification, CpiInstruction, Instruction, LpiInstruction};
-use solana_program::account_info::AccountInfo;
-use solana_program::instruction::AccountMeta;
-use solana_program::pubkey::Pubkey;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::io::Write;
+
+use solana_program::account_info::AccountInfo;
+use solana_program::instruction::AccountMeta;
+use solana_program::pubkey::Pubkey;
+
+use crate::errors::FankorResult;
+use crate::models::FankorContext;
+use crate::traits::{AccountInfoVerification, CpiInstruction, Instruction, LpiInstruction};
 
 /// A wrapper around a `Vec<AccountInfo>` that keeps the rest infos.
 pub struct Rest<'info> {

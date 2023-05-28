@@ -1,7 +1,9 @@
-use crate::errors::{FankorErrorCode, FankorResult};
+use std::marker::PhantomData;
+
 use borsh::BorshDeserialize;
 use solana_program::pubkey::Pubkey;
-use std::marker::PhantomData;
+
+use crate::errors::{FankorErrorCode, FankorResult};
 
 /// Model to get the return value of a CPI instruction.
 #[derive(Copy, Clone)]
@@ -29,7 +31,7 @@ impl<T: BorshDeserialize> CpiReturn<T> {
                 actual: key,
                 expected: *program_id,
             }
-            .into());
+                .into());
         }
 
         Ok(T::try_from_slice(&data)?)

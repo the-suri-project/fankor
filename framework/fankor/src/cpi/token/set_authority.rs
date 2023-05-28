@@ -1,9 +1,10 @@
-use crate::errors::Error;
-use crate::models::{Program, Token};
-use crate::prelude::FankorResult;
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 use spl_token::instruction::AuthorityType;
+
+use crate::errors::Error;
+use crate::models::{Program, Token};
+use crate::prelude::FankorResult;
 
 pub struct CpiSetAuthority<'info> {
     pub owned: AccountInfo<'info>,

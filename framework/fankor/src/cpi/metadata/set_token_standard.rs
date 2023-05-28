@@ -1,7 +1,8 @@
+use solana_program::account_info::AccountInfo;
+
 use crate::errors::Error;
 use crate::models::{Metadata, Program};
 use crate::prelude::FankorResult;
-use solana_program::account_info::AccountInfo;
 
 pub struct CpiSetTokenStandard<'info> {
     pub metadata: AccountInfo<'info>,

@@ -1,9 +1,11 @@
-use crate::fnk_syn::FnkMetaArgumentList;
 use core::convert::TryFrom;
+
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{Attribute, Error, Fields, Ident, ItemEnum, Meta, WhereClause};
+
+use crate::fnk_syn::FnkMetaArgumentList;
 
 pub fn enum_ser(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2> {
     let name = &input.ident;

@@ -226,7 +226,7 @@ pub fn process_struct(
                     quote! {
                         .map_err(|_| #v)?
                     }
-                },
+                }
                 None => {
                     quote! { ? }
                 }
@@ -271,7 +271,7 @@ pub fn process_struct(
                     quote! {
                         .map_err(|_| #v)?
                     }
-                },
+                }
                 None => {
                     quote! { ? }
                 }

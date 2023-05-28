@@ -1,6 +1,7 @@
+use solana_program::account_info::AccountInfo;
+
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::traits::{CopyType, ZeroCopyType};
-use solana_program::account_info::AccountInfo;
 
 impl<'info> ZeroCopyType<'info> for bool {
     fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {

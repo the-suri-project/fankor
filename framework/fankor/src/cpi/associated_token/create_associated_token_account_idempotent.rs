@@ -1,7 +1,8 @@
+use solana_program::account_info::AccountInfo;
+
 use crate::errors::Error;
 use crate::models::{AssociatedToken, Program};
 use crate::prelude::FankorResult;
-use solana_program::account_info::AccountInfo;
 
 pub struct CpiCreateAssociatedTokenAccountIdempotent<'info> {
     pub funding_address: AccountInfo<'info>,

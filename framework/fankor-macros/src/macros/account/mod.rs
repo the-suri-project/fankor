@@ -1,6 +1,3 @@
-mod arguments;
-mod ts_gen;
-
 use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{Error, Item};
@@ -9,6 +6,9 @@ use crate::fnk_syn::FnkMetaArgumentList;
 use crate::macros::account::arguments::AccountArguments;
 use crate::macros::account::ts_gen::ts_gen;
 use crate::Result;
+
+mod arguments;
+mod ts_gen;
 
 pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::TokenStream> {
     // Process arguments.

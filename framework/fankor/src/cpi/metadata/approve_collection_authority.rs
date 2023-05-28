@@ -1,7 +1,8 @@
+use solana_program::account_info::AccountInfo;
+
 use crate::errors::Error;
 use crate::models::{Metadata, Program};
 use crate::prelude::FankorResult;
-use solana_program::account_info::AccountInfo;
 
 pub struct CpiApproveCollectionAuthority<'info> {
     pub collection_authority_record: AccountInfo<'info>,

@@ -1,8 +1,9 @@
+use quote::{format_ident, quote};
+use syn::{Error, Item};
+use syn::spanned::Spanned;
+
 use crate::fnk_syn::FnkMetaArgumentList;
 use crate::Result;
-use quote::{format_ident, quote};
-use syn::spanned::Spanned;
-use syn::{Error, Item};
 
 pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::TokenStream> {
     // Process arguments.
@@ -19,7 +20,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
             return Err(Error::new(
                 input.span(),
                 "This attribute can only be used on a const.",
-            ))
+            ));
         }
     };
 

@@ -1,12 +1,13 @@
-use crate::prelude::{FnkRange, FnkURange};
-use crate::traits::{CopyType, ZeroCopyType};
+use borsh::BorshDeserialize;
+use solana_program::account_info::AccountInfo;
+
 use crate::{
     errors::FankorErrorCode,
     errors::FankorResult,
     prelude::{FnkInt, FnkUInt},
 };
-use borsh::BorshDeserialize;
-use solana_program::account_info::AccountInfo;
+use crate::prelude::{FnkRange, FnkURange};
+use crate::traits::{CopyType, ZeroCopyType};
 
 impl<'info> ZeroCopyType<'info> for FnkURange {
     fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {

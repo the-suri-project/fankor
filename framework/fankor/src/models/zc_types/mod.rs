@@ -1,3 +1,12 @@
+use std::cmp::Ordering;
+use std::io::{Cursor, Write};
+
+use borsh::{BorshDeserialize, BorshSerialize};
+use solana_program::account_info::AccountInfo;
+
+use crate::errors::{FankorErrorCode, FankorResult};
+use crate::traits::{CopyType, ZeroCopyType};
+
 pub mod arrays;
 pub mod binary_vectors;
 pub mod bool;
@@ -10,13 +19,6 @@ pub mod ranges;
 pub mod strings;
 pub mod tuples;
 pub mod vec;
-
-use crate::errors::{FankorErrorCode, FankorResult};
-use crate::traits::{CopyType, ZeroCopyType};
-use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::account_info::AccountInfo;
-use std::cmp::Ordering;
-use std::io::{Cursor, Write};
 
 /// A wrapper around a `T` that implements `ZeroCopyType`.
 pub struct Zc<'info, T: CopyType<'info>> {
@@ -611,8 +613,9 @@ impl<'info, T: CopyType<'info>> Clone for Zc<'info, T> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use crate::tests::create_account_info_for_tests;
+
+    use super::*;
 
     #[test]
     pub fn test_move_byte_slice() {

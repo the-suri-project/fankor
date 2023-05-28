@@ -1,14 +1,16 @@
-use crate::errors::FankorResult;
-use crate::models::FankorContext;
-use crate::prelude::{AccountInfoVerification, LpiInstruction};
-use crate::traits::{CpiInstruction, Instruction, PdaChecker};
-use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::account_info::AccountInfo;
-use solana_program::instruction::AccountMeta;
 use std::fmt;
 use std::fmt::{Debug, Formatter};
 use std::io::Write;
 use std::ops::{Deref, DerefMut};
+
+use borsh::{BorshDeserialize, BorshSerialize};
+use solana_program::account_info::AccountInfo;
+use solana_program::instruction::AccountMeta;
+
+use crate::errors::FankorResult;
+use crate::models::FankorContext;
+use crate::prelude::{AccountInfoVerification, LpiInstruction};
+use crate::traits::{CpiInstruction, Instruction, PdaChecker};
 
 /// An instruction argument.
 pub struct Argument<T>(T);

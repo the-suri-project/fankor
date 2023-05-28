@@ -1,10 +1,8 @@
+use fankor::prelude::*;
+use fankor::tests::ClientExtensions;
+
 use crate::instruction::LpiInstructionStructAccountsWithoutAssociatedType;
 use crate::program::TestProgram;
-use fankor::prelude::*;
-use fankor::tests::{ClientExtensions, ProgramTestExtension};
-use solana_program_test::ProgramTest;
-use solana_sdk::signature::Keypair;
-use solana_sdk::signer::Signer;
 
 #[tokio::test]
 async fn test_program_instruction() {

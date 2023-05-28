@@ -1,13 +1,15 @@
-use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::FankorContext;
-use crate::traits::{AccountInfoVerification, Instruction, PdaChecker, SingleInstructionAccount};
+use std::fmt;
+use std::fmt::{Debug, Formatter};
+use std::marker::PhantomData;
+
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::SysvarId;
-use std::fmt;
-use std::fmt::{Debug, Formatter};
-use std::marker::PhantomData;
+
+use crate::errors::{FankorErrorCode, FankorResult};
+use crate::models::FankorContext;
+use crate::traits::{AccountInfoVerification, Instruction, PdaChecker, SingleInstructionAccount};
 
 /// A Sysvar account.
 #[derive(Clone)]
@@ -30,7 +32,7 @@ impl<'info, T: SysvarId> SysvarAccount<'info, T> {
                 actual: *info.owner,
                 expected: T::id(),
             }
-            .into());
+                .into());
         }
 
         Ok(SysvarAccount {

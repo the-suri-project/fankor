@@ -1,7 +1,8 @@
+use solana_program::account_info::AccountInfo;
+
 use crate::errors::Error;
 use crate::models::{Program, System};
 use crate::prelude::FankorResult;
-use solana_program::account_info::AccountInfo;
 
 pub struct CpiAllocate<'info> {
     pub account_to_allocate: AccountInfo<'info>,

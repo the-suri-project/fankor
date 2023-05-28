@@ -1,8 +1,9 @@
-use borsh::{BorshDeserialize, BorshSerialize};
 use std::fmt::Debug;
 use std::io::Write;
 use std::mem::MaybeUninit;
 use std::ops::{Deref, DerefMut};
+
+use borsh::{BorshDeserialize, BorshSerialize};
 
 /// Wrapper over `Arrays` that make them serializable.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -139,8 +140,9 @@ impl<T: BorshDeserialize, const N: usize> BorshDeserialize for FnkArray<T, N> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use std::io::Cursor;
+
+    use super::*;
 
     #[test]
     fn test_serialize_deserialize_empty() {

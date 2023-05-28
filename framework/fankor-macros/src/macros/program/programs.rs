@@ -1,11 +1,12 @@
-use crate::fnk_syn::{FnkMetaArgumentList, FnkMetaType};
-use crate::Result;
 use convert_case::{Boundary, Case, Converter};
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
+use syn::{Attribute, Error, ItemEnum};
 use syn::parse::{Parse, Parser};
 use syn::spanned::Spanned;
-use syn::{Attribute, Error, ItemEnum};
+
+use crate::fnk_syn::{FnkMetaArgumentList, FnkMetaType};
+use crate::Result;
 
 pub struct Program {
     pub name: Ident,

@@ -1,8 +1,10 @@
-use crate::models::types::unsigned::FnkUInt;
-use crate::prelude::FnkInt;
-use borsh::{BorshDeserialize, BorshSerialize};
 use std::io::Write;
 use std::ops::RangeInclusive;
+
+use borsh::{BorshDeserialize, BorshSerialize};
+
+use crate::models::types::unsigned::FnkUInt;
+use crate::prelude::FnkInt;
 
 /// Custom range impl over two `FnkUInt` points that serializes as point + length.
 /// The range is inclusive and the length can be:
@@ -175,8 +177,9 @@ impl BorshDeserialize for FnkRange {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use std::io::Cursor;
+
+    use super::*;
 
     #[test]
     fn test_serialize_unsigned_range_full() {

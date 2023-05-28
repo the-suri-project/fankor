@@ -1,7 +1,8 @@
+use solana_program::account_info::AccountInfo;
+
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::prelude::FnkExtension;
 use crate::traits::{CopyType, ZeroCopyType};
-use solana_program::account_info::AccountInfo;
 
 impl<'info> ZeroCopyType<'info> for FnkExtension {
     fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
@@ -16,14 +17,14 @@ impl<'info> ZeroCopyType<'info> for FnkExtension {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: "FnkExtension",
             }
-            .into());
+                .into());
         }
 
         if bytes[0] != 0 {
             return Err(FankorErrorCode::ZeroCopyCannotDeserialize {
                 type_name: "FnkExtension",
             }
-            .into());
+                .into());
         }
 
         Ok((FnkExtension, Some(1)))
@@ -34,7 +35,7 @@ impl<'info> ZeroCopyType<'info> for FnkExtension {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: "FnkExtension",
             }
-            .into());
+                .into());
         }
 
         Ok(1)

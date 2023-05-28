@@ -1,19 +1,21 @@
-use crate::cpi;
-use crate::cpi::associated_token::CpiCreateAssociatedTokenAccount;
-use crate::cpi::system_program::CpiCreateAccount;
-use crate::cpi::token::{CpiInitializeAccount3, CpiInitializeMint2, CpiInitializeMultisig2};
-use crate::errors::FankorResult;
-use crate::models::programs::macros::impl_account;
-use crate::models::{Account, AssociatedToken, Program, System, UninitializedAccount};
-use crate::traits::ProgramType;
+use std::io::{ErrorKind, Write};
+use std::ops::Deref;
+
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use solana_program::program_pack::Pack;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::sysvar::Sysvar;
-use std::io::{ErrorKind, Write};
-use std::ops::Deref;
+
+use crate::cpi;
+use crate::cpi::associated_token::CpiCreateAssociatedTokenAccount;
+use crate::cpi::system_program::CpiCreateAccount;
+use crate::cpi::token::{CpiInitializeAccount3, CpiInitializeMint2, CpiInitializeMultisig2};
+use crate::errors::FankorResult;
+use crate::models::{Account, AssociatedToken, Program, System, UninitializedAccount};
+use crate::models::programs::macros::impl_account;
+use crate::traits::ProgramType;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Token;

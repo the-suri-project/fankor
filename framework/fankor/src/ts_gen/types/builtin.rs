@@ -1,10 +1,12 @@
-use crate::traits::{TsTypeGen, TsTypesCache};
-use solana_program::pubkey::Pubkey;
-use solana_sdk::signature::Keypair;
 use std::any::{Any, TypeId};
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
 use std::mem::size_of;
+
+use solana_program::pubkey::Pubkey;
+use solana_sdk::signature::Keypair;
+
+use crate::traits::{TsTypeGen, TsTypesCache};
 
 impl TsTypeGen for () {
     fn value(&self) -> Cow<'static, str> {

@@ -1,3 +1,13 @@
+use std::fmt;
+use std::fmt::{Debug, Formatter};
+
+use solana_program::account_info::AccountInfo;
+use solana_program::clock::Epoch;
+use solana_program::pubkey::Pubkey;
+use solana_program::rent::Rent;
+use solana_program::system_program;
+use solana_program::sysvar::Sysvar;
+
 use crate::cpi;
 use crate::cpi::system_program::CpiCreateAccount;
 use crate::errors::{FankorErrorCode, FankorResult};
@@ -6,14 +16,6 @@ use crate::traits::{
     AccountInfoVerification, AccountType, CopyType, Instruction, PdaChecker,
     SingleInstructionAccount,
 };
-use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_program::system_program;
-use solana_program::sysvar::Sysvar;
-use std::fmt;
-use std::fmt::{Debug, Formatter};
 
 /// Wrapper for `AccountInfo` to explicitly define an uninitialized account.
 pub struct UninitializedAccount<'info> {

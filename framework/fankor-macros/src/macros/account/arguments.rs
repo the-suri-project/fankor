@@ -1,6 +1,7 @@
+use proc_macro2::Ident;
+
 use crate::fnk_syn::FnkMetaArgumentList;
 use crate::Result;
-use proc_macro2::Ident;
 
 pub struct AccountArguments {
     /// The accounts type name.

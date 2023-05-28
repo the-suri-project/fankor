@@ -1,13 +1,14 @@
-mod enums;
-mod structs;
+use proc_macro2::Span;
+use quote::quote;
+use syn::{Error, Ident, Item, ItemImpl};
+use syn::spanned::Spanned;
 
 use crate::macros::serialize::enums::enum_ser;
 use crate::macros::serialize::structs::struct_ser;
 use crate::Result;
-use proc_macro2::Span;
-use quote::quote;
-use syn::spanned::Spanned;
-use syn::{Error, Ident, Item, ItemImpl};
+
+mod enums;
+mod structs;
 
 pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
     let crate_name = Ident::new("borsh", Span::call_site());

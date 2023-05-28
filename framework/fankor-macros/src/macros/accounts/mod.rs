@@ -1,15 +1,15 @@
+use std::collections::HashSet;
+
 use convert_case::{Boundary, Case, Converter};
 use quote::{format_ident, quote};
-use std::collections::HashSet;
+use syn::{Error, Item, parse_quote};
 use syn::spanned::Spanned;
-use syn::{parse_quote, Error, Item};
-
-use crate::Result;
 
 use crate::fnk_syn::FnkMetaArgumentList;
 use crate::macros::accounts::arguments::AccountsArguments;
 use crate::macros::accounts::variant::AccountVariant;
 use crate::macros::enum_discriminants::get_discriminant;
+use crate::Result;
 
 mod arguments;
 mod variant;

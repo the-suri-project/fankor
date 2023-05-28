@@ -1,12 +1,14 @@
-use crate::utils::{unwrap_ident_from_expr, unwrap_int_from_expr};
-use crate::Result;
-use proc_macro2::{Ident, Span};
 use std::fmt::Display;
 use std::str::FromStr;
+
+use proc_macro2::{Ident, Span};
+use syn::{Expr, Token};
 use syn::parse::{Parse, ParseStream};
 use syn::parse_quote::ParseQuote;
 use syn::punctuated::Punctuated;
-use syn::{Expr, Token};
+
+use crate::Result;
+use crate::utils::{unwrap_ident_from_expr, unwrap_int_from_expr};
 
 pub struct FnkMetaArgument {
     pub name: Ident,
@@ -61,7 +63,7 @@ impl FnkMetaArgumentList {
                         self.list_span,
                         format!("Attribute {} is required", name),
                     ))
-                }
+                };
             }
         };
 
@@ -110,7 +112,7 @@ impl FnkMetaArgumentList {
                 return Err(syn::Error::new(
                     element.name.span(),
                     format!("Attribute {} requires a u16 value", element.name),
-                ))
+                ));
             }
         };
 
@@ -134,7 +136,7 @@ impl FnkMetaArgumentList {
                 return Err(syn::Error::new(
                     element.name.span(),
                     format!("Attribute {} requires an ident value", element.name),
-                ))
+                ));
             }
         };
 

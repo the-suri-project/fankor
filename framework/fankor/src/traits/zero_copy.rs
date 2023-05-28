@@ -1,5 +1,6 @@
-use crate::errors::FankorResult;
 use solana_program::account_info::AccountInfo;
+
+use crate::errors::FankorResult;
 
 pub trait ZeroCopyType<'info>: Sized {
     // CONSTRUCTORS -----------------------------------------------------------

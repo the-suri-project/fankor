@@ -7,7 +7,7 @@ pub use lazy_static::lazy_static;
 #[cfg(feature = "metadata-program")]
 pub use mpl_token_metadata;
 pub use solana_program;
-pub use solana_program::account_info::{next_account_info, AccountInfo};
+pub use solana_program::account_info::{AccountInfo, next_account_info};
 pub use solana_program::instruction::AccountMeta;
 pub use solana_program::msg;
 pub use solana_program::program_error::ProgramError;
@@ -41,8 +41,8 @@ pub use fankor_macros::*;
 pub use crate::cpi;
 pub use crate::errors::*;
 pub use crate::macros::*;
-pub use crate::models::types::*;
 pub use crate::models::*;
+pub use crate::models::types::*;
 #[cfg(feature = "testable-program")]
 pub use crate::testable_program::*;
 #[cfg(feature = "test-utils")]

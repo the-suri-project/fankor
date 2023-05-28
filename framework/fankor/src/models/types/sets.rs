@@ -1,8 +1,10 @@
-use crate::prelude::FnkUInt;
-use borsh::{BorshDeserialize, BorshSerialize};
 use std::collections::BTreeSet;
 use std::io::{ErrorKind, Write};
 use std::ops::{Deref, DerefMut};
+
+use borsh::{BorshDeserialize, BorshSerialize};
+
+use crate::prelude::FnkUInt;
 
 /// Wrapper over `BTreeSet` that serializes the length into a `FnkUInt`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -105,8 +107,9 @@ impl<T: BorshDeserialize + Ord> BorshDeserialize for FnkSet<T> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use std::io::Cursor;
+
+    use super::*;
 
     #[test]
     fn test_serialize_deserialize_empty() {

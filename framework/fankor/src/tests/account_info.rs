@@ -1,7 +1,8 @@
-use solana_program::account_info::AccountInfo;
-use solana_program::pubkey::Pubkey;
 use std::cell::RefCell;
 use std::rc::Rc;
+
+use solana_program::account_info::AccountInfo;
+use solana_program::pubkey::Pubkey;
 
 // Magic number to distinguish from normal accounts
 pub const ACCOUNT_INFO_TEST_MAGIC_NUMBER: u64 = 0xAB;

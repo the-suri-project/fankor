@@ -1,10 +1,12 @@
-use crate::errors::{FankorErrorCode, FankorResult};
-use crate::prelude::byte_seeds_to_slices;
-use solana_program::account_info::AccountInfo;
-use solana_program::pubkey::Pubkey;
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
+
+use solana_program::account_info::AccountInfo;
+use solana_program::pubkey::Pubkey;
+
+use crate::errors::{FankorErrorCode, FankorResult};
+use crate::prelude::byte_seeds_to_slices;
 
 #[derive(Clone)]
 pub struct FankorContext<'info> {
@@ -236,7 +238,7 @@ impl<'info> FankorContext<'info> {
                 expected: expected_address,
                 actual: *account.key,
             }
-            .into());
+                .into());
         }
 
         // Add the seeds to the context.

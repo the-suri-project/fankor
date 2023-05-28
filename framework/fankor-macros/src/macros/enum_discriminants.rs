@@ -1,12 +1,13 @@
-use quote::{format_ident, quote};
 use std::collections::HashSet;
 use std::fmt::Display;
 use std::str::FromStr;
-use syn::spanned::Spanned;
-use syn::{Attribute, Error, Fields, Item, Meta, Variant};
 
-use crate::utils::unwrap_int_from_literal;
+use quote::{format_ident, quote};
+use syn::{Attribute, Error, Fields, Item, Meta, Variant};
+use syn::spanned::Spanned;
+
 use crate::Result;
+use crate::utils::unwrap_int_from_literal;
 
 pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
     // Process input.

@@ -1,7 +1,8 @@
-use crate::fnk_syn::FnkMetaArgumentList;
-use crate::Result;
 use proc_macro2::TokenStream;
 use quote::ToTokens;
+
+use crate::fnk_syn::FnkMetaArgumentList;
+use crate::Result;
 
 pub struct InstructionArguments {
     pub initial_validation: Option<Validation>,

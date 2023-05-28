@@ -1,12 +1,14 @@
+use std::borrow::Cow;
+
+use solana_program::pubkey::Pubkey;
+use solana_program::sysvar::SysvarId;
+
 use crate::models::{
     Account, Argument, Either, MaybeUninitialized, Program, Rest, SingleEither, SysvarAccount,
     UncheckedAccount, UninitializedAccount, ZcAccount,
 };
 use crate::prelude::ProgramType;
 use crate::traits::{AccountType, CopyType, TsInstructionGen, TsTypeGen, TsTypesCache};
-use solana_program::pubkey::Pubkey;
-use solana_program::sysvar::SysvarId;
-use std::borrow::Cow;
 
 impl<'info, T: AccountType> TsInstructionGen for Account<'info, T> {
     fn value_type() -> Cow<'static, str> {

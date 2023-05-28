@@ -1,7 +1,8 @@
-use borsh::{BorshDeserialize, BorshSerialize};
 use std::fmt::Display;
 use std::io::{ErrorKind, Write};
 use std::ops::{Deref, DerefMut};
+
+use borsh::{BorshDeserialize, BorshSerialize};
 
 const FLAG_ENCODING_LIMIT: u64 = 1 << 14; // 2^14
 
@@ -272,9 +273,11 @@ impl BorshDeserialize for FnkUInt {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::traits::CopyType;
     use std::io::Cursor;
+
+    use crate::traits::CopyType;
+
+    use super::*;
 
     #[test]
     fn test_get_from() {

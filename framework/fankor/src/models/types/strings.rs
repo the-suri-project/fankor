@@ -1,9 +1,11 @@
-use crate::models::types::unsigned::FnkUInt;
-use borsh::{BorshDeserialize, BorshSerialize};
 use std::borrow::Cow;
 use std::fmt::Display;
 use std::io::{ErrorKind, Write};
 use std::ops::{Deref, DerefMut};
+
+use borsh::{BorshDeserialize, BorshSerialize};
+
+use crate::models::types::unsigned::FnkUInt;
 
 /// Wrapper over `String` that serializes the length into a `FnkUInt`.
 #[derive(Debug, Default, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -129,8 +131,9 @@ impl<'a> BorshDeserialize for FnkString<'a> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use std::io::Cursor;
+
+    use super::*;
 
     #[test]
     fn test_serialize_deserialize() {

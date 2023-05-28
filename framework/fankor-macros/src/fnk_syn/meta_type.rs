@@ -1,5 +1,5 @@
-use syn::parse::{Parse, ParseStream};
 use syn::{Token, Type};
+use syn::parse::{Parse, ParseStream};
 
 pub struct FnkMetaType {
     pub eq_token: Token![=],

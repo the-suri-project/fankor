@@ -1,5 +1,6 @@
-use crate::instruction::*;
 use fankor::prelude::*;
+
+use crate::instruction::*;
 
 #[program(testable, fallback)]
 enum TestProgram {

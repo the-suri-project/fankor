@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::spanned::Spanned;
 use syn::{Error, Fields, Ident, ItemStruct, WhereClause};
+use syn::spanned::Spanned;
 
 use crate::fnk_syn::FnkMetaArgumentList;
 use crate::macros::deserialize::enums::{contains_initialize_with, contains_skip};
@@ -75,7 +75,7 @@ pub fn struct_de(input: &ItemStruct, crate_name: Ident) -> syn::Result<TokenStre
                         syn::parse2(quote! {
                             #field_type: #crate_name::BorshDeserialize
                         })
-                        .unwrap(),
+                            .unwrap(),
                     );
 
                     quote! {

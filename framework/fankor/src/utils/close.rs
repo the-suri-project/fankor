@@ -1,7 +1,8 @@
-use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::FankorContext;
 use solana_program::account_info::AccountInfo;
 use solana_program::system_program;
+
+use crate::errors::{FankorErrorCode, FankorResult};
+use crate::models::FankorContext;
 
 /// Closes the `account` and sends the lamports to the `destination_account`.
 pub(crate) fn close_account<'info>(

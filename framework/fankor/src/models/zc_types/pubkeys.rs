@@ -1,8 +1,10 @@
-use crate::errors::{FankorErrorCode, FankorResult};
-use crate::traits::{CopyType, ZeroCopyType};
+use std::mem::size_of;
+
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
-use std::mem::size_of;
+
+use crate::errors::{FankorErrorCode, FankorResult};
+use crate::traits::{CopyType, ZeroCopyType};
 
 impl<'info> ZeroCopyType<'info> for Pubkey {
     fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
@@ -18,7 +20,7 @@ impl<'info> ZeroCopyType<'info> for Pubkey {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: "Pubkey",
             }
-            .into());
+                .into());
         }
 
         let bytes: [u8; 32] = bytes[..size].try_into().unwrap();
@@ -32,7 +34,7 @@ impl<'info> ZeroCopyType<'info> for Pubkey {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: "Pubkey",
             }
-            .into());
+                .into());
         }
 
         Ok(size)

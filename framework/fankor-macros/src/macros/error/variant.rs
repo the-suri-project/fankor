@@ -1,10 +1,10 @@
-use crate::macros::enum_discriminants::get_discriminant;
 use proc_macro2::Ident;
 use quote::quote;
+use syn::{Attribute, Error, Fields, Lit, MetaList, NestedMeta, parse_macro_input, Token, Variant};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
-use syn::{parse_macro_input, Attribute, Error, Fields, Lit, MetaList, NestedMeta, Token, Variant};
 
+use crate::macros::enum_discriminants::get_discriminant;
 use crate::Result;
 
 pub struct ErrorVariant {

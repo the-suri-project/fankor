@@ -1,12 +1,14 @@
+use std::any::type_name;
+use std::io::Write;
+
+use solana_program::account_info::AccountInfo;
+use solana_program::instruction::AccountMeta;
+
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
 use crate::traits::{
     AccountInfoVerification, CpiInstruction, Instruction, LpiInstruction, PdaChecker,
 };
-use solana_program::account_info::AccountInfo;
-use solana_program::instruction::AccountMeta;
-use std::any::type_name;
-use std::io::Write;
 
 impl<'info, T: Instruction<'info>> Instruction<'info> for Option<T> {
     type CPI = Option<T::CPI>;
@@ -42,7 +44,7 @@ impl<'info, T: Instruction<'info>> Instruction<'info> for Option<T> {
                 return Err(FankorErrorCode::InstructionDidNotDeserialize {
                     account: type_name::<Self>().to_string(),
                 }
-                .into())
+                .into());
             }
         };
 

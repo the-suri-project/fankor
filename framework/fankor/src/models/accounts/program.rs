@@ -1,14 +1,16 @@
+use std::fmt;
+use std::fmt::{Debug, Formatter};
+use std::marker::PhantomData;
+
+use solana_program::account_info::AccountInfo;
+use solana_program::clock::Epoch;
+use solana_program::pubkey::Pubkey;
+
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
 use crate::traits::{
     AccountInfoVerification, Instruction, PdaChecker, ProgramType, SingleInstructionAccount,
 };
-use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
-use solana_program::pubkey::Pubkey;
-use std::fmt;
-use std::fmt::{Debug, Formatter};
-use std::marker::PhantomData;
 
 /// An account that represents a program.
 #[derive(Clone)]

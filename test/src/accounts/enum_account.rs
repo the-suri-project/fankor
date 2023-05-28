@@ -1,5 +1,6 @@
-use crate::accounts::ProgramAccountDiscriminant;
 use fankor::prelude::*;
+
+use crate::accounts::ProgramAccountDiscriminant;
 
 #[account(base = ProgramAccount)]
 pub enum EnumAccountData {
@@ -97,7 +98,7 @@ mod test {
             value1: 1,
             value2_snake: "test".to_string(),
         })
-        .unwrap();
+            .unwrap();
 
         let data = info.try_borrow_data().unwrap();
         assert_eq!(*data, &vector_save);

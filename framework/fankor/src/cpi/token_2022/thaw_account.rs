@@ -1,7 +1,8 @@
+use solana_program::account_info::AccountInfo;
+
 use crate::errors::Error;
 use crate::models::{Program, Token2022};
 use crate::prelude::FankorResult;
-use solana_program::account_info::AccountInfo;
 
 pub struct CpiThawAccount<'info> {
     pub account: AccountInfo<'info>,

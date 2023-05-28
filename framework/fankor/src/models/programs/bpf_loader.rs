@@ -1,9 +1,11 @@
-use crate::traits::ProgramType;
+use std::io::{ErrorKind, Write};
+use std::ops::Deref;
+
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::bpf_loader_upgradeable;
 use solana_program::pubkey::Pubkey;
-use std::io::{ErrorKind, Write};
-use std::ops::Deref;
+
+use crate::traits::ProgramType;
 
 #[derive(Debug, Copy, Clone)]
 pub struct BpfLoader;

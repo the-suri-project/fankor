@@ -1,6 +1,6 @@
 use proc_macro2::Ident;
-use syn::spanned::Spanned;
 use syn::{Attribute, Error, Variant};
+use syn::spanned::Spanned;
 
 use crate::Result;
 

@@ -1,13 +1,13 @@
-use quote::{format_ident, quote};
 use std::collections::HashSet;
+
+use quote::{format_ident, quote};
 use syn::spanned::Spanned;
 use syn::{Error, Fields, Item};
-
-use crate::Result;
 
 use crate::fnk_syn::FnkMetaArgumentList;
 use crate::macros::error::arguments::ErrorArguments;
 use crate::macros::error::variant::ErrorVariant;
+use crate::Result;
 
 mod arguments;
 mod variant;

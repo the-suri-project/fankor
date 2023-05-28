@@ -167,7 +167,7 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
                         #cpi_name::#variant_name(v) => ::fankor::traits::CpiInstruction::serialize_into_instruction_parts(v, writer, metas, infos)?
                     }
                 }
-            }else {
+            } else {
                 quote! {
                     #cpi_name::#variant_name => {}
                 }
@@ -241,7 +241,7 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
                     #lpi_name::#variant_name(v) => ::fankor::traits::LpiInstruction::serialize_into_instruction_parts(v, writer, metas)?
                 }
             }
-        }else {
+        } else {
             quote! {
                 #lpi_name::#variant_name => {}
             }
@@ -424,7 +424,7 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
             });
 
             format!("export interface {} {{ type: '{}', value: {} }}", name, v.name, types_replacement_str)
-        }else {
+        } else {
             metas_fields.push(format!("case '{}': writer.writeByte({}.{}); break;", v.name, discriminant_name, variant_name));
 
             format!("export interface {} {{ type: '{}' }}", name, v.name)

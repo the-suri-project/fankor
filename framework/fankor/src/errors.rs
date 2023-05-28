@@ -46,24 +46,24 @@ pub enum FankorErrorCode {
 
     /// The program must be provided in the account list
     #[msg(
-        "The program {} ({}) must be provided in the account list",
-        name,
-        address
+    "The program {} ({}) must be provided in the account list",
+    name,
+    address
     )]
     MissingProgram { address: Pubkey, name: &'static str },
 
     /// Cannot find a valid PDA with the provided seeds for the specified program
     #[msg(
-        "Cannot find a valid PDA with the provided seeds for the specified program: {}",
-        program_id
+    "Cannot find a valid PDA with the provided seeds for the specified program: {}",
+    program_id
     )]
     CannotFindValidPdaWithProvidedSeeds { program_id: Pubkey },
 
     /// The provided PDA does not match expected one
     #[msg(
-        "The provided PDA ({}) does not match expected one ({})",
-        actual,
-        expected
+    "The provided PDA ({}) does not match expected one ({})",
+    actual,
+    expected
     )]
     InvalidPda { expected: Pubkey, actual: Pubkey },
 
@@ -93,9 +93,9 @@ pub enum FankorErrorCode {
 
     /// Cannot modify an account that is not owned by the current program
     #[msg(
-        "Cannot {} an account that is not owned by the current program: {}",
-        action,
-        address
+    "Cannot {} an account that is not owned by the current program: {}",
+    action,
+    address
     )]
     AccountNotOwnedByProgram {
         address: Pubkey,
@@ -131,10 +131,10 @@ pub enum FankorErrorCode {
 
     /// Account was expected to be owned by a program but it is owned by another
     #[msg(
-        "Account {} was expected to be owned by program {} but it is owned by {}",
-        address,
-        expected,
-        actual
+    "Account {} was expected to be owned by program {} but it is owned by {}",
+    address,
+    expected,
+    actual
     )]
     AccountOwnedByWrongProgram {
         address: Pubkey,
@@ -148,9 +148,9 @@ pub enum FankorErrorCode {
 
     /// The account cannot be writen because it is already closed
     #[msg(
-        "Cannot {} the account {} because it is already closed",
-        action,
-        address
+    "Cannot {} the account {} because it is already closed",
+    action,
+    address
     )]
     AlreadyClosedAccount {
         address: Pubkey,
@@ -183,10 +183,10 @@ pub enum FankorErrorCode {
 
     /// The account must belong to a program but it belongs to another
     #[msg(
-        "The account '{}' must belong to program {} but it belongs to {}",
-        account,
-        expected,
-        actual
+    "The account '{}' must belong to program {} but it belongs to {}",
+    account,
+    expected,
+    actual
     )]
     AccountConstraintOwnerMismatch {
         actual: Pubkey,
@@ -196,10 +196,10 @@ pub enum FankorErrorCode {
 
     /// The account's address of an account must be one value but it is another
     #[msg(
-        "The account's address of '{}' must be {} but it is {}",
-        account,
-        expected,
-        actual
+    "The account's address of '{}' must be {} but it is {}",
+    account,
+    expected,
+    actual
     )]
     AccountConstraintAddressMismatch {
         actual: Pubkey,
@@ -249,10 +249,10 @@ pub enum FankorErrorCode {
 
     /// The length of the account list must be greater or equal than one value but it is another
     #[msg(
-        "The length of the account list '{}' must be greater or equal than {} but it is {}",
-        account,
-        expected,
-        actual
+    "The length of the account list '{}' must be greater or equal than {} but it is {}",
+    account,
+    expected,
+    actual
     )]
     AccountConstraintMinimumMismatch {
         actual: usize,
@@ -262,10 +262,10 @@ pub enum FankorErrorCode {
 
     /// The length of the account list must be lower or equal than one value but it is another
     #[msg(
-        "The length of the account list '{}' must be lower or equal than {} but it is {}",
-        account,
-        expected,
-        actual
+    "The length of the account list '{}' must be lower or equal than {} but it is {}",
+    account,
+    expected,
+    actual
     )]
     AccountConstraintMaximumMismatch {
         actual: usize,
@@ -275,9 +275,9 @@ pub enum FankorErrorCode {
 
     /// The constraint '{}' of the account '{}' has failed
     #[msg(
-        "The constraint '{}' of the account '{}' has failed",
-        constraint,
-        account
+    "The constraint '{}' of the account '{}' has failed",
+    constraint,
+    account
     )]
     AccountConstraintFailed {
         account: &'static str,
@@ -286,8 +286,8 @@ pub enum FankorErrorCode {
 
     /// The specified account has different types.
     #[msg(
-        "A duplicated account ({}) is deserialized with two different types",
-        address
+    "A duplicated account ({}) is deserialized with two different types",
+    address
     )]
     DuplicatedAccountWithDifferentType { address: Pubkey },
 
@@ -305,16 +305,16 @@ pub enum FankorErrorCode {
 
     /// The result of the intermediate buffer is expected to belong to one program but it belongs to another program instead
     #[msg(
-        "The result of the intermediate buffer is expected to belong to the program {} but it belongs to the program {} instead ",
-        expected,
-        actual,
+    "The result of the intermediate buffer is expected to belong to the program {} but it belongs to the program {} instead ",
+    expected,
+    actual,
     )]
     IntermediateBufferIncorrectProgramId { actual: Pubkey, expected: Pubkey },
 
     /// The list contains too many accounts to correctly serialize the instruction. Max: 256
     #[msg(
-        "The list contains too many accounts ({}) to correctly serialize the instruction. Max: 256",
-        size
+    "The list contains too many accounts ({}) to correctly serialize the instruction. Max: 256",
+    size
     )]
     TooManyAccounts { size: usize },
 
@@ -332,8 +332,8 @@ pub enum FankorErrorCode {
 
     /// Invalid enum discriminant while deserializing the zero copy type
     #[msg(
-        "Invalid enum discriminant while deserializing the zero copy type: '{}'",
-        type_name
+    "Invalid enum discriminant while deserializing the zero copy type: '{}'",
+    type_name
     )]
     ZeroCopyInvalidEnumDiscriminant { type_name: &'static str },
 
@@ -464,8 +464,8 @@ impl From<Error> for ProgramError {
     fn from(e: Error) -> ProgramError {
         match e {
             Error::FankorError(FankorError {
-                error_code_number, ..
-            }) => ProgramError::Custom(error_code_number),
+                                   error_code_number, ..
+                               }) => ProgramError::Custom(error_code_number),
             Error::ProgramError(program_error) => program_error,
         }
     }

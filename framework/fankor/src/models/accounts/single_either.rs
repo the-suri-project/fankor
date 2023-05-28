@@ -1,11 +1,13 @@
+use std::fmt;
+use std::fmt::{Debug, Formatter};
+
+use solana_program::account_info::AccountInfo;
+use solana_program::pubkey::Pubkey;
+
 use crate::errors::FankorResult;
 use crate::models::FankorContext;
 use crate::prelude::PdaChecker;
 use crate::traits::{AccountInfoVerification, Instruction, SingleInstructionAccount};
-use solana_program::account_info::AccountInfo;
-use solana_program::pubkey::Pubkey;
-use std::fmt;
-use std::fmt::{Debug, Formatter};
 
 /// Tries to deserialize `L` first and then `R` if `L` fails.
 /// Note that `L` and `R` must be disjoint types, otherwise the deserialization will
@@ -16,7 +18,7 @@ pub enum SingleEither<L, R> {
 }
 
 impl<'info, L: SingleInstructionAccount<'info>, R: SingleInstructionAccount<'info>>
-    SingleEither<L, R>
+SingleEither<L, R>
 {
     // GETTERS -----------------------------------------------------------------
 
@@ -74,7 +76,7 @@ impl<'info, L: SingleInstructionAccount<'info>, R: SingleInstructionAccount<'inf
 }
 
 impl<'info, L: Instruction<'info>, R: Instruction<'info>> Instruction<'info>
-    for SingleEither<L, R>
+for SingleEither<L, R>
 {
     type CPI = AccountInfo<'info>;
     type LPI = Pubkey;
@@ -112,7 +114,7 @@ impl<'info, L: Instruction<'info>, R: Instruction<'info>> Instruction<'info>
 }
 
 impl<'info, L: SingleInstructionAccount<'info>, R: SingleInstructionAccount<'info>>
-    SingleInstructionAccount<'info> for SingleEither<L, R>
+SingleInstructionAccount<'info> for SingleEither<L, R>
 {
     fn info(&self) -> &'info AccountInfo<'info> {
         match self {
@@ -139,7 +141,7 @@ impl<'info, L: PdaChecker<'info>, R: PdaChecker<'info>> PdaChecker<'info> for Si
 }
 
 impl<'info, L: Debug + Instruction<'info>, R: Debug + Instruction<'info>> Debug
-    for SingleEither<L, R>
+for SingleEither<L, R>
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {

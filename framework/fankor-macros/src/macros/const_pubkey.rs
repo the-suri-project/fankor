@@ -1,7 +1,8 @@
-use crate::Result;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{LitByte, LitStr};
+
+use crate::Result;
 
 pub fn processor(pubkey: LitStr) -> Result<proc_macro::TokenStream> {
     let id = parse_pubkey(pubkey.value().as_str())?;

@@ -1,10 +1,12 @@
-use crate::errors::FankorResult;
-use crate::models::FankorContext;
+use std::io::Write;
+
 use solana_program::account_info::AccountInfo;
 use solana_program::clock::Epoch;
 use solana_program::instruction::AccountMeta;
 use solana_program::pubkey::Pubkey;
-use std::io::Write;
+
+use crate::errors::FankorResult;
+use crate::models::FankorContext;
 
 /// Trait for instruction definitions.
 pub trait Instruction<'info>: Sized {

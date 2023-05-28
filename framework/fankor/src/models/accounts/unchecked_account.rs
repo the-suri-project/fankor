@@ -1,16 +1,18 @@
+use std::fmt;
+use std::fmt::{Debug, Formatter};
+
+use solana_program::account_info::AccountInfo;
+use solana_program::clock::Epoch;
+use solana_program::pubkey::Pubkey;
+use solana_program::rent::Rent;
+use solana_program::sysvar::Sysvar;
+
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{FankorContext, Program, System};
 use crate::traits::{AccountInfoVerification, Instruction, PdaChecker, SingleInstructionAccount};
 use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use crate::utils::rent::make_rent_exempt;
-use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_program::sysvar::Sysvar;
-use std::fmt;
-use std::fmt::{Debug, Formatter};
 
 /// Wrapper for `AccountInfo` to explicitly define an unchecked account.
 pub struct UncheckedAccount<'info> {
@@ -122,7 +124,7 @@ impl<'info> UncheckedAccount<'info> {
                 address: *self.address(),
                 action: "reallocate",
             }
-            .into());
+                .into());
         }
 
         if !self.is_writable() {
@@ -130,7 +132,7 @@ impl<'info> UncheckedAccount<'info> {
                 address: *self.address(),
                 action: "reallocate",
             }
-            .into());
+                .into());
         }
 
         if self.context.is_account_uninitialized(self.info) {
@@ -138,7 +140,7 @@ impl<'info> UncheckedAccount<'info> {
                 address: *self.address(),
                 action: "reallocate",
             }
-            .into());
+                .into());
         }
 
         realloc_account_to_size(size, zero_bytes, self.info, payer, system_program)
@@ -174,7 +176,7 @@ impl<'info> UncheckedAccount<'info> {
                 address: *self.address(),
                 action: "make rent-exempt",
             }
-            .into());
+                .into());
         }
 
         if !self.is_writable() {
@@ -182,7 +184,7 @@ impl<'info> UncheckedAccount<'info> {
                 address: *self.address(),
                 action: "make rent-exempt",
             }
-            .into());
+                .into());
         }
 
         if self.context.is_account_uninitialized(self.info) {
@@ -190,7 +192,7 @@ impl<'info> UncheckedAccount<'info> {
                 address: *self.address(),
                 action: "make rent-exempt",
             }
-            .into());
+                .into());
         }
 
         let new_size = self.info.data_len();

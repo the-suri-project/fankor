@@ -1,8 +1,9 @@
+use borsh::BorshDeserialize;
+use solana_program::account_info::AccountInfo;
+
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::prelude::{FnkInt, FnkUInt};
 use crate::traits::{CopyType, ZeroCopyType};
-use borsh::BorshDeserialize;
-use solana_program::account_info::AccountInfo;
 
 impl<'info> ZeroCopyType<'info> for FnkInt {
     fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
@@ -23,7 +24,7 @@ impl<'info> ZeroCopyType<'info> for FnkInt {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: "FnkInt",
             }
-            .into());
+                .into());
         }
 
         let first_byte = bytes[0];
@@ -36,7 +37,7 @@ impl<'info> ZeroCopyType<'info> for FnkInt {
                     return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                         type_name: "FnkInt",
                     }
-                    .into());
+                        .into());
                 }
 
                 size += 1;
@@ -51,7 +52,7 @@ impl<'info> ZeroCopyType<'info> for FnkInt {
                 return Err(FankorErrorCode::ZeroCopyCannotDeserialize {
                     type_name: "FnkInt",
                 }
-                .into());
+                    .into());
             }
 
             let byte_length = byte_length as usize + 2;
@@ -60,7 +61,7 @@ impl<'info> ZeroCopyType<'info> for FnkInt {
                 return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                     type_name: "FnkInt",
                 }
-                .into());
+                    .into());
             }
 
             byte_length + 1
@@ -129,7 +130,7 @@ impl<'info> ZeroCopyType<'info> for FnkUInt {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: "FnkUInt",
             }
-            .into());
+                .into());
         }
 
         let first_byte = bytes[0];
@@ -142,7 +143,7 @@ impl<'info> ZeroCopyType<'info> for FnkUInt {
                     return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                         type_name: "FnkUInt",
                     }
-                    .into());
+                        .into());
                 }
 
                 size += 1;
@@ -157,7 +158,7 @@ impl<'info> ZeroCopyType<'info> for FnkUInt {
                 return Err(FankorErrorCode::ZeroCopyCannotDeserialize {
                     type_name: "FnkUInt",
                 }
-                .into());
+                    .into());
             }
 
             let byte_length = byte_length as usize + 2;
@@ -166,7 +167,7 @@ impl<'info> ZeroCopyType<'info> for FnkUInt {
                 return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                     type_name: "FnkUInt",
                 }
-                .into());
+                    .into());
             }
 
             byte_length + 1
@@ -216,9 +217,11 @@ impl<'info> CopyType<'info> for FnkUInt {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use borsh::BorshSerialize;
     use std::io::Cursor;
+
+    use borsh::BorshSerialize;
+
+    use super::*;
 
     #[test]
     fn test_signed_read_byte_size() {

@@ -1,7 +1,8 @@
-use crate::Result;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::Item;
+
+use crate::Result;
 
 pub fn ts_gen(input: &Item) -> Result<TokenStream> {
     // Process input.

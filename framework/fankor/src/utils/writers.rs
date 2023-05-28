@@ -1,5 +1,6 @@
-use solana_program::program_memory::sol_memcpy;
 use std::io::{self, Write};
+
+use solana_program::program_memory::sol_memcpy;
 
 #[derive(Debug)]
 pub struct ArrayWriter<'a> {

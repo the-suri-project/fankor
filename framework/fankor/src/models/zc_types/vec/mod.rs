@@ -1,15 +1,17 @@
-pub use fnk::*;
+use std::marker::PhantomData;
+use std::mem::size_of;
 
-mod fnk;
+use borsh::{BorshDeserialize, BorshSerialize};
+use solana_program::account_info::AccountInfo;
+
+pub use fnk::*;
 
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::Zc;
 use crate::traits::{CopyType, ZeroCopyType};
 use crate::utils::writers::ArrayWriter;
-use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::account_info::AccountInfo;
-use std::marker::PhantomData;
-use std::mem::size_of;
+
+mod fnk;
 
 pub struct ZcVec<'info, T: CopyType<'info>> {
     info: &'info AccountInfo<'info>,
@@ -299,11 +301,14 @@ impl<'info, T: CopyType<'info>> ExactSizeIterator for Iter<'info, T> {}
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::tests::create_account_info_for_tests;
-    use solana_program::pubkey::Pubkey;
     use std::cell::RefCell;
     use std::rc::Rc;
+
+    use solana_program::pubkey::Pubkey;
+
+    use crate::tests::create_account_info_for_tests;
+
+    use super::*;
 
     #[test]
     fn test_read_byte_length() {

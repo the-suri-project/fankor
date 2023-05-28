@@ -1,13 +1,14 @@
+use std::{fs, thread};
+use std::panic::UnwindSafe;
+use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
 pub use data::*;
 
-mod data;
-
 use crate::ts_gen::context::data::DataContext;
-use std::panic::UnwindSafe;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, MutexGuard};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-use std::{fs, thread};
+
+mod data;
 
 /// Contains helper data to do the building process.
 pub struct BuildContext {

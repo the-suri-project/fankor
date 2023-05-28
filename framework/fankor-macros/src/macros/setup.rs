@@ -1,6 +1,7 @@
-use crate::Result;
 use quote::quote;
 use syn::LitStr;
+
+use crate::Result;
 
 pub fn processor(pubkey: LitStr) -> Result<proc_macro::TokenStream> {
     let result = quote! {

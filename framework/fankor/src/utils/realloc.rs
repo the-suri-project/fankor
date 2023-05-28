@@ -1,7 +1,8 @@
+use solana_program::account_info::AccountInfo;
+
 use crate::errors::FankorResult;
 use crate::models::{Program, System};
 use crate::utils::rent::make_rent_exempt;
-use solana_program::account_info::AccountInfo;
 
 /// Reallocates the `account` to have at least `size` capacity.
 /// If `payer` is provided it ensures it to be rent-exempt with

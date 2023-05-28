@@ -1,7 +1,9 @@
+use std::any::type_name;
+
+use solana_program::account_info::AccountInfo;
+
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::traits::{CopyType, ZeroCopyType};
-use solana_program::account_info::AccountInfo;
-use std::any::type_name;
 
 impl<'info> ZeroCopyType<'info> for () {
     fn new(

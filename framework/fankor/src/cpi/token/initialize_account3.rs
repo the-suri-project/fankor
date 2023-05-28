@@ -1,8 +1,9 @@
+use solana_program::account_info::AccountInfo;
+use solana_program::pubkey::Pubkey;
+
 use crate::errors::Error;
 use crate::models::{Program, Token};
 use crate::prelude::FankorResult;
-use solana_program::account_info::AccountInfo;
-use solana_program::pubkey::Pubkey;
 
 pub struct CpiInitializeAccount3<'info> {
     pub account: AccountInfo<'info>,

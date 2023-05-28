@@ -1,8 +1,8 @@
 use proc_macro2::Ident;
+use syn::{Expr, Token};
 use syn::parse::{Parse, ParseStream};
 use syn::parse_quote::ParseQuote;
 use syn::punctuated::Punctuated;
-use syn::{Expr, Token};
 
 pub struct CustomMetaList {
     pub list: Punctuated<CustomMeta, Token![,]>,

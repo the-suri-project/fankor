@@ -1,10 +1,12 @@
-use crate::traits::CopyType;
-use borsh::{BorshDeserialize, BorshSerialize};
 use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::io::Write;
 use std::mem;
 use std::mem::size_of;
+
+use borsh::{BorshDeserialize, BorshSerialize};
+
+use crate::traits::CopyType;
 
 // Based on https://github.com/oliver-anhuth/avl/blob/d53a6e006a5f4a6df04755703c10dca763028fcf/src/map.rs#L1039
 
@@ -860,9 +862,11 @@ impl<'a, K, V> ExactSizeIterator for Iter<'a, K, V> {}
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use rand::Rng;
     use std::collections::HashSet;
+
+    use rand::Rng;
+
+    use super::*;
 
     /// This test can take some time to complete.
     #[test]

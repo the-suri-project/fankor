@@ -1,13 +1,13 @@
 use quote::{format_ident, quote};
-use syn::spanned::Spanned;
 use syn::{Error, Item};
+use syn::spanned::Spanned;
 
-use crate::Result;
+use cpi::build_cpi;
+use lpi::build_lpi;
 
 use crate::fnk_syn::FnkMetaArgumentList;
 use crate::macros::program::programs::Program;
-use cpi::build_cpi;
-use lpi::build_lpi;
+use crate::Result;
 
 mod cpi;
 mod lpi;
@@ -64,7 +64,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
                     &mut ix_accounts,
                 )?;
             }
-        }else {
+        } else {
             quote! {
                 let accounts = <#variant_name<'info> as fankor::traits::Instruction>::try_from(&context, &mut ix_data, &mut ix_accounts)?;
             }

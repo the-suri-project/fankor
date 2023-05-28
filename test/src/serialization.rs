@@ -26,8 +26,9 @@ enum X {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use fankor::prelude::borsh::{BorshDeserialize, BorshSerialize};
+
+    use super::*;
 
     #[test]
     fn text_serialize_x() {

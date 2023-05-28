@@ -1,11 +1,13 @@
+use std::fmt;
+use std::fmt::{Debug, Formatter};
+
+use solana_program::account_info::AccountInfo;
+use solana_program::pubkey::Pubkey;
+
 use crate::errors::FankorResult;
 use crate::models::{FankorContext, UninitializedAccount};
 use crate::prelude::PdaChecker;
 use crate::traits::{AccountInfoVerification, Instruction, SingleInstructionAccount};
-use solana_program::account_info::AccountInfo;
-use solana_program::pubkey::Pubkey;
-use std::fmt;
-use std::fmt::{Debug, Formatter};
 
 /// Tries to deserialize an actual account or its uninitialized counterpart.
 pub enum MaybeUninitialized<'info, T> {

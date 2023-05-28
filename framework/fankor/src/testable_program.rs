@@ -1,9 +1,3 @@
-use crate::cpi;
-use crate::cpi::system_program::CpiCreateAccount;
-use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::{Argument, FankorContext, Program, System, UncheckedAccount};
-use crate::prelude::{byte_seeds_to_slices, FnkVec};
-use crate::traits::{AccountInfoVerification, CpiInstruction, Instruction, LpiInstruction};
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_program::account_info::AccountInfo;
 use solana_program::instruction::AccountMeta;
@@ -11,6 +5,13 @@ use solana_program::msg;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::sysvar::Sysvar;
+
+use crate::cpi;
+use crate::cpi::system_program::CpiCreateAccount;
+use crate::errors::{FankorErrorCode, FankorResult};
+use crate::models::{Argument, FankorContext, Program, System, UncheckedAccount};
+use crate::prelude::{byte_seeds_to_slices, FnkVec};
+use crate::traits::{AccountInfoVerification, CpiInstruction, Instruction, LpiInstruction};
 
 /// Instruction that allows to create/modify program accounts in order facilitate
 /// program testing.

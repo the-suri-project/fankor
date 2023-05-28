@@ -1,11 +1,13 @@
-use crate::errors::FankorResult;
-use crate::models::zc_types::vec::Iter;
-use crate::models::Zc;
-use crate::prelude::FnkArray;
-use crate::traits::{CopyType, ZeroCopyType};
-use solana_program::account_info::AccountInfo;
 use std::marker::PhantomData;
 use std::mem::size_of;
+
+use solana_program::account_info::AccountInfo;
+
+use crate::errors::FankorResult;
+use crate::models::Zc;
+use crate::models::zc_types::vec::Iter;
+use crate::prelude::FnkArray;
+use crate::traits::{CopyType, ZeroCopyType};
 
 pub struct ZcFnkArray<'info, T: CopyType<'info>, const N: usize> {
     info: &'info AccountInfo<'info>,

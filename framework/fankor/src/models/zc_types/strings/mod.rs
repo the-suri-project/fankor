@@ -1,12 +1,14 @@
-pub use fnk::*;
 use std::mem::size_of;
 
-mod fnk;
+use borsh::BorshDeserialize;
+use solana_program::account_info::AccountInfo;
+
+pub use fnk::*;
 
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::traits::{CopyType, ZeroCopyType};
-use borsh::BorshDeserialize;
-use solana_program::account_info::AccountInfo;
+
+mod fnk;
 
 pub struct ZcString<'info> {
     info: &'info AccountInfo<'info>,
@@ -75,7 +77,7 @@ impl<'info> ZcString<'info> {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: "String",
             }
-            .into());
+                .into());
         }
 
         let text = std::str::from_utf8(&bytes[..size]).map_err(|_| {
@@ -107,7 +109,7 @@ impl<'info> ZcString<'info> {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: "String",
             }
-            .into());
+                .into());
         }
 
         let text = unsafe { std::str::from_utf8_unchecked(&bytes[..size]) };

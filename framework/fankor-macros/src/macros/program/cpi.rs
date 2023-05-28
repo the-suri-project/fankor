@@ -1,14 +1,15 @@
-use crate::macros::program::programs::Program;
-use crate::Result;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
+
+use crate::macros::program::programs::Program;
+use crate::Result;
 
 pub fn build_cpi(program: &Program) -> Result<TokenStream> {
     let methods = program.methods.iter().map(|v| {
         let program_name = &program.name;
         let method_name = &v.snake_name;
         let type_name = &v.name;
-        let discriminant_name= format_ident!("{}Discriminant", program_name);
+        let discriminant_name = format_ident!("{}Discriminant", program_name);
 
         let (result, result_param) = if let Some(result_type) = &v.return_type {
             (quote! {

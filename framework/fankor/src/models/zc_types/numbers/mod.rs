@@ -1,11 +1,13 @@
-pub use fnk::*;
+use std::mem::size_of;
 
-mod fnk;
+use solana_program::account_info::AccountInfo;
+
+pub use fnk::*;
 
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::traits::{CopyType, ZeroCopyType};
-use solana_program::account_info::AccountInfo;
-use std::mem::size_of;
+
+mod fnk;
 
 macro_rules! impl_type {
     ($ty: ty) => {

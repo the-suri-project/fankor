@@ -1,9 +1,11 @@
-use crate::errors::{FankorErrorCode, FankorResult};
-use crate::traits::{CopyType, ZeroCopyType};
-use solana_program::account_info::AccountInfo;
-use solana_program::program_option::COption;
 use std::any::type_name;
 use std::mem::size_of;
+
+use solana_program::account_info::AccountInfo;
+use solana_program::program_option::COption;
+
+use crate::errors::{FankorErrorCode, FankorResult};
+use crate::traits::{CopyType, ZeroCopyType};
 
 impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for Option<T> {
     fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
@@ -19,7 +21,7 @@ impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for Option<T> {
                 return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                     type_name: type_name::<Self>(),
                 }
-                .into());
+                    .into());
             }
 
             bytes[0] != 0
@@ -40,7 +42,7 @@ impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for Option<T> {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: type_name::<Self>(),
             }
-            .into());
+                .into());
         }
 
         let mut size = 1;
@@ -89,7 +91,7 @@ impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for COption<T> {
                 return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                     type_name: type_name::<Self>(),
                 }
-                .into());
+                    .into());
             }
 
             let flag = u32::from_le_bytes(bytes[..size].try_into().unwrap());
@@ -113,7 +115,7 @@ impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for COption<T> {
             return Err(FankorErrorCode::ZeroCopyNotEnoughLength {
                 type_name: type_name::<Self>(),
             }
-            .into());
+                .into());
         }
 
         let flag = u32::from_le_bytes(bytes[..size].try_into().unwrap());

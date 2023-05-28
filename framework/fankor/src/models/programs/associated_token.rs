@@ -1,5 +1,6 @@
-use crate::traits::ProgramType;
 use solana_program::pubkey::Pubkey;
+
+use crate::traits::ProgramType;
 
 #[derive(Debug, Copy, Clone)]
 pub struct AssociatedToken;

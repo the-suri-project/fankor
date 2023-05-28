@@ -1,13 +1,15 @@
-use crate::errors::{FankorErrorCode, FankorResult};
-use crate::models::Zc;
-use crate::prelude::{CopyType, FnkBVec, Node, MAX_HEIGHT};
-use crate::traits::ZeroCopyType;
-use crate::utils::writers::ArrayWriter;
-use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::account_info::AccountInfo;
 use std::cmp::Ordering;
 use std::marker::PhantomData;
 use std::mem::size_of;
+
+use borsh::{BorshDeserialize, BorshSerialize};
+use solana_program::account_info::AccountInfo;
+
+use crate::errors::{FankorErrorCode, FankorResult};
+use crate::models::Zc;
+use crate::prelude::{CopyType, FnkBVec, MAX_HEIGHT, Node};
+use crate::traits::ZeroCopyType;
+use crate::utils::writers::ArrayWriter;
 
 pub struct ZcFnkBVec<'info, K: CopyType<'info>, V: CopyType<'info>> {
     info: &'info AccountInfo<'info>,
@@ -108,10 +110,10 @@ impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZcFnkBVec<'info, K, V> {
 
 #[cfg(test)]
 impl<
-        'info,
-        K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-        V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-    > ZcFnkBVec<'info, K, V>
+    'info,
+    K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+    V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+> ZcFnkBVec<'info, K, V>
 {
     // GETTERS ----------------------------------------------------------------
 
@@ -157,10 +159,10 @@ impl<
 }
 
 impl<
-        'info,
-        K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-        V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-    > ZcFnkBVec<'info, K, V>
+    'info,
+    K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+    V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+> ZcFnkBVec<'info, K, V>
 {
     // GETTERS ----------------------------------------------------------------
 
@@ -1117,10 +1119,10 @@ pub struct Iter<'info, K, V> {
 }
 
 impl<
-        'info,
-        K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-        V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-    > Iterator for Iter<'info, K, V>
+    'info,
+    K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+    V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+> Iterator for Iter<'info, K, V>
 {
     type Item = (K, V);
 
@@ -1167,12 +1169,11 @@ impl<
 }
 
 impl<
-        'info,
-        K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-        V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-    > ExactSizeIterator for Iter<'info, K, V>
-{
-}
+    'info,
+    K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+    V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+> ExactSizeIterator for Iter<'info, K, V>
+{}
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
@@ -1180,10 +1181,13 @@ impl<
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::tests::create_account_info_for_tests;
-    use rand::Rng;
     use std::collections::HashSet;
+
+    use rand::Rng;
+
+    use crate::tests::create_account_info_for_tests;
+
+    use super::*;
 
     /// This test can take some time to complete.
     #[test]

@@ -1,10 +1,12 @@
-use borsh::{BorshDeserialize, BorshSerialize};
 use std::cmp::Ordering;
 use std::fmt::Display;
 use std::io::{ErrorKind, Write};
 use std::ops::{Deref, DerefMut};
 
-const FLAG_ENCODING_LIMIT: u64 = 1 << 13; // 2^13
+use borsh::{BorshDeserialize, BorshSerialize};
+
+const FLAG_ENCODING_LIMIT: u64 = 1 << 13;
+// 2^13
 const MIN_I64_ABS: u64 = i64::MIN.unsigned_abs();
 
 /// Wrapper over a signed number that serializes to a variable-length form.
@@ -421,9 +423,11 @@ impl BorshDeserialize for FnkInt {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::traits::CopyType;
     use std::io::Cursor;
+
+    use crate::traits::CopyType;
+
+    use super::*;
 
     #[test]
     fn test_get_from() {

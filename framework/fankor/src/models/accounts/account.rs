@@ -1,3 +1,14 @@
+use std::fmt;
+use std::fmt::{Debug, Formatter};
+use std::io::Write;
+
+use solana_program::account_info::AccountInfo;
+use solana_program::clock::Epoch;
+use solana_program::pubkey::Pubkey;
+use solana_program::rent::Rent;
+use solana_program::system_program;
+use solana_program::sysvar::Sysvar;
+
 use crate::errors::{Error, FankorErrorCode, FankorResult};
 use crate::models::{FankorContext, FankorContextExitAction, Program, System, ZcAccount};
 use crate::prelude::AccountInfoVerification;
@@ -6,15 +17,6 @@ use crate::utils::close::close_account;
 use crate::utils::realloc::realloc_account_to_size;
 use crate::utils::rent::make_rent_exempt;
 use crate::utils::writers::ArrayWriter;
-use solana_program::account_info::AccountInfo;
-use solana_program::clock::Epoch;
-use solana_program::pubkey::Pubkey;
-use solana_program::rent::Rent;
-use solana_program::system_program;
-use solana_program::sysvar::Sysvar;
-use std::fmt;
-use std::fmt::{Debug, Formatter};
-use std::io::Write;
 
 /// An initialized account.
 pub struct Account<'info, T: AccountType> {

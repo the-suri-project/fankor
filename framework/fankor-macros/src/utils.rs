@@ -1,7 +1,8 @@
-use crate::Result;
 use proc_macro2::Ident;
-use syn::spanned::Spanned;
 use syn::{Expr, Lit, LitInt};
+use syn::spanned::Spanned;
+
+use crate::Result;
 
 /// Unwraps an int literal from a generic literal.
 pub fn unwrap_int_from_literal(lit: Lit) -> Result<LitInt> {

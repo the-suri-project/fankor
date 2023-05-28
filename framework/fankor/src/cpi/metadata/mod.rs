@@ -1,3 +1,6 @@
+use mpl_token_metadata::state::DataV2;
+use solana_program::pubkey::Pubkey;
+
 pub use approve_collection_authority::*;
 pub use approve_use_authority::*;
 pub use burn_nft::*;
@@ -18,8 +21,6 @@ use crate::errors::Error;
 use crate::models::{Metadata, Program};
 use crate::prelude::AccountInfo;
 use crate::prelude::FankorResult;
-use mpl_token_metadata::state::DataV2;
-use solana_program::pubkey::Pubkey;
 
 mod approve_collection_authority;
 mod approve_use_authority;

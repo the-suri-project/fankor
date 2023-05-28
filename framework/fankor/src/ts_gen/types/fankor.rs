@@ -1,10 +1,11 @@
+use std::any::{Any, TypeId};
+use std::borrow::Cow;
+
 use crate::prelude::{
     FnkArray, FnkBVec, FnkExtension, FnkInt, FnkMap, FnkRange, FnkSet, FnkString, FnkUInt,
     FnkURange, FnkVec,
 };
 use crate::traits::{TsTypeGen, TsTypesCache};
-use std::any::{Any, TypeId};
-use std::borrow::Cow;
 
 impl TsTypeGen for FnkInt {
     fn value(&self) -> Cow<'static, str> {

@@ -1,9 +1,11 @@
+use std::io::Write;
+
+use solana_program::account_info::AccountInfo;
+use solana_program::instruction::AccountMeta;
+
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
 use crate::traits::{AccountInfoVerification, CpiInstruction, Instruction, LpiInstruction};
-use solana_program::account_info::AccountInfo;
-use solana_program::instruction::AccountMeta;
-use std::io::Write;
 
 impl<'info, T: Instruction<'info>> Instruction<'info> for Vec<T> {
     type CPI = Vec<T::CPI>;

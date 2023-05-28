@@ -1,15 +1,17 @@
+use std::any::type_name;
+use std::fmt;
+use std::fmt::{Debug, Formatter};
+use std::io::Write;
+
+use solana_program::account_info::AccountInfo;
+use solana_program::instruction::AccountMeta;
+
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::FankorContext;
 use crate::prelude::PdaChecker;
 use crate::traits::{
     AccountInfoVerification, CpiInstruction, Instruction, SingleInstructionAccount,
 };
-use solana_program::account_info::AccountInfo;
-use solana_program::instruction::AccountMeta;
-use std::any::type_name;
-use std::fmt;
-use std::fmt::{Debug, Formatter};
-use std::io::Write;
 
 /// Deserialize `L` or `R` depending on a flag.
 pub enum Either<L, R> {
@@ -107,7 +109,7 @@ impl<'info, L: Instruction<'info>, R: Instruction<'info>> Instruction<'info> for
                 return Err(FankorErrorCode::InstructionDidNotDeserialize {
                     account: type_name::<Self>().to_string(),
                 }
-                .into())
+                .into());
             }
         };
 

@@ -1,11 +1,10 @@
-use crate::fnk_syn::FnkMetaArgumentList;
 use syn::spanned::Spanned;
 use syn::{Error, Item};
 
-use crate::Result;
-
+use crate::fnk_syn::FnkMetaArgumentList;
 use crate::macros::instruction::enums::process_enum;
 use crate::macros::instruction::structs::process_struct;
+use crate::Result;
 
 mod arguments;
 mod enums;

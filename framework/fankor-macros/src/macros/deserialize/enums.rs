@@ -1,8 +1,9 @@
-use crate::fnk_syn::FnkMetaArgumentList;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::{format_ident, quote, ToTokens};
-use syn::spanned::Spanned;
 use syn::{Attribute, Error, Fields, Ident, ItemEnum, Meta, NestedMeta, Path, WhereClause};
+use syn::spanned::Spanned;
+
+use crate::fnk_syn::FnkMetaArgumentList;
 
 pub fn enum_de(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2> {
     let name = &input.ident;
@@ -100,7 +101,7 @@ pub fn enum_de(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2>
                             syn::parse2(quote! {
                                 #field_type: #crate_name::BorshDeserialize
                             })
-                            .unwrap(),
+                                .unwrap(),
                         );
 
                         variant_header.extend(quote! {
@@ -120,7 +121,7 @@ pub fn enum_de(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2>
                             syn::parse2(quote! {
                                 #field_type: #crate_name::BorshDeserialize
                             })
-                            .unwrap(),
+                                .unwrap(),
                         );
 
                         variant_header

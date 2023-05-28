@@ -1,21 +1,23 @@
-use crate::cpi;
-use crate::cpi::metadata::{CpiCreateMasterEditionV3, CpiCreateMetadataAccountV3};
-use crate::cpi::system_program::CpiCreateAccount;
-use crate::errors::FankorResult;
-use crate::models::programs::macros::impl_account;
-use crate::models::{Account, Program, System, Token, UninitializedAccount};
-use crate::traits::ProgramType;
+use std::io::{ErrorKind, Write};
+use std::ops::Deref;
+
 use borsh::{BorshDeserialize, BorshSerialize};
 use mpl_token_metadata::state::{
-    Collection, CollectionDetails, Creator, TokenMetadataAccount, Uses, BURN, COLLECTION_AUTHORITY,
-    EDITION, PREFIX, USER,
+    BURN, Collection, COLLECTION_AUTHORITY, CollectionDetails, Creator, EDITION, PREFIX,
+    TokenMetadataAccount, USER, Uses,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
 use solana_program::rent::Rent;
 use solana_program::sysvar::Sysvar;
-use std::io::{ErrorKind, Write};
-use std::ops::Deref;
+
+use crate::cpi;
+use crate::cpi::metadata::{CpiCreateMasterEditionV3, CpiCreateMetadataAccountV3};
+use crate::cpi::system_program::CpiCreateAccount;
+use crate::errors::FankorResult;
+use crate::models::{Account, Program, System, Token, UninitializedAccount};
+use crate::models::programs::macros::impl_account;
+use crate::traits::ProgramType;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Metadata;

@@ -1,5 +1,6 @@
-use crate::accounts::ProgramAccountDiscriminant;
 use fankor::prelude::*;
+
+use crate::accounts::ProgramAccountDiscriminant;
 
 #[account(base = ProgramAccount)]
 #[derive(Debug, PartialEq)]
@@ -59,7 +60,7 @@ mod test {
             zc_value
                 .value2_from_previous_unchecked(
                     StructAccountDataFields::Value1,
-                    zc_value.value1().unwrap().offset()
+                    zc_value.value1().unwrap().offset(),
                 )
                 .unwrap()
                 .offset()
@@ -88,7 +89,7 @@ mod test {
             value1: 1,
             value2: "test".to_string(),
         })
-        .unwrap();
+            .unwrap();
 
         let data = info.try_borrow_data().unwrap();
         assert_eq!(*data, &vector_save);

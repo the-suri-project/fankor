@@ -1,5 +1,6 @@
-use borsh::{BorshDeserialize, BorshSerialize};
 use std::io::{ErrorKind, Write};
+
+use borsh::{BorshDeserialize, BorshSerialize};
 
 /// An extension placeholder with no meaning. It acts as unit type in Rust
 /// but occupies one byte valuing 0 in (de)serialization. Moreover, in
