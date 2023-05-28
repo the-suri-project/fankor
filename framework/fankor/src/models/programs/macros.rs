@@ -1,3 +1,6 @@
+#![allow(unused_macros)]
+#![allow(unused_imports)]
+
 macro_rules! impl_account {
     (token: $name: ident, $ty: ty, $owner: expr $(,)?) => {
         #[derive(Debug, Clone, PartialEq, Default)]

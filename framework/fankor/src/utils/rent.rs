@@ -1,11 +1,13 @@
+use std::cmp::Ordering;
+
+use solana_program::account_info::AccountInfo;
+use solana_program::rent::Rent;
+use solana_program::sysvar::Sysvar;
+
 use crate::cpi;
 use crate::cpi::system_program::CpiTransfer;
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::{Program, System};
-use solana_program::account_info::AccountInfo;
-use solana_program::rent::Rent;
-use solana_program::sysvar::Sysvar;
-use std::cmp::Ordering;
 
 /// Makes an `account` be rent exempt. If `exact` is provided it ensures
 /// it to be rent-exempt with only the exact required amount, i.e.
@@ -15,7 +17,7 @@ pub(crate) fn make_rent_exempt<'info>(
     exact: bool,
     payer: &AccountInfo<'info>,
     info: &AccountInfo<'info>,
-    program: &Program<System>,
+    system_program: &Program<System>,
 ) -> FankorResult<()> {
     if !payer.is_writable {
         return Err(FankorErrorCode::ReadonlyAccountModification {
@@ -43,7 +45,7 @@ pub(crate) fn make_rent_exempt<'info>(
             let lamports = needed_balance - current_balance;
 
             cpi::system_program::transfer(
-                program,
+                system_program,
                 CpiTransfer {
                     from: payer.clone(),
                     to: info.clone(),
@@ -67,19 +69,26 @@ pub(crate) fn make_rent_exempt<'info>(
             **info.lamports.borrow_mut() = info_lamports.checked_sub(lamports).unwrap();
             **payer.lamports.borrow_mut() = payer_lamports.checked_add(lamports).unwrap();
 
-            // This no-op CPI is made here to prevent an error that rises when we manually modify
-            // the lamports of accounts and after that someone makes a CPI without using it, for
-            // example using other accounts in the program. The problem is that the runtime only
-            // keeps track of the lamports changes of accounts that passes through CPIs.
-            cpi::system_program::transfer(
-                program,
-                CpiTransfer {
-                    from: payer.clone(),
-                    to: info.clone(),
-                },
-                0,
-                &[],
-            )
+            // Note: manually changing the lamports of the accounts can cause problems if any of
+            // those accounts are used in a CPI after these modifications but not both at the same
+            // time. To fix it, we do a NOOP operation over them in order to make the runtime know
+            // about the changes.
+            //
+            // This is a simple workaround that only works if payer is signer, in any other case
+            // the fix must be applied manually.
+            if payer.is_signer {
+                cpi::system_program::transfer(
+                    system_program,
+                    CpiTransfer {
+                        from: payer.clone(),
+                        to: info.clone(),
+                    },
+                    0,
+                    &[],
+                )?;
+            }
+
+            Ok(())
         }
     }
 }

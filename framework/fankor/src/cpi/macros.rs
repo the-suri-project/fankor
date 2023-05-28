@@ -1,3 +1,6 @@
+#![allow(unused_macros)]
+#![allow(unused_imports)]
+
 macro_rules! impl_cpi_method {
     ($program: ident, $cpi_name: ident, $name: ident, $func: expr, accounts: [$($accounts:ident),* $(,)?], args: [$($arg_keys:ident : $arg_types: ty),* $(,)?] $(, instruction_error_handle: $instruction_error_handle: tt)? $(,)?) => {
         pub struct $cpi_name<'info> {

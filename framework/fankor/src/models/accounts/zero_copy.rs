@@ -208,7 +208,7 @@ impl<'info, T: AccountType + CopyType<'info>> ZcAccount<'info, T> {
             .into());
         }
 
-        realloc_account_to_size(system_program, size, zero_bytes, self.info, payer)
+        realloc_account_to_size(size, zero_bytes, self.info, payer, system_program)
     }
 
     /// Makes the account rent-exempt by adding funds from `payer` if necessary.
