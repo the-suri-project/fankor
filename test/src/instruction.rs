@@ -11,6 +11,8 @@ use crate::errors::Errors;
 pub struct StructAccounts<'info> {
     pub args: Argument<InstructionArgs>,
 
+    pub args_rest: RestArguments,
+
     #[account(owner = & crate::ID)]
     #[account(writable)]
     #[account(executable)]
@@ -101,7 +103,7 @@ pub struct StructAccountsWithoutAssociatedType<'info> {
     pub option_zc_account: Option<ZcAccount<'info, ZeroCopyStructAccountData>>,
 
     pub either:
-    Either<Account<'info, StructAccountData>, ZcAccount<'info, ZeroCopyStructAccountData>>,
+        Either<Account<'info, StructAccountData>, ZcAccount<'info, ZeroCopyStructAccountData>>,
 
     pub maybe_uninitialized: MaybeUninitialized<'info, ZcAccount<'info, ZeroCopyStructAccountData>>,
 

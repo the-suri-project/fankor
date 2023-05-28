@@ -4,8 +4,8 @@ use solana_program::pubkey::Pubkey;
 use solana_program::sysvar::SysvarId;
 
 use crate::models::{
-    Account, Argument, Either, MaybeUninitialized, Program, Rest, SingleEither, SysvarAccount,
-    UncheckedAccount, UninitializedAccount, ZcAccount,
+    Account, Argument, Either, MaybeUninitialized, Program, Rest, RestArguments, SingleEither,
+    SysvarAccount, UncheckedAccount, UninitializedAccount, ZcAccount,
 };
 use crate::prelude::ProgramType;
 use crate::traits::{AccountType, CopyType, TsInstructionGen, TsTypeGen, TsTypesCache};
@@ -183,6 +183,28 @@ impl<'info> TsInstructionGen for Rest<'info> {
         Cow::Owned(format!(
             "{}.forEach(v => {{ accountMetas.push({{ pubkey: v, isSigner: {}, isWritable: {} }}); }});",
             value, signer, writable
+        ))
+    }
+}
+
+impl TsInstructionGen for RestArguments {
+    fn value_type() -> Cow<'static, str> {
+        <Vec<u8>>::value_type()
+    }
+
+    fn generate_type(registered_types: &mut TsTypesCache) -> Cow<'static, str> {
+        <Vec<u8>>::generate_type(registered_types)
+    }
+
+    fn get_account_metas(
+        value: Cow<'static, str>,
+        _signer: bool,
+        _writable: bool,
+    ) -> Cow<'static, str> {
+        Cow::Owned(format!(
+            "{}.serialize(writer, {});",
+            <Vec<u8>>::schema_name(),
+            value
         ))
     }
 }
