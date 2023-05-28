@@ -13,8 +13,8 @@ use crate::cpi::associated_token::CpiCreateAssociatedTokenAccount;
 use crate::cpi::system_program::CpiCreateAccount;
 use crate::cpi::token::{CpiInitializeAccount3, CpiInitializeMint2, CpiInitializeMultisig2};
 use crate::errors::FankorResult;
-use crate::models::{Account, AssociatedToken, Program, System, UninitializedAccount};
 use crate::models::programs::macros::impl_account;
+use crate::models::{Account, AssociatedToken, Program, System, UninitializedAccount};
 use crate::traits::ProgramType;
 
 #[derive(Debug, Copy, Clone)]
@@ -243,6 +243,7 @@ impl TokenAccount {
     }
 
     /// Initializes a TokenAccount in an associated token account.
+    #[allow(clippy::too_many_arguments)]
     pub fn init_associated<'info>(
         account_to_init: UninitializedAccount<'info>,
         owner: AccountInfo<'info>,

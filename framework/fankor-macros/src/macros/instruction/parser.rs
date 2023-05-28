@@ -1,8 +1,7 @@
 use proc_macro2::Ident;
-use syn::{Expr, Token};
 use syn::parse::{Parse, ParseStream};
-use syn::parse_quote::ParseQuote;
 use syn::punctuated::Punctuated;
+use syn::{Expr, Token};
 
 pub struct CustomMetaList {
     pub list: Punctuated<CustomMeta, Token![,]>,
@@ -11,7 +10,7 @@ pub struct CustomMetaList {
 impl Parse for CustomMetaList {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         Ok(Self {
-            list: <Punctuated<CustomMeta, Token![,]>>::parse(input)?,
+            list: <Punctuated<CustomMeta, Token![,]>>::parse_terminated(input)?,
         })
     }
 }

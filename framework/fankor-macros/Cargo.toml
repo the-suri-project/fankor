@@ -15,4 +15,4 @@ bs58 = "0.5.0"
 convert_case = "0.6.0"
 proc-macro2 = { version = "1.0.56", features = ["span-locations"] }
 quote = "1.0.26"
-syn = { version = "1.0.109", features = ["full"] }
+syn = { version = "2.0.18", features = ["full"] }

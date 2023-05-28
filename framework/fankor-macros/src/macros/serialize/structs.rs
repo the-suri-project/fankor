@@ -2,8 +2,8 @@ use core::convert::TryFrom;
 
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::quote;
-use syn::{Error, Fields, Ident, Index, ItemStruct, WhereClause};
 use syn::spanned::Spanned;
+use syn::{Error, Fields, Ident, Index, ItemStruct, WhereClause};
 
 use crate::fnk_syn::FnkMetaArgumentList;
 use crate::macros::serialize::enums::contains_skip;
@@ -15,7 +15,7 @@ pub fn struct_ser(input: &ItemStruct, crate_name: Ident) -> syn::Result<TokenStr
     let mut account_discriminants = None;
 
     for attr in &input.attrs {
-        if attr.path.is_ident("fankor") {
+        if attr.path().is_ident("fankor") {
             if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
                 args.error_on_duplicated()?;
 
@@ -73,7 +73,7 @@ pub fn struct_ser(input: &ItemStruct, crate_name: Ident) -> syn::Result<TokenStr
                     syn::parse2(quote! {
                         #field_type: #crate_name::ser::BorshSerialize
                     })
-                        .unwrap(),
+                    .unwrap(),
                 );
             }
         }

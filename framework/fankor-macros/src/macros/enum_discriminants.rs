@@ -3,11 +3,11 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 use quote::{format_ident, quote};
-use syn::{Attribute, Error, Fields, Item, Meta, Variant};
 use syn::spanned::Spanned;
+use syn::{Attribute, Error, Fields, Item, Meta, Variant};
 
+use crate::utils::{unwrap_int_from_literal, unwrap_lit_from_expression};
 use crate::Result;
-use crate::utils::unwrap_int_from_literal;
 
 pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
     // Process input.
@@ -106,7 +106,6 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                 #[automatically_derived]
                 impl #discriminant_name {
-                    #[inline(always)]
                     pub const fn code(&self) -> u8 {
                         match self {
                             #(#codes,)*
@@ -116,7 +115,6 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
                 #[automatically_derived]
                 impl #impl_generics #name #ty_generics #where_clause {
-                    #[inline(always)]
                     pub const fn discriminant(&self) -> #discriminant_name {
                         match self {
                             #(#discriminants,)*
@@ -190,7 +188,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
 
 pub fn is_deprecated(attrs: &[Attribute]) -> bool {
     for attr in attrs.iter() {
-        if let Ok(Meta::Path(path)) = attr.parse_meta() {
+        if let Meta::Path(path) = &attr.meta {
             if path.is_ident("deprecated") {
                 return true;
             }
@@ -217,7 +215,7 @@ where
 
     let mut discriminant = None;
     for attr in variant.attrs.iter() {
-        if let Ok(Meta::NameValue(name_value)) = attr.parse_meta() {
+        if let Meta::NameValue(name_value) = &attr.meta {
             if name_value.path.is_ident("discriminant") {
                 if discriminant.is_some() {
                     return Err(Error::new(
@@ -226,7 +224,8 @@ where
                     ));
                 }
 
-                let literal = unwrap_int_from_literal(name_value.lit.clone())?;
+                let literal =
+                    unwrap_int_from_literal(unwrap_lit_from_expression(name_value.value.clone())?)?;
                 discriminant = Some(literal.base10_parse()?);
             }
         }

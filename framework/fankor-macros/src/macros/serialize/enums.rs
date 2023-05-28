@@ -15,7 +15,7 @@ pub fn enum_ser(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2
     let mut is_accounts = false;
 
     for attr in &input.attrs {
-        if attr.path.is_ident("fankor") {
+        if attr.path().is_ident("fankor") {
             if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
                 args.error_on_duplicated()?;
 
@@ -178,7 +178,7 @@ pub fn enum_ser(input: &ItemEnum, crate_name: Ident) -> syn::Result<TokenStream2
 
 pub fn contains_skip(attrs: &[Attribute]) -> bool {
     for attr in attrs.iter() {
-        if let Ok(Meta::Path(path)) = attr.parse_meta() {
+        if let Meta::Path(path) = &attr.meta {
             if path.is_ident("borsh_skip") {
                 return true;
             }

@@ -1,8 +1,20 @@
 use proc_macro2::Ident;
-use syn::{Expr, Lit, LitInt};
 use syn::spanned::Spanned;
+use syn::{Expr, Lit, LitInt};
 
 use crate::Result;
+
+/// Unwraps a literal from an expression.
+pub fn unwrap_lit_from_expression(expr: Expr) -> Result<Lit> {
+    match expr {
+        Expr::Lit(lit) => Ok(lit.lit),
+        v => Err(syn::Error::new(v.span(), "Expected literal")),
+    }
+}
+
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
+// ----------------------------------------------------------------------------
 
 /// Unwraps an int literal from a generic literal.
 pub fn unwrap_int_from_literal(lit: Lit) -> Result<LitInt> {

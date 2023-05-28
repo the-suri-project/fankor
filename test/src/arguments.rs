@@ -13,6 +13,7 @@ pub struct InstructionArgs2 {
     pub arg1: bool,
     pub arg2: u32,
     pub arg3: u64,
+    pub arg4: Pubkey,
 }
 
 #[fankor_base]

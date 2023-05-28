@@ -29,22 +29,18 @@ impl<'info> Rest<'info> {
 
     // GETTERS ----------------------------------------------------------------
 
-    #[inline(always)]
     pub fn len(&self) -> usize {
         self.accounts.len()
     }
 
-    #[inline(always)]
     pub fn is_empty(&self) -> bool {
         self.accounts.len() == 0
     }
 
-    #[inline(always)]
     pub fn accounts(&self) -> &'info [AccountInfo<'info>] {
         self.accounts
     }
 
-    #[inline(always)]
     pub fn context(&self) -> &'info FankorContext<'info> {
         self.context
     }

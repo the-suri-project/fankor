@@ -33,47 +33,38 @@ impl<'info> UncheckedAccount<'info> {
 
     // GETTERS ----------------------------------------------------------------
 
-    #[inline(always)]
     pub fn address(&self) -> &'info Pubkey {
         self.info().key
     }
 
-    #[inline(always)]
     pub fn owner(&self) -> &'info Pubkey {
         self.info().owner
     }
 
-    #[inline(always)]
     pub fn is_writable(&self) -> bool {
         self.info().is_writable
     }
 
-    #[inline(always)]
     pub fn is_signer(&self) -> bool {
         self.info().is_signer
     }
 
-    #[inline(always)]
     pub fn is_executable(&self) -> bool {
         self.info().executable
     }
 
-    #[inline(always)]
     pub fn balance(&self) -> u64 {
         self.info().lamports()
     }
 
-    #[inline(always)]
     pub fn rent_epoch(&self) -> Epoch {
         self.info.rent_epoch
     }
 
-    #[inline(always)]
     pub fn info(&self) -> &'info AccountInfo<'info> {
         self.info
     }
 
-    #[inline(always)]
     pub fn context(&self) -> &'info FankorContext<'info> {
         self.context
     }
@@ -124,7 +115,7 @@ impl<'info> UncheckedAccount<'info> {
                 address: *self.address(),
                 action: "reallocate",
             }
-                .into());
+            .into());
         }
 
         if !self.is_writable() {
@@ -132,7 +123,7 @@ impl<'info> UncheckedAccount<'info> {
                 address: *self.address(),
                 action: "reallocate",
             }
-                .into());
+            .into());
         }
 
         if self.context.is_account_uninitialized(self.info) {
@@ -140,7 +131,7 @@ impl<'info> UncheckedAccount<'info> {
                 address: *self.address(),
                 action: "reallocate",
             }
-                .into());
+            .into());
         }
 
         realloc_account_to_size(size, zero_bytes, self.info, payer, system_program)
@@ -176,7 +167,7 @@ impl<'info> UncheckedAccount<'info> {
                 address: *self.address(),
                 action: "make rent-exempt",
             }
-                .into());
+            .into());
         }
 
         if !self.is_writable() {
@@ -184,7 +175,7 @@ impl<'info> UncheckedAccount<'info> {
                 address: *self.address(),
                 action: "make rent-exempt",
             }
-                .into());
+            .into());
         }
 
         if self.context.is_account_uninitialized(self.info) {
@@ -192,7 +183,7 @@ impl<'info> UncheckedAccount<'info> {
                 address: *self.address(),
                 action: "make rent-exempt",
             }
-                .into());
+            .into());
         }
 
         let new_size = self.info.data_len();

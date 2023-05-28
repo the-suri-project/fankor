@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::{Error, Fields, Ident, ItemStruct, WhereClause};
 use syn::spanned::Spanned;
+use syn::{Error, Fields, Ident, ItemStruct};
 
 use crate::fnk_syn::FnkMetaArgumentList;
 use crate::macros::deserialize::enums::{contains_initialize_with, contains_skip};
@@ -13,7 +13,7 @@ pub fn struct_de(input: &ItemStruct, crate_name: Ident) -> syn::Result<TokenStre
     let mut account_discriminants = None;
 
     for attr in &input.attrs {
-        if attr.path.is_ident("fankor") {
+        if attr.path().is_ident("fankor") {
             if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
                 args.error_on_duplicated()?;
 
@@ -52,32 +52,18 @@ pub fn struct_de(input: &ItemStruct, crate_name: Ident) -> syn::Result<TokenStre
     };
 
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    let mut where_clause = where_clause.map_or_else(
-        || WhereClause {
-            where_token: Default::default(),
-            predicates: Default::default(),
-        },
-        Clone::clone,
-    );
     let init_method = contains_initialize_with(&input.attrs)?;
     let return_value = match &input.fields {
         Fields::Named(fields) => {
             let mut body = TokenStream2::new();
             for field in &fields.named {
                 let field_name = field.ident.as_ref().unwrap();
+
                 let delta = if contains_skip(&field.attrs) {
                     quote! {
                         #field_name: Default::default(),
                     }
                 } else {
-                    let field_type = &field.ty;
-                    where_clause.predicates.push(
-                        syn::parse2(quote! {
-                            #field_type: #crate_name::BorshDeserialize
-                        })
-                            .unwrap(),
-                    );
-
                     quote! {
                         #field_name: #crate_name::BorshDeserialize::deserialize(buf)?,
                     }
@@ -106,27 +92,25 @@ pub fn struct_de(input: &ItemStruct, crate_name: Ident) -> syn::Result<TokenStre
             }
         }
     };
-    if let Some(method_ident) = init_method {
-        Ok(quote! {
-            impl #impl_generics #crate_name::de::BorshDeserialize for #name #ty_generics #where_clause {
-                fn deserialize(buf: &mut &[u8]) -> ::core::result::Result<Self, #crate_name::maybestd::io::Error> {
-                    #account_discriminants
 
-                    let mut return_value = #return_value;
-                    return_value.#method_ident();
-                    Ok(return_value)
-                }
-            }
-        })
+    let init_method = if let Some(method_ident) = init_method {
+        quote! {
+            return_value.#method_ident();
+        }
     } else {
-        Ok(quote! {
-            impl #impl_generics #crate_name::de::BorshDeserialize for #name #ty_generics #where_clause {
-                fn deserialize(buf: &mut &[u8]) -> ::core::result::Result<Self, #crate_name::maybestd::io::Error> {
-                    #account_discriminants
+        quote! {}
+    };
 
-                    Ok(#return_value)
-                }
+    Ok(quote! {
+        #[automatically_derived]
+        impl #impl_generics #crate_name::de::BorshDeserialize for #name #ty_generics #where_clause {
+            fn deserialize(buf: &mut &[u8]) -> ::core::result::Result<Self, #crate_name::maybestd::io::Error> {
+                #account_discriminants
+
+                let mut return_value = #return_value;
+                #init_method
+                Ok(return_value)
             }
-        })
-    }
+        }
+    })
 }

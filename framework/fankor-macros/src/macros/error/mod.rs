@@ -228,7 +228,6 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
                 format!("{}", self)
             }
 
-            #[inline(always)]
             pub const fn discriminant(&self) -> #discriminant_name {
                 match self {
                     #(#discriminant_maps,)*
@@ -271,7 +270,6 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
 
         #[automatically_derived]
         impl #discriminant_name {
-            #[inline(always)]
             pub const fn code(&self) -> u32 {
                 match self {
                     #(#discriminant_codes,)*

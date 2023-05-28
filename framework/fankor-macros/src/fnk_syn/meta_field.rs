@@ -1,6 +1,5 @@
 use proc_macro2::Ident;
 use syn::parse::{Parse, ParseStream};
-use syn::parse_quote::ParseQuote;
 use syn::punctuated::Punctuated;
 use syn::{Expr, Token};
 
@@ -77,7 +76,7 @@ pub struct FnkMetaFieldListWithErrors {
 impl Parse for FnkMetaFieldListWithErrors {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         Ok(Self {
-            list: <Punctuated<FnkMetaFieldWithError, Token![,]>>::parse(input)?,
+            list: <Punctuated<FnkMetaFieldWithError, Token![,]>>::parse_terminated(input)?,
         })
     }
 }

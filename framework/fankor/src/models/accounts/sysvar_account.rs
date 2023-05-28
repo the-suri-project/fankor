@@ -32,7 +32,7 @@ impl<'info, T: SysvarId> SysvarAccount<'info, T> {
                 actual: *info.owner,
                 expected: T::id(),
             }
-                .into());
+            .into());
         }
 
         Ok(SysvarAccount {
@@ -44,47 +44,38 @@ impl<'info, T: SysvarId> SysvarAccount<'info, T> {
 
     // GETTERS ----------------------------------------------------------------
 
-    #[inline(always)]
     pub fn address(&self) -> &'info Pubkey {
         self.info().key
     }
 
-    #[inline(always)]
     pub fn owner(&self) -> &'info Pubkey {
         self.info().owner
     }
 
-    #[inline(always)]
     pub fn is_writable(&self) -> bool {
         self.info().is_writable
     }
 
-    #[inline(always)]
     pub fn is_signer(&self) -> bool {
         self.info().is_signer
     }
 
-    #[inline(always)]
     pub fn is_executable(&self) -> bool {
         self.info().executable
     }
 
-    #[inline(always)]
     pub fn balance(&self) -> u64 {
         self.info().lamports()
     }
 
-    #[inline(always)]
     pub fn rent_epoch(&self) -> Epoch {
         self.info.rent_epoch
     }
 
-    #[inline(always)]
     pub fn info(&self) -> &'info AccountInfo<'info> {
         self.info
     }
 
-    #[inline(always)]
     pub fn context(&self) -> &'info FankorContext<'info> {
         self.context
     }

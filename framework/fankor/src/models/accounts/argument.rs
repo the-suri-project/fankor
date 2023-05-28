@@ -25,12 +25,10 @@ impl<T> Argument<T> {
 
     // GETTERS ----------------------------------------------------------------
 
-    #[inline(always)]
     pub fn data(&self) -> &T {
         &self.0
     }
 
-    #[inline(always)]
     pub fn data_mut(&mut self) -> &mut T {
         &mut self.0
     }

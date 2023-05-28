@@ -1,6 +1,6 @@
 use quote::{format_ident, quote};
-use syn::{Error, Item};
 use syn::spanned::Spanned;
+use syn::{Error, Item};
 
 use cpi::build_cpi;
 use lpi::build_lpi;
@@ -149,7 +149,7 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
                     #name_str,
                     crate::ID,
                     Some(
-                        |first_instruction_account: ::solana_program_test::IndexOfAccount,
+                        |first_instruction_account: usize,
                             invoke_context: &mut ::solana_program_test::InvokeContext| {
                             ::solana_program_test::builtin_process_instruction(
                                 |program_id: &::fankor::prelude::Pubkey,

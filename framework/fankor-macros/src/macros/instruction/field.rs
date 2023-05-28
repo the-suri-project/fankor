@@ -1,13 +1,12 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+use syn::parse::{Parse, ParseStream};
+use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
 use syn::{
     Attribute, Error, Expr, Fields, GenericArgument, PathArguments, Token, Type, Variant,
     Visibility,
 };
-use syn::parse::{Parse, ParseStream};
-use syn::parse_quote::ParseQuote;
-use syn::punctuated::Punctuated;
-use syn::spanned::Spanned;
 
 use crate::Result;
 
@@ -149,7 +148,7 @@ impl Field {
 
     fn parse_attributes(&mut self, mut attrs: Vec<Attribute>, is_enum: bool) -> Result<()> {
         while let Some(attribute) = attrs.pop() {
-            if !attribute.path.is_ident("account") {
+            if !attribute.path().is_ident("account") {
                 self.attrs.push(attribute);
                 continue;
             }
@@ -959,7 +958,7 @@ pub struct CustomMetaListWithErrors {
 impl Parse for CustomMetaListWithErrors {
     fn parse(input: ParseStream) -> syn::Result<Self> {
         Ok(Self {
-            list: <Punctuated<CustomMetaWithError, Token![,]>>::parse(input)?,
+            list: <Punctuated<CustomMetaWithError, Token![,]>>::parse_terminated(input)?,
         })
     }
 }

@@ -1,11 +1,10 @@
 use convert_case::{Boundary, Case, Converter};
 use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
-use syn::{Attribute, Error, ItemEnum};
-use syn::parse::{Parse, Parser};
 use syn::spanned::Spanned;
+use syn::{Attribute, Error, Expr, ItemEnum, Meta};
 
-use crate::fnk_syn::{FnkMetaArgumentList, FnkMetaType};
+use crate::fnk_syn::FnkMetaArgumentList;
 use crate::Result;
 
 pub struct Program {
@@ -93,20 +92,28 @@ impl Program {
 
             for attribute in variant.attrs {
                 let attribute_span = attribute.span();
+                let attribute_path = attribute.path();
 
-                if attribute.path.is_ident("return_type") {
-                    let result = if let Ok(value) = FnkMetaType::parse.parse2(attribute.tokens) {
-                        value.ty.to_token_stream()
+                if attribute_path.is_ident("return_type") {
+                    let result = if let Meta::NameValue(v) = attribute.meta {
+                        if let Expr::Path(p) = v.value {
+                            p.path.to_token_stream()
+                        } else {
+                            return Err(Error::new(
+                                attribute_span,
+                                "The correct pattern is #[return_type = <path>]",
+                            ));
+                        }
                     } else {
                         return Err(Error::new(
                             attribute_span,
-                            "The correct pattern is #[return_type = <type>]",
+                            "The correct pattern is #[return_type = <path>]",
                         ));
                     };
 
                     return_type = Some(result);
-                } else if attribute.path.is_ident("boxed") {
-                    if !attribute.tokens.is_empty() {
+                } else if attribute_path.is_ident("boxed") {
+                    if attribute.meta.require_path_only().is_err() {
                         return Err(Error::new(
                             attribute_span,
                             "The correct pattern is #[boxed]",

@@ -7,7 +7,7 @@ use solana_program::account_info::AccountInfo;
 
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::Zc;
-use crate::prelude::{CopyType, FnkBVec, MAX_HEIGHT, Node};
+use crate::prelude::{CopyType, FnkBVec, Node, MAX_HEIGHT};
 use crate::traits::ZeroCopyType;
 use crate::utils::writers::ArrayWriter;
 
@@ -55,7 +55,6 @@ impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZcFnkBVec<'info, K, V> {
     }
 
     /// Returns the offset of the content vector.
-    #[inline]
     fn content_offset(&self) -> usize {
         self.offset + size_of::<u16>() * 2
     }
@@ -110,10 +109,10 @@ impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZcFnkBVec<'info, K, V> {
 
 #[cfg(test)]
 impl<
-    'info,
-    K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-    V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-> ZcFnkBVec<'info, K, V>
+        'info,
+        K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+        V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+    > ZcFnkBVec<'info, K, V>
 {
     // GETTERS ----------------------------------------------------------------
 
@@ -159,10 +158,10 @@ impl<
 }
 
 impl<
-    'info,
-    K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-    V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-> ZcFnkBVec<'info, K, V>
+        'info,
+        K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+        V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+    > ZcFnkBVec<'info, K, V>
 {
     // GETTERS ----------------------------------------------------------------
 
@@ -1119,10 +1118,10 @@ pub struct Iter<'info, K, V> {
 }
 
 impl<
-    'info,
-    K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-    V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-> Iterator for Iter<'info, K, V>
+        'info,
+        K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+        V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+    > Iterator for Iter<'info, K, V>
 {
     type Item = (K, V);
 
@@ -1169,11 +1168,12 @@ impl<
 }
 
 impl<
-    'info,
-    K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-    V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-> ExactSizeIterator for Iter<'info, K, V>
-{}
+        'info,
+        K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+        V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
+    > ExactSizeIterator for Iter<'info, K, V>
+{
+}
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------

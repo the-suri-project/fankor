@@ -9,7 +9,6 @@ impl<'info, T: ZeroCopyType<'info>> ZeroCopyType<'info> for Box<T> {
         Ok((Box::new(result), size))
     }
 
-    #[inline(always)]
     fn read_byte_size(bytes: &[u8]) -> FankorResult<usize> {
         T::read_byte_size(bytes)
     }

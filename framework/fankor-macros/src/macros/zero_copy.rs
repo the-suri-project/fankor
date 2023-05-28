@@ -1,7 +1,7 @@
 use convert_case::{Case, Converter};
 use quote::{format_ident, quote};
-use syn::{Error, Fields, Item};
 use syn::spanned::Spanned;
+use syn::{Error, Fields, Item};
 
 use crate::fnk_syn::FnkMetaArgumentList;
 use crate::Result;
@@ -18,7 +18,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let mut extra_offset = 0usize;
 
             for attr in &item.attrs {
-                if attr.path.is_ident("fankor") {
+                if attr.path().is_ident("fankor") {
                     if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
                         args.error_on_duplicated()?;
 
@@ -219,7 +219,7 @@ pub fn processor(input: Item) -> Result<proc_macro::TokenStream> {
             let mut extra_offset = 0usize;
 
             for attr in &item.attrs {
-                if attr.path.is_ident("fankor") {
+                if attr.path().is_ident("fankor") {
                     if let Ok(mut args) = attr.parse_args::<FnkMetaArgumentList>() {
                         args.error_on_duplicated()?;
 

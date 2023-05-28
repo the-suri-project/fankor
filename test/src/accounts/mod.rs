@@ -104,7 +104,7 @@ mod test {
             value1: 1,
             value2: "test".to_string(),
         }))
-            .unwrap();
+        .unwrap();
 
         let data = info.try_borrow_data().unwrap();
         assert_eq!(*data, &vector_save);

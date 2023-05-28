@@ -3,8 +3,8 @@ use std::ops::Deref;
 
 use borsh::{BorshDeserialize, BorshSerialize};
 use mpl_token_metadata::state::{
-    BURN, Collection, COLLECTION_AUTHORITY, CollectionDetails, Creator, EDITION, PREFIX,
-    TokenMetadataAccount, USER, Uses,
+    Collection, CollectionDetails, Creator, TokenMetadataAccount, Uses, BURN, COLLECTION_AUTHORITY,
+    EDITION, PREFIX, USER,
 };
 use solana_program::account_info::AccountInfo;
 use solana_program::pubkey::Pubkey;
@@ -15,8 +15,8 @@ use crate::cpi;
 use crate::cpi::metadata::{CpiCreateMasterEditionV3, CpiCreateMetadataAccountV3};
 use crate::cpi::system_program::CpiCreateAccount;
 use crate::errors::FankorResult;
-use crate::models::{Account, Program, System, Token, UninitializedAccount};
 use crate::models::programs::macros::impl_account;
+use crate::models::{Account, Program, System, Token, UninitializedAccount};
 use crate::traits::ProgramType;
 
 #[derive(Debug, Copy, Clone)]

@@ -336,7 +336,6 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
 
         #[automatically_derived]
         impl <'info> #cpi_name <'info> {
-            #[inline(always)]
             pub const fn discriminant(&self) -> #discriminant_name {
                 match self {
                     #(#discriminants,)*
@@ -371,7 +370,6 @@ pub fn process_enum(args: FnkMetaArgumentList, item: ItemEnum) -> Result<proc_ma
 
         #[automatically_derived]
         impl <'info> #lpi_name <'info> {
-            #[inline(always)]
             pub const fn discriminant(&self) -> #discriminant_name {
                 match self {
                     #(#discriminants,)*

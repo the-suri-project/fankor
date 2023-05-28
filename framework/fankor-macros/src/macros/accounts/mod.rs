@@ -2,8 +2,8 @@ use std::collections::HashSet;
 
 use convert_case::{Boundary, Case, Converter};
 use quote::{format_ident, quote};
-use syn::{Error, Item, parse_quote};
 use syn::spanned::Spanned;
+use syn::{parse_quote, Error, Item};
 
 use crate::fnk_syn::FnkMetaArgumentList;
 use crate::macros::accounts::arguments::AccountsArguments;
@@ -228,7 +228,6 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
 
             #[automatically_derived]
             impl #discriminant_name {
-                #[inline(always)]
                 pub const fn code(&self) -> u8 {
                     match self {
                         #(#codes,)*
@@ -238,7 +237,6 @@ pub fn processor(args: FnkMetaArgumentList, input: Item) -> Result<proc_macro::T
 
             #[automatically_derived]
             impl #impl_generics #name #ty_generics #where_clause {
-                #[inline(always)]
                 pub const fn discriminant(&self) -> #discriminant_name {
                     match self {
                         #(#discriminants,)*

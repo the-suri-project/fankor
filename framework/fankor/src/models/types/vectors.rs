@@ -81,7 +81,6 @@ impl<T: BorshSerialize> BorshSerialize for FnkVec<T> {
 }
 
 impl<T: BorshDeserialize> BorshDeserialize for FnkVec<T> {
-    #[inline]
     fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
         let len = FnkUInt::deserialize(buf)?;
         let len = match len.get_u32() {

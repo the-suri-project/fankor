@@ -1,7 +1,5 @@
 #[cfg(any(feature = "spl-associated-token-account"))]
 pub use associated_token::*;
-#[cfg(feature = "bpf-loader-program")]
-pub use bpf_loader::*;
 #[cfg(feature = "metadata-program")]
 pub use metadata::*;
 pub use system_program::*;
@@ -21,7 +19,5 @@ mod metadata;
 #[cfg(feature = "token-program")]
 mod associated_token;
 
-#[cfg(feature = "bpf-loader-program")]
-mod bpf_loader;
 #[cfg(feature = "token-program-2022")]
 mod token_2022;

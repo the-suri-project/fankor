@@ -1,15 +1,14 @@
-use proc_macro2::Ident;
-use quote::quote;
-use syn::{Attribute, Error, Fields, Lit, MetaList, NestedMeta, parse_macro_input, Token, Variant};
+use proc_macro2::{Ident, TokenStream};
 use syn::punctuated::Punctuated;
 use syn::spanned::Spanned;
+use syn::{parse_quote, Attribute, Error, Expr, Fields, Lit, Meta, Token, Variant};
 
 use crate::macros::enum_discriminants::get_discriminant;
 use crate::Result;
 
 pub struct ErrorVariant {
     pub name: Ident,
-    pub message: Option<Punctuated<NestedMeta, Token![,]>>,
+    pub message: Option<TokenStream>,
     pub attributes: Vec<Attribute>,
     pub fields: Fields,
     pub code: Option<u32>,
@@ -24,7 +23,7 @@ impl ErrorVariant {
         let code = get_discriminant(&variant)?;
         variant
             .attrs
-            .retain(|attr| !attr.path.is_ident("discriminant"));
+            .retain(|attr| !attr.path().is_ident("discriminant"));
 
         let mut error_variant = ErrorVariant {
             name: variant.ident,
@@ -45,8 +44,9 @@ impl ErrorVariant {
         let mut index = 0;
         while index < self.attributes.len() {
             let attribute = &self.attributes[index];
+            let attribute_path = attribute.path();
 
-            if attribute.path.is_ident("msg") {
+            if attribute_path.is_ident("msg") {
                 let attribute = self.attributes.remove(index);
                 let attribute_span = attribute.span();
 
@@ -57,13 +57,9 @@ impl ErrorVariant {
                     ));
                 }
 
-                let path = &attribute.path;
-                let tokens = &attribute.tokens;
-                let tokens = quote! {#path #tokens};
-
-                let args = match parse_macro_input::parse::<MetaList>(tokens.into()) {
-                    Ok(v) => v,
-                    Err(_) => {
+                let args = match &attribute.meta {
+                    Meta::List(v) => &v.tokens,
+                    _ => {
                         return Err(Error::new(
                             attribute_span,
                             "The msg attribute expects arguments following the format of the format! macro",
@@ -72,21 +68,25 @@ impl ErrorVariant {
                 };
 
                 // Check first argument is a literal string.
-                let first_argument = args.nested.first().unwrap();
-                match first_argument {
-                    NestedMeta::Lit(v) => match v {
+                let expr_list: Punctuated<Expr, Token![,]> = parse_quote! { #args };
+
+                match expr_list.first() {
+                    Some(Expr::Lit(v)) => match &v.lit {
                         Lit::Str(_) => {}
                         v => {
                             return Err(Error::new(v.span(), "This must be a literal string"));
                         }
                     },
-                    NestedMeta::Meta(v) => {
-                        return Err(Error::new(v.span(), "This must be a literal string"));
+                    _ => {
+                        return Err(Error::new(
+                            expr_list.span(),
+                            "First attribute must be a literal string",
+                        ));
                     }
                 }
 
-                self.message = Some(args.nested);
-            } else if attribute.path.is_ident("deprecated") {
+                self.message = Some(args.clone());
+            } else if attribute_path.is_ident("deprecated") {
                 let attribute_span = attribute.span();
 
                 if self.deprecated {
