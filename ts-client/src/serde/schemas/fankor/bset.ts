@@ -1,53 +1,33 @@
 import { FnkBorshWriter } from '../../serializer';
 import { FnkBorshReader } from '../../deserializer';
-import { InferFnkBorshSchemaInner, RustMap } from '../maps';
+import { InferFnkBorshSchemaInner } from '../maps';
 import { FnkBorshSchema } from '../../borsh';
 import { U16, U8 } from '../unsigned';
 
-export function FnkBVec<
-    Sk extends FnkBorshSchema<any>,
-    Sv extends FnkBorshSchema<any>
->({ keySchema, valueSchema }: { keySchema: Sk; valueSchema: Sv }) {
-    return new FnkBVecSchema(keySchema, valueSchema);
+export function FnkBSet<Sv extends FnkBorshSchema<any>>(valueSchema: Sv) {
+    return new FnkBSetSchema(valueSchema);
 }
 
-export class FnkBVecSchema<
-    Sk extends FnkBorshSchema<any>,
-    Sv extends FnkBorshSchema<any>
-> implements
-        FnkBorshSchema<
-            RustMap<InferFnkBorshSchemaInner<Sk>, InferFnkBorshSchemaInner<Sv>>
-        >
+export class FnkBSetSchema<Sv extends FnkBorshSchema<any>>
+    implements FnkBorshSchema<InferFnkBorshSchemaInner<Sv>[]>
 {
-    readonly keySchema: Sk;
     readonly valueSchema: Sv;
 
     // CONSTRUCTOR ------------------------------------------------------------
 
-    constructor(keySchema: Sk, valueSchema: Sv) {
-        this.keySchema = keySchema;
+    constructor(valueSchema: Sv) {
         this.valueSchema = valueSchema;
     }
 
     // METHODS ----------------------------------------------------------------
 
     /**
-     * Values must be sorted by key.
+     * Values must be sorted.
      */
-    serialize(
-        writer: FnkBorshWriter,
-        value: RustMap<
-            InferFnkBorshSchemaInner<Sk>,
-            InferFnkBorshSchemaInner<Sv>
-        >
-    ) {
-        let nodes: Node<
-            InferFnkBorshSchemaInner<Sk>,
-            InferFnkBorshSchemaInner<Sv>
-        >[] = value.map((v) => {
+    serialize(writer: FnkBorshWriter, value: InferFnkBorshSchemaInner<Sv>[]) {
+        let nodes: Node<InferFnkBorshSchemaInner<Sv>>[] = value.map((v) => {
             return {
-                key: v.key,
-                value: v.value,
+                value: v,
                 leftChildAt: 0,
                 rightChildAt: 0,
                 height: 0,
@@ -66,7 +46,6 @@ export class FnkBVecSchema<
             U16.serialize(writer, rootPosition + 1);
 
             for (const node of nodes) {
-                this.keySchema.serialize(writer, node.key);
                 this.valueSchema.serialize(writer, node.value);
                 U16.serialize(writer, node.leftChildAt);
                 U16.serialize(writer, node.rightChildAt);
@@ -75,36 +54,26 @@ export class FnkBVecSchema<
         }
     }
 
-    deserialize(
-        reader: FnkBorshReader
-    ): RustMap<InferFnkBorshSchemaInner<Sk>, InferFnkBorshSchemaInner<Sv>> {
+    deserialize(reader: FnkBorshReader): InferFnkBorshSchemaInner<Sv>[] {
         const length = U16.deserialize(reader);
         U16.deserialize(reader);
 
-        const result: RustMap<
-            InferFnkBorshSchemaInner<Sk>,
-            InferFnkBorshSchemaInner<Sv>
-        > = [];
+        const result: InferFnkBorshSchemaInner<Sv>[] = [];
 
         for (let i = 0; i < length; i++) {
-            const key = this.keySchema.deserialize(reader);
             const value = this.valueSchema.deserialize(reader);
             U16.deserialize(reader);
             U16.deserialize(reader);
             U8.deserialize(reader);
 
-            result.push({
-                key,
-                value,
-            });
+            result.push(value);
         }
 
         return result;
     }
 }
 
-interface Node<K, V> {
-    key: K;
+interface Node<V> {
     value: V;
     leftChildAt: number;
     rightChildAt: number;
@@ -112,11 +81,11 @@ interface Node<K, V> {
 }
 
 // [from, to)
-function fixNode<K, V>(
+function fixNode<V>(
     from: number,
     to: number,
-    nodes: Node<K, V>[]
-): [number, Node<K, V>] | null {
+    nodes: Node<V>[]
+): [number, Node<V>] | null {
     if (from === to) {
         return null;
     }

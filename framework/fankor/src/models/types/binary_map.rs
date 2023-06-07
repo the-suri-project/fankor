@@ -4,13 +4,12 @@ use std::io::Write;
 use std::mem;
 use std::mem::size_of;
 
+use crate::prelude::FNK_BINARY_TREE_MAX_HEIGHT;
 use borsh::{BorshDeserialize, BorshSerialize};
 
 use crate::traits::CopyType;
 
 // Based on https://github.com/oliver-anhuth/avl/blob/d53a6e006a5f4a6df04755703c10dca763028fcf/src/map.rs#L1039
-
-pub(crate) const MAX_HEIGHT: usize = 23; // 1,44 * log2(MAX_NODES) / MAX_NODES = 2 ^ 16 bits
 
 /// Wrapper over `Vec` whose values are sorted and serialized forming a BTree
 /// structure.
@@ -22,7 +21,7 @@ pub(crate) const MAX_HEIGHT: usize = 23; // 1,44 * log2(MAX_NODES) / MAX_NODES =
 /// The maximum number of nodes are 2^16-1. If it is exceeded, it will
 /// panic.
 #[derive(Debug, Clone)]
-pub struct FnkBVec<K, V> {
+pub struct FnkBMap<K, V> {
     nodes: Vec<Node<K, V>>,
 
     /// The index of the root element. If it is 0, it means that the vector
@@ -30,7 +29,7 @@ pub struct FnkBVec<K, V> {
     root_position: u16,
 }
 
-impl<K, V> FnkBVec<K, V> {
+impl<K, V> FnkBMap<K, V> {
     // CONSTRUCTORS -----------------------------------------------------------
 
     pub fn new() -> Self {
@@ -94,7 +93,7 @@ impl<K, V> FnkBVec<K, V> {
 }
 
 #[cfg(test)]
-impl<K: Debug, V: Debug> FnkBVec<K, V> {
+impl<K: Debug, V: Debug> FnkBMap<K, V> {
     // GETTERS ----------------------------------------------------------------
 
     /// Returns the height of the map.
@@ -138,7 +137,7 @@ impl<K: Debug, V: Debug> FnkBVec<K, V> {
     }
 }
 
-impl<'info, K: Ord + Copy + CopyType<'info>, V: Copy + CopyType<'info>> FnkBVec<K, V> {
+impl<'info, K: Ord + Copy + CopyType<'info>, V: Copy + CopyType<'info>> FnkBMap<K, V> {
     // METHODS ----------------------------------------------------------------
 
     /// Returns a reference to the value corresponding to the key.
@@ -230,8 +229,8 @@ impl<'info, K: Ord + Copy + CopyType<'info>, V: Copy + CopyType<'info>> FnkBVec<
         }
 
         let old_value = None;
-        let mut parents = [0u16; MAX_HEIGHT];
-        let mut parent_left_direction = [false; MAX_HEIGHT];
+        let mut parents = [0u16; FNK_BINARY_TREE_MAX_HEIGHT];
+        let mut parent_left_direction = [false; FNK_BINARY_TREE_MAX_HEIGHT];
         let mut parent_index = 0;
 
         parents[0] = self.root_position;
@@ -324,8 +323,8 @@ impl<'info, K: Ord + Copy + CopyType<'info>, V: Copy + CopyType<'info>> FnkBVec<
             return None;
         }
 
-        let mut parents = [0u16; MAX_HEIGHT];
-        let mut parent_left_direction = [false; MAX_HEIGHT];
+        let mut parents = [0u16; FNK_BINARY_TREE_MAX_HEIGHT];
+        let mut parent_left_direction = [false; FNK_BINARY_TREE_MAX_HEIGHT];
         let mut parent_index = 0;
         let to_remove_position;
 
@@ -685,11 +684,11 @@ impl<'info, K: Ord + Copy + CopyType<'info>, V: Copy + CopyType<'info>> FnkBVec<
     }
 }
 
-impl<K, V> FnkBVec<K, V> {
+impl<K, V> FnkBMap<K, V> {
     /// Returns an iterator over the map.
-    pub fn iter(&self) -> Iter<K, V> {
+    pub fn iter(&self) -> FnkBMapIter<K, V> {
         if self.is_empty() {
-            return Iter {
+            return FnkBMapIter {
                 data: self,
                 parents: [0; 23],
                 parent_index: 0,
@@ -710,7 +709,7 @@ impl<K, V> FnkBVec<K, V> {
             min_node = &self.nodes[min_node.left_child_at as usize - 1];
         }
 
-        Iter {
+        FnkBMapIter {
             data: self,
             parents,
             parent_index,
@@ -718,13 +717,13 @@ impl<K, V> FnkBVec<K, V> {
     }
 }
 
-impl<K, V> Default for FnkBVec<K, V> {
+impl<K, V> Default for FnkBMap<K, V> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<K: BorshSerialize, V: BorshSerialize> BorshSerialize for FnkBVec<K, V> {
+impl<K: BorshSerialize, V: BorshSerialize> BorshSerialize for FnkBMap<K, V> {
     fn serialize<W: Write>(&self, writer: &mut W) -> std::io::Result<()> {
         (self.nodes.len() as u16).serialize(writer)?;
         self.root_position.serialize(writer)?;
@@ -737,7 +736,7 @@ impl<K: BorshSerialize, V: BorshSerialize> BorshSerialize for FnkBVec<K, V> {
     }
 }
 
-impl<K: BorshDeserialize, V: BorshDeserialize> BorshDeserialize for FnkBVec<K, V> {
+impl<K: BorshDeserialize, V: BorshDeserialize> BorshDeserialize for FnkBMap<K, V> {
     #[inline]
     fn deserialize(buf: &mut &[u8]) -> std::io::Result<Self> {
         let len = u16::deserialize(buf)?;
@@ -755,7 +754,7 @@ impl<K: BorshDeserialize, V: BorshDeserialize> BorshDeserialize for FnkBVec<K, V
     }
 }
 
-impl<K: PartialEq, V: PartialEq> PartialEq for FnkBVec<K, V> {
+impl<K: PartialEq, V: PartialEq> PartialEq for FnkBMap<K, V> {
     fn eq(&self, other: &Self) -> bool {
         if self.nodes.len() != other.len() {
             return false;
@@ -771,7 +770,7 @@ impl<K: PartialEq, V: PartialEq> PartialEq for FnkBVec<K, V> {
     }
 }
 
-impl<K: Eq, V: Eq> Eq for FnkBVec<K, V> {}
+impl<K: Eq, V: Eq> Eq for FnkBMap<K, V> {}
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
@@ -810,15 +809,15 @@ impl<'info, K: CopyType<'info>, V: CopyType<'info>> Node<K, V> {
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-pub struct Iter<'a, K, V> {
-    pub(crate) data: &'a FnkBVec<K, V>,
-    pub(crate) parents: [u16; MAX_HEIGHT],
+pub struct FnkBMapIter<'a, K, V> {
+    pub(crate) data: &'a FnkBMap<K, V>,
+    pub(crate) parents: [u16; FNK_BINARY_TREE_MAX_HEIGHT],
     /// Zero means empty.
     /// One means the first parent.
     pub(crate) parent_index: u8,
 }
 
-impl<'a, K, V> Iterator for Iter<'a, K, V> {
+impl<'a, K, V> Iterator for FnkBMapIter<'a, K, V> {
     type Item = (&'a K, &'a V);
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -854,7 +853,7 @@ impl<'a, K, V> Iterator for Iter<'a, K, V> {
     }
 }
 
-impl<'a, K, V> ExactSizeIterator for Iter<'a, K, V> {}
+impl<'a, K, V> ExactSizeIterator for FnkBMapIter<'a, K, V> {}
 
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
@@ -873,7 +872,7 @@ mod test {
     fn test_iterator() {
         for _ in 0..100 {
             let mut rng = rand::thread_rng();
-            let mut map = FnkBVec::new();
+            let mut map = FnkBMap::new();
 
             let mut keys = HashSet::with_capacity(100);
 
@@ -897,7 +896,7 @@ mod test {
     fn test_insert_get_and_remove_random() {
         for _ in 0..100 {
             let mut rng = rand::thread_rng();
-            let mut map = FnkBVec::new();
+            let mut map = FnkBMap::new();
 
             assert_eq!(map.validate(), 0, "(0) Invalid height");
 
@@ -977,7 +976,7 @@ mod test {
     #[test]
     fn test_serialize_deserialize() {
         let mut rng = rand::thread_rng();
-        let mut map = FnkBVec::new();
+        let mut map = FnkBMap::new();
 
         let mut values = HashSet::new();
 
@@ -996,7 +995,7 @@ mod test {
 
         // (De)Serialize
         let serialize = map.try_to_vec().expect("Failed to serialize");
-        let deserialize = FnkBVec::try_from_slice(&serialize).expect("Failed to deserialize");
+        let deserialize = FnkBMap::try_from_slice(&serialize).expect("Failed to deserialize");
 
         // Validate
         let height = map.validate();
@@ -1022,8 +1021,8 @@ mod test {
 
     #[test]
     fn test_equal() {
-        let mut map1 = FnkBVec::new();
-        let mut map2 = FnkBVec::new();
+        let mut map1 = FnkBMap::new();
+        let mut map2 = FnkBMap::new();
 
         assert_eq!(map1, map2);
 
@@ -1036,12 +1035,12 @@ mod test {
         map2.insert(1, 2);
         assert_ne!(map1, map2);
 
-        let mut map2 = FnkBVec::new();
+        let mut map2 = FnkBMap::new();
         map2.insert(2, 1);
         assert_ne!(map1, map2);
 
-        let mut map1 = FnkBVec::new();
-        let mut map2 = FnkBVec::new();
+        let mut map1 = FnkBMap::new();
+        let mut map2 = FnkBMap::new();
 
         map1.insert(1, 1);
         map1.insert(2, 2);

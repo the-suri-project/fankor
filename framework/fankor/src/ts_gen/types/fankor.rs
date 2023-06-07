@@ -2,7 +2,7 @@ use std::any::{Any, TypeId};
 use std::borrow::Cow;
 
 use crate::prelude::{
-    FnkArray, FnkBVec, FnkExtension, FnkInt, FnkMap, FnkRange, FnkSet, FnkString, FnkUInt,
+    FnkArray, FnkBMap, FnkExtension, FnkInt, FnkMap, FnkRange, FnkSet, FnkString, FnkUInt,
     FnkURange, FnkVec,
 };
 use crate::traits::{TsTypeGen, TsTypesCache};
@@ -222,7 +222,7 @@ impl<K: TsTypeGen, V: TsTypeGen> TsTypeGen for FnkMap<K, V> {
     }
 }
 
-impl<K: TsTypeGen, V: TsTypeGen> TsTypeGen for FnkBVec<K, V> {
+impl<K: TsTypeGen, V: TsTypeGen> TsTypeGen for FnkBMap<K, V> {
     fn value(&self) -> Cow<'static, str> {
         let values = self
             .iter()
@@ -242,7 +242,7 @@ impl<K: TsTypeGen, V: TsTypeGen> TsTypeGen for FnkBVec<K, V> {
 
     fn schema_name() -> Cow<'static, str> {
         Cow::Owned(format!(
-            "fnk.FnkBVecSchema<{}, {}>",
+            "fnk.FnkBMapSchema<{}, {}>",
             K::schema_name(),
             V::schema_name()
         ))
@@ -252,7 +252,7 @@ impl<K: TsTypeGen, V: TsTypeGen> TsTypeGen for FnkBVec<K, V> {
         let inner_key_schema = K::generate_schema(registered_schemas);
         let inner_value_schema = V::generate_schema(registered_schemas);
         Cow::Owned(format!(
-            "fnk.FnkBVec({{ keySchema: {}, valueSchema: {} }})",
+            "fnk.FnkBMap({{ keySchema: {}, valueSchema: {} }})",
             inner_key_schema, inner_value_schema
         ))
     }

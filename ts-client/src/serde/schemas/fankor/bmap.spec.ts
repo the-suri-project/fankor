@@ -3,11 +3,11 @@ import { FnkBorshWriter } from '../../serializer';
 import { FnkBorshReader } from '../../deserializer';
 import { U64, U8 } from '../unsigned';
 import { TPublicKey } from '../public_keys';
-import { FnkBVec } from './bvec';
+import { FnkBMap } from './bmap';
 
-describe('FnkMap Tests', () => {
+describe('FnkBMap Tests', () => {
     it('test_serialize_deserialize_empty', () => {
-        const schema = FnkBVec({
+        const schema = FnkBMap({
             keySchema: TPublicKey,
             valueSchema: U64,
         });
@@ -33,7 +33,7 @@ describe('FnkMap Tests', () => {
     });
 
     it('test_serialize_deserialize_data', () => {
-        const schema = FnkBVec({
+        const schema = FnkBMap({
             keySchema: U8,
             valueSchema: U8,
         });
@@ -104,7 +104,7 @@ describe('FnkMap Tests', () => {
     });
 
     it('test_serialize_deserialize_data_with_different_lengths', () => {
-        const schema = FnkBVec({
+        const schema = FnkBMap({
             keySchema: U8,
             valueSchema: U8,
         });

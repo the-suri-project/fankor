@@ -8,7 +8,8 @@ use crate::errors::{FankorErrorCode, FankorResult};
 use crate::traits::{CopyType, ZeroCopyType};
 
 pub mod arrays;
-pub mod binary_vectors;
+pub mod binary_map;
+pub mod binary_set;
 pub mod bool;
 pub mod boxed;
 pub mod extensions;

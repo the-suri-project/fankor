@@ -1,5 +1,6 @@
 pub use arrays::*;
-pub use binary_vectors::*;
+pub use binary_map::*;
+pub use binary_set::*;
 pub use extensions::*;
 pub use integers::*;
 pub use maps::*;
@@ -10,7 +11,8 @@ pub use unsigned::*;
 pub use vectors::*;
 
 mod arrays;
-mod binary_vectors;
+mod binary_map;
+mod binary_set;
 mod extensions;
 mod integers;
 mod maps;

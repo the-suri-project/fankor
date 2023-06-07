@@ -7,17 +7,17 @@ use solana_program::account_info::AccountInfo;
 
 use crate::errors::{FankorErrorCode, FankorResult};
 use crate::models::Zc;
-use crate::prelude::{CopyType, FnkBVec, Node, MAX_HEIGHT};
+use crate::prelude::{CopyType, FnkBMap, Node, FNK_BINARY_TREE_MAX_HEIGHT};
 use crate::traits::ZeroCopyType;
 use crate::utils::writers::ArrayWriter;
 
-pub struct ZcFnkBVec<'info, K: CopyType<'info>, V: CopyType<'info>> {
+pub struct ZcFnkBMap<'info, K: CopyType<'info>, V: CopyType<'info>> {
     info: &'info AccountInfo<'info>,
     offset: usize,
     _data: PhantomData<(K, V)>,
 }
 
-impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZcFnkBVec<'info, K, V> {
+impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZcFnkBMap<'info, K, V> {
     // GETTERS ----------------------------------------------------------------
 
     /// Returns the number of elements in the map.
@@ -112,7 +112,7 @@ impl<
         'info,
         K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
         V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-    > ZcFnkBVec<'info, K, V>
+    > ZcFnkBMap<'info, K, V>
 {
     // GETTERS ----------------------------------------------------------------
 
@@ -161,7 +161,7 @@ impl<
         'info,
         K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
         V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-    > ZcFnkBVec<'info, K, V>
+    > ZcFnkBMap<'info, K, V>
 {
     // GETTERS ----------------------------------------------------------------
 
@@ -548,8 +548,8 @@ impl<
         }
 
         let old_value = None;
-        let mut parents = [0u16; MAX_HEIGHT];
-        let mut parent_left_direction = [false; MAX_HEIGHT];
+        let mut parents = [0u16; FNK_BINARY_TREE_MAX_HEIGHT];
+        let mut parent_left_direction = [false; FNK_BINARY_TREE_MAX_HEIGHT];
         let mut parent_index = 0;
 
         parents[0] = root_position;
@@ -639,8 +639,8 @@ impl<
             return Ok(None);
         }
 
-        let mut parents = [0u16; MAX_HEIGHT];
-        let mut parent_left_direction = [false; MAX_HEIGHT];
+        let mut parents = [0u16; FNK_BINARY_TREE_MAX_HEIGHT];
+        let mut parent_left_direction = [false; FNK_BINARY_TREE_MAX_HEIGHT];
         let mut parent_index = 0;
         let to_remove_position;
 
@@ -907,9 +907,9 @@ impl<
     }
 
     /// Returns an iterator over the map.
-    pub fn iter(&self) -> FankorResult<Iter<'info, K, V>> {
+    pub fn iter(&self) -> FankorResult<ZcFnkBMapIter<'info, K, V>> {
         if self.is_empty()? {
-            return Ok(Iter {
+            return Ok(ZcFnkBMapIter {
                 info: self.info,
                 offset: self.offset,
                 parents: [0; 23],
@@ -932,7 +932,7 @@ impl<
             left_child_at = self.read_node_left_child_at(left_child_at - 1)?;
         }
 
-        Ok(Iter {
+        Ok(ZcFnkBMapIter {
             info: self.info,
             offset: self.offset,
             parents,
@@ -1066,10 +1066,10 @@ impl<
     }
 }
 
-impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZeroCopyType<'info> for ZcFnkBVec<'info, K, V> {
+impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZeroCopyType<'info> for ZcFnkBMap<'info, K, V> {
     fn new(info: &'info AccountInfo<'info>, offset: usize) -> FankorResult<(Self, Option<usize>)> {
         Ok((
-            ZcFnkBVec {
+            ZcFnkBMap {
                 info,
                 offset,
                 _data: PhantomData,
@@ -1090,8 +1090,8 @@ impl<'info, K: CopyType<'info>, V: CopyType<'info>> ZeroCopyType<'info> for ZcFn
     }
 }
 
-impl<'info, K: CopyType<'info>, V: CopyType<'info>> CopyType<'info> for FnkBVec<K, V> {
-    type ZeroCopyType = ZcFnkBVec<'info, K, V>;
+impl<'info, K: CopyType<'info>, V: CopyType<'info>> CopyType<'info> for FnkBMap<K, V> {
+    type ZeroCopyType = ZcFnkBMap<'info, K, V>;
 
     fn byte_size(&self) -> usize {
         // Size field + root position + nodes
@@ -1107,10 +1107,10 @@ impl<'info, K: CopyType<'info>, V: CopyType<'info>> CopyType<'info> for FnkBVec<
 // ----------------------------------------------------------------------------
 // ----------------------------------------------------------------------------
 
-pub struct Iter<'info, K, V> {
+pub struct ZcFnkBMapIter<'info, K, V> {
     pub(crate) info: &'info AccountInfo<'info>,
     pub(crate) offset: usize,
-    pub(crate) parents: [u16; MAX_HEIGHT],
+    pub(crate) parents: [u16; FNK_BINARY_TREE_MAX_HEIGHT],
     /// Zero means empty.
     /// One means the first parent.
     pub(crate) parent_index: u8,
@@ -1121,7 +1121,7 @@ impl<
         'info,
         K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
         V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-    > Iterator for Iter<'info, K, V>
+    > Iterator for ZcFnkBMapIter<'info, K, V>
 {
     type Item = (K, V);
 
@@ -1130,11 +1130,11 @@ impl<
             return None;
         }
 
-        let (zc, _) = ZcFnkBVec::<K, V>::new(self.info, self.offset).unwrap();
+        let (zc, _) = ZcFnkBMap::<K, V>::new(self.info, self.offset).unwrap();
         let node_position = self.parents[self.parent_index as usize - 1];
         let node = zc
             .read_node(node_position - 1)
-            .expect("Cannot read node from FnkBVec iterator");
+            .expect("Cannot read node from FnkBMap iterator");
         self.parent_index -= 1;
 
         if node.right_child_at != 0 {
@@ -1144,7 +1144,7 @@ impl<
             // Get left most node.
             let mut left_child_at = zc
                 .read_node_left_child_at(node.right_child_at - 1)
-                .expect("Cannot read node from FnkBVec iterator");
+                .expect("Cannot read node from FnkBMap iterator");
 
             while left_child_at != 0 {
                 self.parent_index += 1;
@@ -1152,7 +1152,7 @@ impl<
 
                 left_child_at = zc
                     .read_node_left_child_at(left_child_at - 1)
-                    .expect("Cannot read node from FnkBVec iterator");
+                    .expect("Cannot read node from FnkBMap iterator");
             }
         }
 
@@ -1160,8 +1160,8 @@ impl<
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let (zc, _) = ZcFnkBVec::<K, V>::new(self.info, self.offset).unwrap();
-        let size = zc.len().expect("Cannot read size from FnkBVec iterator");
+        let (zc, _) = ZcFnkBMap::<K, V>::new(self.info, self.offset).unwrap();
+        let size = zc.len().expect("Cannot read size from FnkBMap iterator");
 
         (size as usize, Some(size as usize))
     }
@@ -1171,7 +1171,7 @@ impl<
         'info,
         K: Ord + Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
         V: Copy + BorshSerialize + BorshDeserialize + CopyType<'info>,
-    > ExactSizeIterator for Iter<'info, K, V>
+    > ExactSizeIterator for ZcFnkBMapIter<'info, K, V>
 {
 }
 
@@ -1198,13 +1198,13 @@ mod test {
             let mut vector = vec![0u8; 10_000];
             let info = create_account_info_for_tests(&mut lamports, &mut vector);
             let mut rng = rand::thread_rng();
-            let (map, _) = ZcFnkBVec::new(&info, 0).unwrap();
+            let (map, _) = ZcFnkBMap::new(&info, 0).unwrap();
 
             let mut keys = HashSet::with_capacity(100);
 
             for i in 0..100 {
                 let next = rng.gen_range(0..u32::MAX);
-                map.insert(next, i).expect("Cannot insert into ZcFnkBVec");
+                map.insert(next, i).expect("Cannot insert into ZcFnkBMap");
                 keys.insert(next);
             }
 
@@ -1213,7 +1213,7 @@ mod test {
 
             let map_keys = map
                 .iter()
-                .expect("Cannot iter over ZcFnkBVec")
+                .expect("Cannot iter over ZcFnkBMap")
                 .map(|(k, _)| k)
                 .collect::<Vec<_>>();
 
@@ -1232,7 +1232,7 @@ mod test {
             let mut vector = vec![0u8; combinations as usize * 45];
             let info = create_account_info_for_tests(&mut lamports, &mut vector);
             let mut rng = rand::thread_rng();
-            let (map, _) = ZcFnkBVec::new(&info, 0).unwrap();
+            let (map, _) = ZcFnkBMap::new(&info, 0).unwrap();
 
             assert_eq!(map.validate(), 0, "(0) Invalid height");
 
@@ -1241,7 +1241,7 @@ mod test {
 
             for i in 0..combinations {
                 let next = rng.gen_range(0..u32::MAX);
-                map.insert(next, i).expect("Cannot insert into ZcFnkBVec");
+                map.insert(next, i).expect("Cannot insert into ZcFnkBMap");
                 values.insert(next);
 
                 let height = map.validate();
@@ -1260,7 +1260,7 @@ mod test {
                 );
 
                 assert_eq!(
-                    map.get(&next).expect("Cannot get from ZcFnkBVec"),
+                    map.get(&next).expect("Cannot get from ZcFnkBMap"),
                     Some(i),
                     "(I{}) Map does not contain {}",
                     i + 1,
@@ -1269,7 +1269,7 @@ mod test {
             }
 
             assert_eq!(
-                map.len().expect("Cannot get length from ZcFnkBVec") as usize,
+                map.len().expect("Cannot get length from ZcFnkBMap") as usize,
                 values.len(),
                 "Invalid map length"
             );
@@ -1277,7 +1277,7 @@ mod test {
             for (i, next) in values.iter().enumerate() {
                 assert!(
                     map.remove(next)
-                        .expect("Cannot remove from ZcFnkBVec")
+                        .expect("Cannot remove from ZcFnkBMap")
                         .is_some(),
                     "(R{}) Map does not contain {}",
                     i + 1,
@@ -1300,7 +1300,7 @@ mod test {
                 );
 
                 assert_eq!(
-                    map.get(next).expect("Cannot get from ZcFnkBVec"),
+                    map.get(next).expect("Cannot get from ZcFnkBMap"),
                     None,
                     "(R{}) Map still contains {}",
                     i + 1,
@@ -1310,12 +1310,12 @@ mod test {
 
             assert_eq!(
                 map.root_position()
-                    .expect("Cannot get root position from ZcFnkBVec"),
+                    .expect("Cannot get root position from ZcFnkBMap"),
                 0,
                 "Root position is not 0"
             );
             assert_eq!(
-                map.len().expect("Cannot get len from ZcFnkBVec"),
+                map.len().expect("Cannot get len from ZcFnkBMap"),
                 0,
                 "Map is not empty"
             );
