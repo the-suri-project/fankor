@@ -12,7 +12,7 @@ pub trait PdaGenerator<'info> {
     /// Returns the actual PDA address as well as the bump seed and the seeds used to generate it.
     fn get_pda_seeds_with_bump(
         &self,
-        context: FankorContext<'info>,
+        context: &FankorContext<'info>,
     ) -> FankorResult<(Pubkey, u8, Vec<u8>)> {
         let mut seeds = self.get_pda_seeds()?;
         let seeds_slices = byte_seeds_to_slices(&seeds);
