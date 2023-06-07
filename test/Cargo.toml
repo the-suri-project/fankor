@@ -22,8 +22,8 @@ fankor = { path = "../framework/fankor", features = ["all-programs"] }
 
 [dev-dependencies]
 fankor = { path = "../framework/fankor", features = ["all-programs", "test-utils"] }
-solana-sdk = "1.14.18"
-solana-program-test = "1.14.18"
+solana-sdk = "=1.14.18"
+solana-program-test = "=1.14.18"
 tokio = { version = "1.14.1", features = ["macros"] }
 
 [profile.release]
